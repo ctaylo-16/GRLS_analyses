@@ -1,0 +1,420 @@
+---
+title: "GRLS enviro"
+format: html
+editor: visual
+---
+
+## Environmental exposures
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+#exposures dataset
+environment_exposures<-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
+sleep_environment <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
+
+```
+
+indoors exposures =
+
+'use_aerosol','use_air_cleaner','use_hepa_filter,'use_moth_balls','use_incense_or_candles','smoke_exposure'
+
+outside house exposures=
+
+'any_treated_weeds','any_treated_insects','any_treated_fertilizer'
+
+## Environmental exposures creating binary variables
+
+### Indoors
+
+```{r}
+#indoor variables to keep
+indoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure))
+##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
+aerosol <- environment_exposures %>% 
+  group_by(subject_id) %>%
+  mutate(aerosol_ever = if_else(any(use_aerosol == 1), 1, 0))
+
+#exposures ever for all of the indoors variables
+environment_exposures_2 <- environment_exposures %>% 
+  group_by(subject_id) %>%
+#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
+  mutate(across(use_aerosol:smoke_exposure,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
+
+#check with histogram these exposures are more than all 1s
+#relevant variables
+variables <- environment_exposures_2 %>% 
+  select(c(ever_use_aerosol,ever_use_air_cleaner,
+         ever_use_hepa_filter,ever_use_moth_balls,
+         ever_use_incense_or_candles,ever_smoke_exposure))
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of binary variables
+binary_var <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values environmental locations",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+binary_var
+
+# 
+
+```
+
+### Outdoors
+
+```{r}
+#outdoors variables to keep
+outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
+##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
+
+#exposures ever for all of the outdoors variables
+environment_exposures_out <- outdoors %>% 
+  group_by(subject_id) %>%
+#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
+  mutate(across(any_treated_weeds:any_treated_fertilizer,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
+
+#check with histogram these exposures are more than all 1s
+#relevant variables
+variables <- environment_exposures_out %>% 
+  select(c(any_treated_weeds,any_treated_insects,
+           any_treated_fertilizer))
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of binary variables
+binary_var <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values environmental locations",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+binary_var
+```
+
+```{r}
+# combine indoors and outdoors (cant combine sleeping as is different length)
+indoors_outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure,hours_of_smoke,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
+
+#set indoors outdoors date column as date then parse year from it
+indoors_outdoors$date_2 <-parse_date_time(indoors_outdoors$record_date,"ym")
+#parse year from
+indoors_outdoors <- indoors_outdoors %>% mutate(exposure_year = as.numeric(format(date_2, "%Y")))
+```
+
+Now need to do for:
+
+-   exposure in the 5 y prior to diagnosis
+
+-   exposure in the 3 y prior to diagnosis
+
+-   exposure in the 1 y prior to diagnosis
+
+Load in cancer file:
+
+```{r}
+# use the end_points dataset for now 
+end_points_neoplasia <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- end_points_neoplasia %>% 
+  mutate(across(where(is.character), tolower))
+end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
+
+
+#get neoplasia diagnosis year month column into date format
+end_HSA$diagnosis_year_month_date <- as.POSIXct(end_HSA$diagnosis_date)
+# create a year column in HSA file so can do calculations on year (no point being more precise as questionaire done annually and may not match diagnosis time)
+end_HSA$diagnosis_year <- as.numeric(format(end_HSA$diagnosis_year_month_date,"%Y"))
+# set to month level (not day of month) = all on 1st day of month
+end_HSA$diagnosis_year_month_date2 <- as.POSIXct(floor_date(end_HSA$diagnosis_year_month_date,unit="month"))
+#column with has cancer set as 1 for sense checking records
+end_HSA <- end_HSA %>%
+  mutate(has_HSA =1)
+
+
+#296 dogs have HSA 
+
+```
+
+### Exposure in 5y prior to diagnosis
+
+```{r}
+
+#new dataframe to combine hsa diagnosis date and exposure
+end_HSA2 <- end_HSA %>%
+  select(c(subject_id,diagnosis_year_month,diagnosis_year,diagnosis_year_month_date2, has_HSA))
+#delete rows with NA of record date in it in the indoors_outdoors
+indoors_outdoors2 <- indoors_outdoors %>%
+  filter(!is.na(record_date))
+#join records - do it this way so that each of the years of study for enviro exposures are retained 
+HSA_exposure <- left_join(indoors_outdoors2,end_HSA2,by="subject_id")
+
+# double check all HSA dogs are in this join by checking which IDs are different
+not_in_HSA <- setdiff(end_HSA2$subject_id,HSA_exposure2$subject_id)
+#then fill in all rows for that patient with its diagnosis date (or else lose all the rwos except 1 for each dog)
+HSA_exposure <- HSA_exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year_month,.direction="downup")
+HSA_exposure <- HSA_exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year,.direction="downup")
+HSA_exposure <- HSA_exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year_month_date2,.direction="downup")
+HSA_exposure <- HSA_exposure %>%
+  group_by(subject_id)%>%
+  fill(has_HSA,.direction="downup")
+#only retain dogs with a HSA diagnosis - so remove all rows without a diagnosis date in them
+HSA_exposure2 <- HSA_exposure %>% 
+  filter(!is.na(has_HSA))
+
+#again check all remain 
+not_in_HSA2 <- setdiff(end_HSA2$subject_id,HSA_exposure2$subject_id)
+not_in_HSA2
+
+
+end_HSA <- years_prior_to(end_HSA,diagnosis_year,5)
+# Specify the columns to check
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+#code to check for all relevant columns 
+exposure_years <-5
+merged_df <- check_exposure(HSA_exposure2, columns_to_check, diagnosis_year, exposure_years)
+```
+
+```         
+```
+
+### Exposure in 3y prior to diagnosis
+
+```{r}
+#  apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+exposure_years <- 3
+
+result_df <- check_exposure(merged_df, columns_to_check, diagnosis_year, exposure_years)
+```
+
+### Exposure in 1y prior to diagnosis
+
+```{r}
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+exposure_years <- 1
+
+result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposure_years)
+```
+
+## Smoke exposure
+
+Calculate hours of smoke exposure before diagnosis:
+
+```{r}
+
+#remove rows that say see detail rows as these are meaningless - this may have been done in an earlier tidying step
+smoking_df <- result_df%>%
+  filter(!grepl("see detail rows", hours_of_smoke))
+#convert column to numeric now
+smoking_df <- smoking_df %>% 
+  mutate(hours_of_smoke= as.numeric(hours_of_smoke))
+
+#create a record_year variable 
+#had to use lubridate not as.POSIX for getting character string into date
+smoking_df <- smoking_df %>% 
+  mutate(record_date2=ym(record_date)) %>%
+  mutate(record_year = as.numeric(format(record_date2, "%Y")))
+  
+# function to calculate hours of smoke exposed to prior to diagnosis 
+#dosage function applied 
+smoking_df2 <- exposure_dosage(smoking_df,"hours_of_smoke","record_year","diagnosis_year")
+
+
+#check if any records lost
+not_in_HSA2 <- setdiff(HSA_exposure2$subject_id,smoking_df2$subject_id)
+
+```
+
+Could also create a further function to calculate dosage 1,3,5y before diagnosis or similar - if needed.
+
+## Sleep location
+
+NB. Lots of dogs have multiple 'specific_sleep_location' for same record year. Not sure how of interest specific sleep location is so for now will just do sleep location in previous 5/3/1y
+
+```{r}
+sleep <- sleep_environment %>% select(c(subject_id,year_in_study,record_date,sleep_location,specific_sleep_location))
+
+
+#set indoors outdoors date column as date then parse year from it
+sleep$record_date2 <-parse_date_time(sleep$record_date,"ym")
+#parse year from
+sleep <- sleep %>% 
+  mutate(exposure_year = as.numeric(format(record_date2, "%Y")))
+
+#how many sleep locations are there
+table(sleep_environment$sleep_location)
+
+#some patients have duplicate rows within a year ?/there are no differences between the rows so going to remove all rows where the row above is identical
+
+sleep <- unique(sleep)
+
+# 3 locations , need to create 3 columns with a Y/N for each location before then calculating exposure to it
+
+# Specify outcomes for the function
+desired_outcomes <- c("in the garage", "in the house", "outside")
+
+# Applying the function
+sleep2 <- split_column(sleep, sleep$sleep_location, desired_outcomes)
+
+```
+
+Can easily apply the exposed every Y N in 1,3,5y prior to diagnosis function for the environmental exposures above but perhaps more meaningful would be to determine some sort of % of each location in the 1,3,5y prior to diagnosis eg. 80% of sleep locations in garage 5y prior to diagnosis OR report the majority location in the 1,3,5,y prior to diagnosis
+
+5,3,1y Y N exposed:
+
+```{r}
+#join sleep to our smoking dataframe to then calculate sleep location information 
+HSA_sleep_smoking_enviro <- left_join(smoking_df2,sleep2,by=c("subject_id","year_in_study"))
+
+#check no HSA patients lost in this 
+#again check all remain 
+not_in_HSA2 <- setdiff(HSA_sleep_smoking_enviro$subject_id,end_HSA2$subject_id)
+
+# remove the .x suffix
+HSA_sleep_smoking_enviro <- HSA_sleep_smoking_enviro %>%
+  rename_at('exposure_year.x',~'exposure_year')
+#5,3,1y variables
+#5
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+exposure_years <- 5
+
+result_df <- check_exposure(HSA_sleep_smoking_enviro, columns_to_check, diagnosis_year, exposure_years)
+#3y
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+exposure_years <- 3
+
+result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposure_years)
+#1
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+exposure_years <- 1
+
+result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposure_years)
+```
+
+### Majority sleep location
+
+(NB. this is not done for the 5y prior to diagnosis, just across all records for each dog - could ammend this for diagnosis if seems important)
+
+Still to do:
+
+-   sort indexing for this code (rather than +1, need to make sure it correctly indexes)
+
+-   apply it to the 5y possible exposure gap
+
+-   turn into a function to apply to wider range of exposure variables (e.g. all the weird bedding types etc, different kinds of activity etc)
+
+```{r}
+#initially checking that there is variation in locaiton for the dogs sleep location
+multi_location_count <- result_df %>%
+  group_by(subject_id,sleep_location) %>%
+   summarise(count = n())
+print(multi_location_count)
+#there is, although infrequent 
+# edit above code to determine majority location
+columns_to_count <- c("in the garage_YN","in the house_YN","outside_YN")
+# initial code before function created
+#result_df2 <- result_df %>%
+  #group_by(subject_id) %>%
+#  summarise(across(all_of(columns_to_count), ~sum(. == 1, na.rm = TRUE))) %>%  # Count occurrences of 1s in specified columns
+ # mutate(majority_location = names(.)[max.col(select(., all_of(columns_to_count)))+1])
+#which is max of the columns in list and gives numeric index of maximal column in the list of 3 columns, add the +1 so that when added back to main df it fits in with the whole index 
+
+#remove the YN of column name in the rows
+#result_df2$majority_location <- gsub("_YN$", "", result_df2$majority_location)
+
+
+
+result_df2 <- majority_location(result_df,columns_to_count)
+```
+
+```{r}
+#re add majority location information back to main df once have kept the relevant columns
+result_df2 <- result_df2%>%
+  select(c(subject_id,majority_location))
+
+# renaming majority sleep column whilst cant work dynamic col naming aspect of majority location function
+result_df2 <- result_df2 %>%
+  rename_at('majority_location',~'majority_sleep_location_lifetime')
+
+
+HSA_sleep_smoking_enviro_all <- merge(result_df,result_df2,by="subject_id")
+
+
+
+```
+
+## Location classifying
+
+```{r}
+enviro_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
+```
+
+```{r}
+enviro_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
+
+```
+
+These variables are all very not mutually exclusive eg. carpet vs lino flooring indoors - possibly good component for PCA (already effectively One Hot Encoded for this). or could also modify majority location % location functions from above
+
+Can create variables something along the lines of *exposure to each flooring type/outdoor location/furniture type in the previous X (5,3,1y) prior to diagnosis*
+
+```{r}
+
+```
+
+## Wash groom products
+
+```{r}
+
+```
+
+## Activity details
+
+-   3 files- activity_details_through_SY2.csv, activity_details_SY3_beyond.csv and activity_overview.csv
+
+```{r}
+
+```
+
+Saving environmental data assoc with HSA
+
+```{r}
+#NB change to final file name when file done
+write.csv(HSA_sleep_smoking_enviro_all,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/HSA_case_enviro.csv")
+```

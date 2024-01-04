@@ -1,0 +1,32 @@
+---
+title: "GRLS medications"
+author: "Collette Taylor"
+format: html
+editor: visual
+---
+
+Files and packages to import
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+
+medications <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/medications.csv",na.strings=c ("","NA"))
+vaccinations <-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/vaccines.csv",na.strings=c ("","NA"))
+#ensure all lower case
+medications <- medications %>% mutate(across(where(is.character), tolower))
+vaccinations <- vaccinations %>% mutate(across(where(is.character), tolower))
+```
+
+## Vaccinations
+
+Want to determine:
+
+A number of vaccines in lifetime ('dosage')
+
+Vaccination within past X years
+
+What were they vaccinated with in past X years
+
+NB. new row for every vaccine (multiple rows for same study year) for each subject id

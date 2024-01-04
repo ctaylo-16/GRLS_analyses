@@ -1,0 +1,262 @@
+---
+title: "GRLS repro"
+author: "Collette Taylor"
+format: html
+editor: visual
+---
+
+## Packages and files reqt
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+demog <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/dog_profile.csv")
+
+demog <- demog %>% mutate_all(na_if,"")
+# female information
+repro_hx_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_female.csv")
+repro_heats_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv")
+#male 
+repro_hx_male <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_male.csv")
+
+repro_hx_hormones <-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv")
+#all empty cells encoded as NA
+repro_hx_female <- repro_hx_female %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+repro_hx_male <- repro_hx_male %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+repro_heats_female <- repro_heats_female %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+repro_hx_hormones <- repro_hx_hormones %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+```
+
+Seperate out sex,neuter and age variables
+
+```{r}
+#sex 
+demog <- demog %>% 
+  mutate(sex=recode(
+    sex_status,"Spayed Female"="F", "Intact Female" = "F", "Neutered Male" = "M",
+    "Intact Male" = "M")
+  )
+#neuter status
+demog <- demog %>%
+  mutate(neuter=recode(
+    sex_status, "Spayed Female"="Neutered", "Neutered Male"="Neutered","Intact Female"= "Entire", "Intact Male" = "Entire")
+  )
+#age
+#convert birth date to date
+# NB as not provided with day this auto-sets to 1st of month - will not really matter as YM adequate
+demog$birth_date2 <-parse_date_time(demog$birth_date, "ym")
+#update as neccessary (if use system date it screws up american dates in system)
+today <- as.Date("2023-12-04")
+#age in days
+demog$age_days <- as.numeric(difftime(Sys.Date(),demog$birth_date2, units="days"))
+#age in years
+demog <- demog %>%
+  mutate(age_years= age_days/365)
+#age in months
+demog <- demog %>%
+  mutate(age_months=age_days / 30.44)
+         
+#time since enrolment
+demog$enrolled_date2 <-parse_date_time(demog$enrolled_date, "ym")
+#enrolled in days
+demog$enrolled_days <- as.numeric(difftime(Sys.Date(),demog$enrolled_date2, units="days"))
+#enrolled in years
+demog <- demog %>%
+  mutate(enrolled_years= enrolled_days/365)
+#enrolled in months
+demog <- demog %>%
+  mutate(enrolled_months=enrolled_days / 30.44)
+
+#to 1 dp for all the date columns
+demog <- demog %>% mutate(across(where(is.numeric), round, 1))
+```
+
+```{r}
+
+#neuter demog merge to work with easier
+demog2 <- demog[c("subject_id","sex","neuter","birth_date2")]
+repro_hx_female <- repro_hx_female %>%
+  rename_at('spayed_on_date',~'neutered_on_date')
+repro_hx_female <- repro_hx_female %>%
+  rename_at('spayed_reason',~'neutered_reason')
+repro_status <-bind_rows(repro_hx_female,repro_hx_male)
+repro_status <- merge(repro_status,repro_hx_hormones,by="subject_id",all.x = TRUE)
+demog_neut <- merge(demog2,repro_status,by="subject_id")
+
+#fill rows with variables only reported in 1 y of record and not carried over
+demog_neut <- demog_neut %>% 
+  group_by(subject_id)%>%
+  fill(c(neutered_on_date,neutered_reason),.direction="downup")
+#replace NAs across dataframe with 0 
+demog_neut <- demog_neut %>% mutate_if(is.character, ~ ifelse(is.na(.), "0", .))
+demog_neut <- demog_neut %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, .)))
+```
+
+## Create an age at neutering variable:
+
+```{r}
+#get neutered ond ate in correct format
+demog_neut$neutered_on_date <-parse_date_time(demog_neut$neutered_on_date, "ym")
+
+neut_age <- demog_neut %>%
+  mutate(age_at_neuter_months = ifelse(!is.na(birth_date2) & !is.na(neutered_on_date),as.numeric(interval(birth_date2, neutered_on_date) / months(1)),
+                                NA_real_))
+#age at neuter in years
+neut_age <- neut_age %>%
+  mutate(age_at_neuter_years = age_at_neuter_months/12)
+
+
+```
+
+## Create a number of seasons before neutering variable:
+
+```{r}
+neut_age_seasons <- neut_age %>%
+  group_by(subject_id) %>%
+  #only include dogs that had a neutering date recorded and with a heat in last year recorded
+  mutate(season_pre_neuter = ifelse(any(!is.na(age_at_neuter_months) & (heat_last_year == 1)), 1, 0))
+
+#need to create a number of seasons pre neutering variable
+  #do not include those that dont have a neutering date and then count rows with a heats last year for each patient
+neut_age_seasons <- neut_age_seasons %>%
+  group_by(subject_id) %>%
+  mutate(heats_before_neutering = if_else(all(!is.na(neutered_on_date)),
+                                          sum(heat_last_year == 1, na.rm = TRUE),
+                                          NA_real_))
+```
+
+## Create an age at first season variable:
+
+```{r}
+neut_age_seasons$record_date <-parse_date_time(neut_age_seasons$record_date.x,"ym")
+
+#using functions from GRLS functions.qmd
+
+neut_age_seasons2<- first_exposure_point(neut_age_seasons,heat_last_year,record_date)
+neut_age_seasons3  <- first_exposure_age2(neut_age_seasons2,"heat_last_year_first_exposure_date", "birth_date2")
+```
+
+## Create a number of seasons before neutering variable:
+
+```{r}
+neut_age_seasons4 <- num_exposures(neut_age_seasons3,"heat_last_year","record_date","neutered_on_date")
+```
+
+## Create an ever pregnant variable
+
+```{r}
+#pregnancy before neuter Y N
+neut_age_seasons5<- neut_age_seasons4 %>%
+  group_by(subject_id) %>%
+  mutate(preg_pre_neuter=ifelse(any(!is.na(age_at_neuter_months) & no_pregnancy_last_year==1,na.rm=TRUE),1,0))    
+
+```
+
+## Create a male dogs bred before neutering variable
+
+```{r}
+
+
+  #only include dogs that had a neutering date recorded and with bred in last year recorded
+
+neut_age_M <- neut_age_seasons5 %>%
+  mutate(
+    mated_pre_neuter = if_else(sex == "M" & neuter == "Neutered" & 
+                                  any(!is.na(age_at_neuter_months) & intact_naturally_bred_last_year == 1),
+                                1,
+                                0)
+  )
+
+```
+
+## Create a male dogs number of years bred before neutering variable
+
+```{r}
+#need to check the counts which row is correct
+neut_age_M2 <- num_exposures(neut_age_M,"intact_naturally_bred_count_last_year","record_date","neutered_on_date")
+
+
+#no. of times bred prior to neutering
+neut_age_M3 <- neut_age_M %>%
+  group_by(subject_id) %>%
+  mutate(
+    num_bred_before_neutering = sum(intact_naturally_bred_count_last_year == 1, na.rm = TRUE),
+    num_breeding_before_neutering = sum(intact_naturally_bred_count_last_year, na.rm = TRUE) + sum(neutered_naturally_bred_count_last_year, na.rm = TRUE)
+  )
+  
+```
+
+## Cancer data
+
+Haemangiosarcoma
+
+```{r}
+##HSA data
+
+# use the end_points dataset for now 
+end_points_neoplasia <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- end_points_neoplasia %>% 
+  mutate(across(where(is.character), tolower))
+end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
+
+
+#get neoplasia diagnosis year month column into date format
+end_HSA$diagnosis_year_month_date <- as.POSIXct(end_HSA$diagnosis_date)
+end_HSA$diagnosis_year_month_date <- as.POSIXct(floor_date(end_HSA$diagnosis_year_month_date,unit="month"))
+
+
+```
+
+Join cancer and repro data:
+
+```{r}
+#rename a joining column
+neut_age_M3 <- neut_age_M3 %>% 
+  rename_at('year_in_study.x',~'year_in_study')
+end_HSA_join <- left_join(end_HSA,neut_age_M3, by=c("subject_id","year_in_study"))
+```
+
+NB: 3 patients have duplicated records in the end_HSA dataset:
+
+-   094-014074- exact same record so can delete
+
+-   094-004790- first record is 'untyped definitive' vs second is 'final'
+
+-   094-002416- first record definitive, second is final
+
+## Neutering and cancer
+
+Time between neutering and cancer diagnosis:
+
+```{r}
+event1_name <- "neutering"
+event2_name <- "HSA"
+end_HSA_join <- end_HSA_join %>% mutate(diagnosis_year_month_date1 =as.POSIXct(diagnosis_date,format="%Y-%m-%d"))
+end_HSA_join <- end_HSA_join %>% mutate(neutered_on_date1 =as.POSIXct(neutered_on_date,format="%Y-%m-%d"))
+neut_cancer_timing <- timespan4(end_HSA_join,"neutered_on_date","diagnosis_date",event1_name,event2_name)
+
+
+#cannot make this function work so have done manually for now with difftime below
+
+end_HSA_join <- end_HSA_join %>% mutate(timespan_neuter_cancer_days = as.numeric(difftime(as.POSIXct(end_HSA_join$diagnosis_date), as.POSIXct(end_HSA_join$neutered_on_date, tz="UTC"), units="days"))) 
+end_HSA_join <- end_HSA_join %>% mutate(timespan_neuter_cancer_years = timespan_neuter_cancer/365)
+
+```
+
+## Export of cancer and repro variables
+
+```{r}
+#HSA and repro
+write.csv(end_HSA_join,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/HSA_case_repro.csv")
+
+```

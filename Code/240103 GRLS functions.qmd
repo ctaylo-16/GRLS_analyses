@@ -1,0 +1,297 @@
+---
+title: "GRLS functions"
+format: html
+editor: visual
+---
+
+## Identify first exposure function
+
+A function to find the date of first exposure of an event - initially using for neutering but also potentially for drug exposure?
+
+```{r}
+#create first exposure date function
+#3 inputs required
+first_exposure_point <- function(data, exposure_column, record_date) {
+  #dynamic column naming code to create a column name depending on what exposure column is called
+  col_name <- paste0(quo_name(enquo(exposure_column)), "_", "first_exposure_date")
+  
+  data %>%
+    mutate(
+      #!! and := used in dynamic col naming. if the dog is exposed (==1) and the record date is not NA then find earliest record date , else record NA
+      !!col_name := ifelse({{ exposure_column }} == 1,
+                           ifelse(!is.na(first(record_date, order_by = record_date)),
+                                  format(first(record_date, order_by = record_date), "%Y-%m-%d"),
+                                  NA),
+                           NA)
+    )
+}
+```
+
+## Age at first exposure function
+
+Calculate age at first exposure to a variable
+
+```{r}
+#requires 3 inputs
+first_exposure_age <- function(data, first_exposure_point_col, birth_date_col) {
+  # code checks that the columns listed are in df or else stops and prints an error message
+  required_cols <- c(first_exposure_point_col, birth_date_col)
+  
+  if (!all(required_cols %in% colnames(data))) {
+    stop("One or more required columns not found in the data frame.")
+  }
+#create new columns in data that calculate difference between first exposure date and birth date and then turn into years or months values
+  data %>%
+    mutate(
+      first_exposure_point_col = as.POSIXct(.data[[first_exposure_point_col]], format = "%Y-%m-%d"),
+      birth_date_col = as.POSIXct(.data[[birth_date_col]], format = "%Y-%m-%d"),
+      first_exposure_age = as.numeric(first_exposure_point_col - birth_date_col, units = "days"),
+      first_exposure_age_years = first_exposure_age / 365.25,
+      first_exposure_age_months = first_exposure_age / 12
+    )
+}
+
+#this function creates dynamic column names so can apply to all variables and will have what the 'exposure' is in col names
+first_exposure_age2 <- function(data, first_exposure_point_col, birth_date_col) {
+  # code checks that the columns listed are in df or else stops and prints an error message
+  required_cols <- c(first_exposure_point_col, birth_date_col)
+  
+  if (!all(required_cols %in% colnames(data))) {
+    stop("One or more required columns not found in the data frame.")
+  }
+  
+  # Extract the dynamic column name
+  dynamic_col_name <- paste0(quo_name(enquo(first_exposure_point_col)), "_age")
+  
+  data %>%
+    mutate(
+      first_exposure_point_col = as.POSIXct(.data[[first_exposure_point_col]], format = "%Y-%m-%d"),
+      birth_date_col = as.POSIXct(.data[[birth_date_col]], format = "%Y-%m-%d"),
+      !!dynamic_col_name := as.numeric(first_exposure_point_col - birth_date_col, units = "days"),
+      !!paste0(dynamic_col_name, "_years") := .data[[dynamic_col_name]] / 365.25,
+    )
+}
+
+
+
+
+
+```
+
+## Number of times an exposure happens before an event
+
+function that is \# of events/exposures before the date of an event eg. neutering date, cancer diagnosis date
+
+```{r}
+# requires 4 inputs
+num_exposures <- function(data,exposure_column,record_date,date_of_event){
+  
+  #this creates a column name dynamically in function using exposure column name, underscore then exposure name
+  col_name <- paste0(quo_name(enquo(exposure_column)), "_", "num_exposures")
+    #code checks that the columns listed are in df or else stops and prints an error message
+  required_cols <- c(exposure_column, record_date,date_of_event)
+  if (!all(required_cols %in% colnames(data))) {
+    stop("One or more required columns not found in the data frame.")}
+
+  data %>%
+    group_by(subject_id) %>%
+    #new col which sums the number of rows per dog with a 1 that happen before a specific event happened
+    mutate(!!col_name := sum((.data[[exposure_column]] == 1) & (.data[[record_date]] < .data[[date_of_event]]), na.rm = TRUE))
+}
+
+```
+
+## Length of time between two dates - currently not working
+
+```{r}
+# 5 inputs
+timespan <- function(data, date_of_event1, date_of_event2, event1_name, event2_name) {
+  # Convert specified columns to date
+  data <- data %>%
+    mutate_at(vars(date_of_event1, date_of_event2), as.Date)
+  #create a dynamic column name
+  col_name <- paste0("time_between_", event1_name, "_and_", event2_name)
+
+  data %>%
+    #
+    mutate({{ col_name }} := ifelse(!is.na(date_of_event1) & !is.na(date_of_event2),
+                                      as.numeric(interval(date_of_event1, date_of_event2) / months(1)),
+                                      NA_real_))
+}
+
+
+timespan2 <- function(data, date_of_event1, date_of_event2, event1_name, event2_name) {
+  # Convert specified columns to date
+  data <- data %>%
+    mutate(across(c(date_of_event1, date_of_event2), as.POSIXct, format = "%Y-%m-%d"))
+
+  # Check if any date values are still NA after conversion
+  if (any(is.na(data[[date_of_event1]])) || any(is.na(data[[date_of_event2]]))) {
+    warning("Some date values could not be converted. Check the date formats.")
+  }
+
+  col_name <- paste0("time_between_", event1_name, "_and_", event2_name)
+
+  data %>%
+    mutate({{ col_name }} := ifelse(!is.na(date_of_event1) & !is.na(date_of_event2),
+                                      as.numeric(interval(date_of_event1, date_of_event2) / months(1)),
+                                      NA_real_))
+}
+
+
+
+
+
+timespan3 <-  function(data, date_of_event1, date_of_event2, event1_name, event2_name) {
+  # Convert specified columns to Date class with explicit format
+  # Print unique values of date columns after conversion
+  cat("Unique values in", date_of_event1, "after conversion:", unique(data[[date_of_event1]]), "\n")
+  cat("Unique values in", date_of_event2, "after conversion:", unique(data[[date_of_event2]]), "\n")
+
+  # Check if any date values are still NA after conversion
+  if (any(is.na(data[[date_of_event1]])) || any(is.na(data[[date_of_event2]]))) {
+    warning("Some date values could not be converted. Check the date formats.")
+  }
+
+  col_name <- paste0("time_between_", event1_name, "_and_", event2_name)
+
+  data <- data %>%
+    mutate({{ col_name }} := difftime(as.POSIXct(date_of_event1), as.POSIXct(date_of_event2, tz="UTC"), units="days"),
+                                      NA_real_)
+
+}
+
+timespan4 <- function(data, date_of_event1, date_of_event2, event1_name, event2_name) {
+  # Convert specified columns to Date class with explicit format
+  col_name <- paste0("time_between_", event1_name, "_and_", event2_name)
+
+ data <- data %>%
+    filter(!is.na(date_of_event1) & !is.na(date_of_event2)) %>%
+    mutate(col_name= difftime(as.POSIXct(date_of_event1), as.POSIXct(date_of_event2), units = "days"),
+           NA_real_)
+
+  return(data)
+
+}
+```
+
+## Calculate the year for a specific number of years prior to diagnosis date
+
+eg. what year was 5y prior to diagnosis (to feed into the exposure in previous X years function).
+
+Requires event to be in a numeric year string (e.g. end_HSA \<- end_HSA %\>% mutate(diagnosis_year = as.numeric(format(diagnosis_year_month_date, "%Y"))) )
+
+```{r}
+#3 inputs
+years_prior_to <- function(data, event, num_years) {
+  col_name <- paste0("prediagnosis", num_years, "year")
+  # calculate the date of event minus X num of years 
+  data %>% 
+    mutate({{ col_name }} := (as.numeric({{ event }} - num_years)))
+}
+
+
+# Example usage
+#end_HSA <- years_prior_to(end_HSA,diagnosis_year,5)
+```
+
+## Exposed in previous X years function
+
+This function produces a binary response (Within X years or Not within X years) to whether a dog was exposed to a variable (based on 0 or 1 response in df) in the previous X years using diagnosis year (requires diagnosis year to be in a numeric year string )
+
+```{r}
+#4 inputs
+check_exposure <- function(data, columns_to_check, diagnosis_year, exposure_years) {
+  data %>%
+    group_by(subject_id) %>%
+    #check for each dog for each column in list if there is a 1 for exposure recorded and that this is within the desired range between diagnosis and exposure
+    mutate(across(all_of(columns_to_check), 
+                  list(~ if_else(
+                    any(. == 1 & (diagnosis_year - exposure_year) <= exposure_years),
+                    #within = 1, not within = 0
+                    paste0("Within ", exposure_years, "y"),
+                    paste0("Not within ", exposure_years, "y")
+                  )), 
+                  .names = "{.col}_{exposure_years}y"))
+}
+
+# Example usage:
+#columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+  #                     "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+    #                   "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+#exposure_years <- 3
+
+#result_df <- check_exposure(merged_df, columns_to_check, diagnosis_year, exposure_years)
+```
+
+## Hours/amount of exposure prior to a date
+
+A function to calculate the 'dosage' of an exposure event prior to a certain date
+
+Initially will use for hours of smoke exposure prior to diagnosis
+
+```{r}
+
+
+exposure_dosage <- function(data, column_of_exposure, record_date, date_of_event) {
+  col_name <- paste0(column_of_exposure, "_prediagnosis")
+  
+  data %>%
+    group_by(subject_id) %>%
+    mutate(!!col_name := sum(ifelse(.data[[record_date]] < .data[[date_of_event]], .data[[column_of_exposure]], 0), na.rm = TRUE)) %>%
+    ungroup()
+}
+
+```
+
+## Sleep ever location function
+
+As questionaire information can have multiple responses within same year eg. sleep location as in the house but on bed for one row and outside and in a kennel in another row for same patient - essentially do they ever sleep in X location
+
+Can likely use for other variables - not sure yet
+
+```{r}
+#3 inputs
+split_column <- function(data, original_column, outcomes) {
+  #create a new column name where the name of the outcome column and a seperater of_ are made
+  outcome_columns <- paste(outcomes, sep = "_")
+  #for each outcome in the list of outcomes if it ever = 1 for the dog then will be a 1 in the new column
+  for (outcome in outcomes) {
+    data <- mutate(data, !!paste(outcome, "YN", sep = "_") := if_else(original_column == outcome, "1", "0"))
+  }
+  
+  return(data)
+}
+
+```
+
+## Main location function
+
+Function to count the number of 1s for each dog in each column to count and then determine of those columns which has the biggest number = majority_location
+
+For binary outcome of presence there Y or N
+
+```{r}
+# 2 inputs
+majority_location <- function(data,columns_to_count) {
+  data %>%
+    group_by(subject_id)%>%
+    #count the number of 1s for each dog for each column seperately
+    summarise(across(all_of(columns_to_count), ~sum(. == 1, na.rm = TRUE))) %>%
+    #majority location is the column with biggest count in the previous step, a +1 is added for the indexing between relative df created in summarise vs actual df the fucntion is applied to
+    mutate(majority_location = names(.)[max.col(select(., all_of(columns_to_count)))+1]) 
+    }
+
+#same function but dynamic column labelling - cant make this work currently
+majority_location2 <- function(data, columns_to_count) {
+  col_name <- paste0(columns_to_count, "_lifetime_exposure")
+  
+  data %>%
+    group_by(subject_id) %>%
+    summarise(across(all_of(columns_to_count), ~sum(. == 1, na.rm = TRUE))) %>%
+    mutate(!!col_name := names(.data)[max.col(select(., all_of(columns_to_count)))+1])
+}
+
+
+```
