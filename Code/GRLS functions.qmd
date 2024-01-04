@@ -299,5 +299,9 @@ majority_location2 <- function(data, columns_to_count) {
 ## Total dose administered
 
 ```{r}
-
+total_dose <- function(data,dosage,duration,frequency){
+  data %>%
+    group_by(subject_id)%>%
+    
+}
 ```

@@ -91,15 +91,11 @@ medications2 <- medications %>%
 #redo table
 freq_spec_day_table <- table(medications2$frequency_specify_days)
 freq_spec_day_table
-variable_mapping <- c("eod" = 0.5, "sid" = 1, "bid" = 2, "tid"=3,"qid" = 4,
-                      "once"=1,)
 
-
-
-# Creating a named vector (dictionary)
+# Creating a dictionary for the values in freq_spec_day_table so that can use these in calculations
 dosing_frequency <- c(
   "0.5" = "eod",
-  "1" = c("once","sid"),
+  "1" = c("once","sid","q (days), specify1"),
   "2" = "bid",
   "3" = "tid",
   "4" = "qid",
