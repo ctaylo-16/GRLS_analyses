@@ -298,20 +298,21 @@ majority_location2 <- function(data, columns_to_count) {
 
 ## Total dose administered
 
+NB. needs readr to work
+
 ```{r}
-total_dose <- function(data,dose,duration,mapped_values_frequency){
+total_dose <- function(data, dose, duration, mapped_values_frequency) {
   medications_calcs <- data %>%
-    #ensure relevant columns are in numeric format
-  mutate(across(c(dose, duration, mapped_values_frequency), as.numeric)) %>%
-    #calculate row wise so each record has a dose calculated
-  rowwise() %>%
-    #prod is product of these 3 columns multiplied and NA ignored
-  mutate(total_dosage = prod(c(dose, duration, mapped_values_frequency), na.rm = TRUE))
-
-    
+    # Ensure relevant columns are in numeric format
+    mutate(
+      across(c(dose, duration,mapped_values_frequency), ~coalesce(readr::parse_number(.), NA)))%>%
+    # Check for NAs in any of the columns
+    filter(!if_any(c(dose, duration, mapped_values_frequency), ~ is.na(.))) %>%
+    # Calculate row-wise so each record has a dose calculated
+    rowwise() %>%
+    # Multiply individual columns to calculate total_dosage
+    mutate(total_dosage = dose * duration * mapped_values_frequency)
+  
+  return(medications_calcs)
 }
-
-
-
-
 ```

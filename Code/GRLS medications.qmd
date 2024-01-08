@@ -93,18 +93,48 @@ freq_spec_day_table <- table(medications2$frequency_specify_days)
 freq_spec_day_table
 
 # Creating a dictionary for the values in freq_spec_day_table so that can use these in calculations
-dosing_frequency <- c(
+#add to this once clean data seen
+dosing_frequency <- list(
+  "0.03" =c("q (days)30","q (days)31"),
+  "0.14"="q (days)7",
   "0.5" = "eod",
-  "1" = c("once","sid","q (days), specify1"),
+  "1" = c("once", "sid", "q (days), specify1","q (days), specify1"),
   "2" = "bid",
   "3" = "tid",
-  "4" = "qid",
-  
+  "4" = "qid"
 )
+
+
+#mapping dictionary to our dataset
+medications_mapped <- medications2 %>%
+  mutate(mapped_values = ifelse(frequency_specify_days %in% unlist(dosing_frequency), 
+                                as.character(sapply(frequency_specify_days, function(val) {
+                                  for (key in names(dosing_frequency)) {
+                                    if (val %in% dosing_frequency[[key]]) {
+                                      return(key)
+                                    }
+                                  }
+                                  return(NA)
+                                })),
+                                NA))
+
+# Display the updated dataframe
+print(medications_mapped[, c("frequency_specify_days", "mapped_values")])
+
 
 
 
 #medications need to change duration unit to a numeric value eg. weeks to 7 (ie. 7 days)
+#convert mapped_values column  and dose andd duration to numeric
 
+medications_calcs <- medications_mapped %>%
+  mutate(across(c(dose, duration, mapped_values), as.numeric)) %>%
+  rowwise() %>%
+  mutate(total_dosage = prod(c(dose, duration, mapped_values), na.rm = TRUE))
+
+medications_mapped <- medications_mapped %>%
+  mutate(as.numeric(mapped_values))
+#function for this
+medications_calc <- total_dose(medications_mapped, "dose","duration","mapped_values")
 
 ```
