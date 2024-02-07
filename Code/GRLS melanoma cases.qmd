@@ -1,0 +1,107 @@
+---
+title: "Melanoma cases GRLS"
+author: "Collette Taylor"
+format: html
+editor: visual
+---
+
+## Datasets
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+demog <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+
+demog <- demog %>% mutate_all(na_if,"")
+
+end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+
+histo_necro <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/histology_necropsy_labs.csv")
+
+
+neoplasia_conditions <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv")
+
+banked_samples <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/banked_samples.csv")
+
+clinical_labs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/clinical_labs.csv")
+
+exam_notes <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical_superficial_mass.csv")
+```
+
+Find melanoma in end points dataset
+
+```{r}
+# number of different outcomes and what most common
+end_points %>% group_by(tracked_condition) %>%
+  summarise(Frequency = n()
+  ) %>% arrange(desc(Frequency))
+
+uniqueIDs_endpoints <- unique(end_points$subject_id)
+
+#melanoma end point - deaths with melanoma diagnosis
+melanoma <- end_points %>% filter(grepl('melan',tracked_condition),ignore.case=TRUE)
+
+melanoma %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(melanoma)
+#how many unique melanoma cases
+unique_melanoma_cases <-unique(melanoma$subject_id)
+#26
+```
+
+Assess how many melanoma cases are in 'neoplasia_conditions'
+
+```{r}
+
+melanoma_from_conditions <- neoplasia_conditions %>%
+  filter(melanoma ==1)
+unique_melanoma_conditions <- unique(melanoma$subject_id)
+#26 in here - as above
+```
+
+What data do we have for these melanoma cases:
+
+\- check histo/necro?
+
+```{r}
+histo_necro_for_melanomas <- histo_necro %>%
+  filter(subject_id %in% unique_melanoma_cases)
+#~42 histo from these 26 dogs but of varying quality
+
+table(histo_necro_for_melanomas$notes)
+```
+
+-banked samples?
+
+```{r}
+samples_banked <- histo_necro %>%
+  filter(subject_id %in% unique_melanoma_cases)
+
+#=42all the histo necro samples are banked
+```
+
+-blood work?
+
+```{r}
+blood_banked <- clinical_labs %>% 
+  filter(subject_id %in% unique_melanoma_cases)
+
+#15330 records, how many for each of the 42 patients and are they annual bloods
+blood_banked_by_dog <- blood_banked %>%
+  group_by(subject_id)%>%
+  summarise(Frequency = n()
+  ) %>% arrange(desc(Frequency))
+blood_banked_by_dog
+
+#some dogs have ~700 records as each bit of bloods is recorded sep eg. albumin, protein, globulin
+```
+
+-mass info on physical exam?
+
+```{r}
+PE <- exam_notes %>% 
+  filter(subject_id %in% unique_melanoma_cases)
+
+#this dataset largely looks empty??
+```

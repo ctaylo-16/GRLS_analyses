@@ -1,0 +1,1351 @@
+---
+title: "GRLS neoplasia overview"
+format: html
+editor: visual
+---
+
+# GRLS exploratory analyses
+
+## Neoplasia and endpoints datasets
+
+Initial examination of neoplasia and end points datasets from GRLS. Neoplasia dataset includes a record for all dogs for all years there is a study questionaire returned and endpoints is cause of death (any cause) for dogs
+
+```{r,results='false',message=FALSE}
+#packages
+library(tidyverse)
+library(ggplot2)
+library(forcats)
+#neoplasia file from grls
+setwd("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data")
+#neoplasia <- read.csv(file="Data/conditions_neoplasia.csv")
+#having to do absolute directory currently?
+neoplasia<-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv",na.strings=c ("", "NA"))
+#end_points <- read.csv(file="Data/study_endpoints.csv")
+end_points <- read.csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/study_endpoints.csv",na.strings=c ("", "NA"))
+```
+
+## Explore end points
+
+'malignancy and cause of death' dataset ('study_endpoints.csv')
+
+Major columns of interest:
+
+-   date of diagnosis('diagnosis_date' or 'diagnosis_year_month')
+
+-   condition that has led to death('tracked_condition')
+
+-   tier of confidence of diagnosis ('tier_of_confidence')
+
+-   is this tracked condition the cause of death ('is_cause_of_death')
+
+-   is the cause of death a recurrence ('is_recurrence')
+
+[There are 958 dogs in this dataset, I *think*]{.underline} of these 690 of these have confirmed death (remaining maybe are un-enrolled/inactive)
+
+```{r}
+# number of different outcomes and what most common
+end_points %>% group_by(tracked_condition) %>%
+  summarise(Frequency = n()
+  ) %>% arrange(desc(Frequency))
+
+uniqueIDs_endpoints <- unique(end_points$subject_id)
+
+# dogs where the disease is recorded as cause of death
+died <- end_points %>% filter(is_cause_of_death==1)
+uniqueID_died <- unique(died$subject_id)
+```
+
+Main end points are neoplasia - of these MCT, HSA and lymphoma are major ones. This end points seperates out all different kinds of neoplasias by location so see which are major once grouped. Three groups created here (NB. groups overlap):
+
+\- those that died with a neoplasia diagnosis (NOT necessarily that they died of the neoplasia, some have multiple neoplasia at also) = 812 dogs
+
+\- those that died due to their diagnosed neoplasia = 526 dogs
+
+\- those that died without a neoplasia diagnosis = 164?
+
+Seperate out all those that died of neoplasia:
+
+```{r}
+#make all data lower case as ignore case not working
+end_points <- end_points %>% 
+  mutate(across(where(is.character), tolower))
+uniqueIDs_anydeath <- unique(end_points$subject_id)
+# seperate out only neoplasia deaths with key words
+neoplasia_at_death <- end_points %>% filter(grepl('tumor|oma|leuk|neopla',tracked_condition),ignore.case=TRUE)
+uniqueIDs_neoplasia_at_death <- unique(neoplasia_at_death$subject_id)
+#812/958 dogs had a diagnosed neoplasia at time of death
+#write csv of all dogs that had a neoplasia diagnosis at death
+write.csv(neoplasia_at_death, "C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/GRLS_neoplasia_at_death.csv")
+
+#death due to neoplasia
+
+neoplasia_death <- neoplasia_at_death %>% filter(is_cause_of_death ==1)
+uniqueIDs_neoplasia_death <- unique(neoplasia_death$subject_id)
+#526 dogs
+#write csv for all dogs that had a neoplasia as cause of death
+write.csv(neoplasia_death,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/GRLS_neoplasia_death.csv")
+# and non neoplastic deaths
+non_neoplastic_death <- end_points %>% filter(!grepl('tumor|oma|leuk|neopla',tracked_condition),ignore.case=TRUE)
+  #alternative way to get the non neoplastic deaths but 
+#non_neoplastic_death2 <- merge(non_neoplastic_death,neoplasia_death,  by = "subject_id", all.x = TRUE)
+non_neoplastic_death <- non_neoplastic_death %>% filter(is_cause_of_death ==1)
+uniqueIDs_nonneoplasia <- unique(non_neoplastic_death$subject_id)
+#164 dogs
+write.csv(non_neoplastic_death,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/GRLS_non_neoplasia_death.csv")
+
+```
+
+958 dogs in the endpoints database - of these 526 have neoplasia as cause of death =54%
+
+### Dogs with a neoplasia diagnosis at death
+
+Split the 812 dogs that had a neoplasia diagnosis at death by what type of neoplasia was diagnosed:
+
+```{r}
+
+#sort out into types of neoplasia - lymphomas, HSAs, mast cells, sarcomas etc.
+neoplasia_at_death %>% group_by(tracked_condition) %>%
+  summarise(Frequency = n()
+  ) %>% arrange(desc(Frequency))
+
+
+#mast cells
+mct <- neoplasia_at_death %>% filter(grepl('mast',tracked_condition),ignore.case=TRUE)
+
+#lymphomas
+lymphoma <- neoplasia_at_death %>% filter(grepl('lymph',tracked_condition),ignore.case=TRUE)
+
+#haemangioasarcomas
+hsa <- neoplasia_at_death %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
+#osteosarc
+osteosarc  <- neoplasia_at_death %>% filter(grepl('osteo',tracked_condition),ignore.case=TRUE)
+#mammary masses
+#mammary  <- neoplasia_at_death %>% filter(grepl('mamm',tracked_condition),ignore.case=TRUE)
+#melanoma 
+melanoma <- neoplasia_at_death %>% filter(grepl('melan',tracked_condition),ignore.case=TRUE)
+#miscellaneous/less frequent tumours
+lessFreqTumours <- neoplasia_at_death %>% filter(!grepl('mast|lymph|hema|osteo|melan',tracked_condition),ignore.case=TRUE)
+```
+
+Within each tumour group what are most common types:
+
+```{r}
+#mct
+mct %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(mct)
+#lypmhoma
+lymphoma %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(lymphoma)
+#hsa
+hsa %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(hsa)
+#osteosarc
+osteosarc %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(osteosarc)
+#melanoma
+melanoma %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(melanoma)
+```
+
+### Dogs that died due to neoplasia
+
+526 dogs that died due to their neoplasia
+
+```{r}
+
+#sort out into types of neoplasia - lymphomas, HSAs, mast cells, sarcomas etc.
+neoplasia_death %>% group_by(tracked_condition) %>%
+  summarise(Frequency = n()
+  ) %>% arrange(desc(Frequency))
+
+
+#mast cells
+mct_death <- neoplasia_death %>% filter(grepl('mast',tracked_condition),ignore.case=TRUE)
+
+#lymphomas
+lymphoma_death <- neoplasia_death %>% filter(grepl('lymph',tracked_condition),ignore.case=TRUE)
+
+#haemangioasarcomas
+hsa_death <- neoplasia_death %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
+#osteosarc
+osteosarc_death  <- neoplasia_death %>% filter(grepl('osteo',tracked_condition),ignore.case=TRUE)
+#mammary masses
+#mammary  <- neoplasia_death %>% filter(grepl('mamm',tracked_condition),ignore.case=TRUE)
+#melanoma 
+melanoma_death <- neoplasia_death %>% filter(grepl('melan',tracked_condition),ignore.case=TRUE)
+#miscellaneous/less frequent tumours
+lessFreqTumours_death <- neoplasia_death %>% filter(!grepl('mast|lymph|hema|osteo|melan',tracked_condition),ignore.case=TRUE)
+```
+
+```{r}
+#mct
+mct_death %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(mct_death)
+#lypmhoma
+lymphoma_death %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(lymphoma_death)
+#hsa
+hsa_death %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(hsa_death)
+#osteosarc
+osteosarc_death %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(osteosarc_death)
+#melanoma
+melanoma_death %>% group_by(tracked_condition) %>% summarise(n = n()) %>%
+  mutate(Proportion = n / sum(n)) %>% arrange(desc(n))
+nrow(melanoma_death)
+```
+
+## Dogs with neoplasia diagnosis ever?
+
+Explore neoplasia records (this will include neoplastic end points and also dogs still alive with neoplasia)
+
+('conditions_neoplasia.csv').
+
+Main columns of interest:
+
+-   date of questionaire ('record_date')
+-   new or pre-existing neoplasia ('to_date') - 0 = neoplasia diagnosed only in that study year 1= all neoplasia diagnosed from baseline to that study year
+-   any co-morbidities ('any') - 0= no neoplasia diagnosed, 1= neoplasia diagnosed
+-   columns describing location of tumour ('adrenal' -\> 'thyroid')
+
+```{r, eval=FALSE}
+#number of individual dogs in DF (all GRs)
+uniqueIDs <- unique(neoplasia$subject_id)
+#retain only records where 'any' column has a 1 in it
+neoplasiaAnytime <- neoplasia %>% filter(any==1 | to_date==1)
+uniqueNeoplasia <- unique(neoplasiaAnytime$subject_id)
+nrow(neoplasiaAnytime)
+```
+
+3044 dogs with 66968 records (represents up until 05/23, of these 402 dogs, with 2574 records, had cancer at some point in study
+
+Most common neoplasia location (NB. this table just includes each row recording a neoplasia, not seperated out by indiv dogs so some rows will just be same neoplasia max 10x) :
+
+```{r, eval=FALSE}
+# NOT WORKING CURRENTLY
+
+for each column in neoplasiaAnytime count the number of unique patient IDs
+
+cancer_counts <- neoplasiaAnytime %>%
+  summarise(across(-6, ~n_distinct(subject_id[.==1]), .names = "patient_count_{.col}"))
+
+
+
+
+neoplasia_anytime <- neoplasiaAnytime %>% 
+  group_by(subject_id) 
+
+
+count_result <- neoplasia_anytime %>%
+  group_by(across(start_column:end_column))%>%
+  summarise(count = n_distinct(subject_id[. >= 1]))
+
+
+# counts for each column of if tumour is in this location (0 or 1)
+locations <- neoplasia_anytime %>% summarise(across(adrenal_tumor:other,sum))
+
+# how many records per patient with each tumour type in it 
+record_per_patient_each_neoplasia <- locations %>% group_by(subject_id) %>% summarise(across(adrenal_tumor:other,sum))
+
+
+
+#convert the wide locations table to a long table and sort by largest number of neoplasias first
+locationsLong <- locations %>% pivot_longer('adrenal_tumor':'other') %>% 
+  arrange (desc(value))
+
+locationsLong
+
+# how many records per patient with each tumour type in it 
+record_per_patient_each_neoplasia <- locationsLong %>% 
+  filter(value > 0) 
+
+
+#table with number of dogs with each neoplasia
+no_dogs_each_neoplasia <- locationsLong %>%
+  group_by(name) %>%
+  summarise(count = n())
+
+#table with cancer type and patient IDs matching it
+```
+
+Ones we can likely do analyses with (\>100 cases) - mast cell tumor, hemangiosarc, lymphoma, soft tissue sarcoma, melanoma, eye tumor
+
+## Medications
+
+```{r}
+#load in medications dataset and explore
+medications <- read_csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/medications.csv")
+
+medications <- medications %>% mutate(across(where(is.character), tolower))
+head(medications)
+
+#missing data
+missing.values_meds <- medications %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange((num.missing)) 
+
+missing_value_meds <- missing.values_meds %>% mutate(Proportion = num.missing / nrow(medications) * 100)
+missing_value_meds
+```
+
+Lots of missing data on dosage, admin method etc. but majority records have got the active ingredient administered there - this is in varying states in a few columns:
+
+-   medication_ingredients - missing 0.5%
+
+-   medication_name - missing 39%
+
+-   medication_name_specify - missing 51.6%
+
+Frequency and dose also reasonably low proportion missing also
+
+Most common medications administered:
+
+```{r}
+#which medications administered most frequently
+freq_meds <- medications %>% group_by(medication_ingredients)%>%
+    summarise(Frequency = n()) %>% 
+  arrange(desc(Frequency))
+freq_meds
+
+#number of medication events per dog
+meds_per_dog <- medications%>%group_by(subject_id) %>%
+  summarise(medication_administrations = sum(any_medications))%>%
+  arrange(desc(medication_administrations))
+meds_per_dog
+#avg medication events per dog
+mean(meds_per_dog$medication_administrations)
+```
+
+```{r}
+#plot of meds with >100 administrations in database
+freq_meds_100 <- freq_meds %>% filter(Frequency >= 100)%>%    
+  mutate(medication_ingredients=fct_reorder(medication_ingredients,desc(Frequency))) 
+
+#only keep first 20 char of ingredient for plot, have to remove commas first or else NA
+#freq_meds_100$medication_ingredient_trunc <- gsub(",","",freq_meds_100$medication_ingredients)
+#str_length(freq_meds_100$medication_ingredients)
+#freq_meds_100$medication_ingredient_trunc <- str_trunc(freq_meds_100$medication_ingredients,10,"right")  
+         
+meds100 <- ggplot(data=freq_meds_100, aes(x=medication_ingredients, y=Frequency)) +
+  geom_bar(stat="identity", fill="steelblue", width=.4)+
+  theme_minimal() +
+  labs(
+    x = "Drug",
+    y = "Frequency",
+    title = "Drugs administered to GRLS with >100 administrations"
+    ) +
+  theme(
+    plot.title = element_text(face = "bold", margin = margin(10, 0, 10, 0)))+
+  theme(axis.text.x = element_text(angle = 90,size=4))
+  
+meds100
+
+
+
+
+
+```
+
+Most commonly administered medications are parasite treatments, NSAIDs and an AB: ivermectin, afoxolaner, lufenuron, carprofen, metronidazole.
+
+These meds require some grouping/organising potentially eg. lufenuron,milbemycin oxime is one medication and milbemycin oxime is seperate (reflects different pharmaceutical products) \<- have a think about how to approach this / see what the January data update from Morris is like
+
+2881 dogs have a recorded med administered - range 1-116 mean 14.8 treatments.
+
+-   Plan: Group broadly by class of drug initially (eg antimicrobial, endoparasite Tx, ectoparasite tx etc.)
+
+    -   if interesting results found can group at lower level eg. type of antimicrobial
+    -   create a cumulative exposure variable - number of treatments in X years prior to cancer diagnosis (eg. number of ABs in the 5? years prior to diagnosis?)
+
+## Vaccinations
+
+```{r}
+#load in medications dataset and explore
+vaccinations <- read_csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/vaccines.csv")
+vaccinations <- vaccinations %>%
+  mutate(across(where(is.character), tolower))
+head(vaccinations)
+```
+
+```{r}
+#how much missing data in type
+missing.values_vacc <- vaccinations %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_vacc <- missing.values_vacc %>% mutate(Proportion = num.missing / nrow(vaccinations) * 100)
+missing_value_vacc
+```
+
+Missing a lot of vaccine type and manufacturer data and even if vaccinated ever ('vaccine_ever').
+
+-   Vaccine_ever doesnt look correct - theres lots of rows with a vaccine listed in type but a NA for vaccine ever?
+
+-   Need to group more broadly into vaccine types eg. rabies, KC, DAPPi, lepto or core/non-core
+
+```{r}
+#which vaccinations administered most frequently
+freq_vaccs <- vaccinations %>% group_by(type)%>%
+    summarise(Frequency = n()) %>% 
+  arrange(desc(Frequency))
+freq_vaccs
+### this bit doesnt work currently as need to edit vaccine ever
+#number of medication events per dog
+vaccs_per_dog <- vaccinations%>%group_by(subject_id) %>%
+  summarise(vacc_administrations = sum(vaccine_ever))%>%
+  arrange(desc(vacc_administrations))
+vaccs_per_dog
+#avg medication events per dog
+mean(vaccs_per_dog$vacc_administrations)
+```
+
+Vaccine columns of most use:
+
+-   vaccine_ever (once edit to put a 1 in any row with a character in type)
+
+-   type (once grouped more broadly)
+
+Then create cumulative exposure variables
+
+## Reproductive history
+
+There are 4x repro related csvs :
+
+-   reproductive_history_female.csv
+
+-   reproductive_history_heat.csv
+
+-   reproductive_history_hormones.csv
+
+-   reproductive_history_male.csv
+
+```{r}
+
+# female neutering and breeding information
+repro_hx_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_female.csv",na.strings=c ("", "NA"))
+repro_hx_female <- repro_hx_female %>% mutate(across(where(is.character), tolower))
+#female heats
+repro_heats_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv",na.strings=c ("", "NA"))
+repro_heats_female <- repro_heats_female %>% mutate(across(where(is.character), tolower))
+#male neutering and breeding info
+repro_hx_male <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_male.csv",na.strings=c ("", "NA"))
+repro_hx_male <- repro_hx_male %>% mutate(across(where(is.character), tolower))
+#hormone therapy
+repro_hx_hormones <-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv",na.strings=c ("", "NA"))
+repro_hx_hormones <- repro_hx_hormones %>% mutate(across(where(is.character), tolower))
+
+
+```
+
+### Repro history females
+
+```{r}
+#how many females in repro hx file
+F_reproIDs <- unique(repro_hx_female$subject_id)
+missing.values_repro_f <- repro_hx_female %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_repro_f <- missing.values_repro_f %>% mutate(Proportion = num.missing / nrow(repro_hx_female) * 100)
+missing_value_repro_f
+```
+
+Repro data for 1504 females
+
+Very little missing data in this dataframe exc date of spay and spay reason
+
+Think date of spay might be missing lots as multi rows for dog per year of study but only one spay date potentially -
+
+```{r}
+# group records by dog and see how many are missing date of spay
+spay_date_missing <- repro_hx_female %>% select(subject_id,spayed_on_date) %>% 
+  group_by(subject_id) %>%
+  summarise(neutered_any_year = any(!is.na(spayed_on_date)))%>%
+  filter(neutered_any_year == FALSE)
+  
+
+```
+
+So we are actually missing date of neuter for 232 dogs = \~15% (but NB this may include the entire F dogs too - need to cross match with demog csv)
+
+Spay reasons:
+
+```{r}
+repro_hx_female %>% 
+  group_by(spayed_reason) %>%
+  summarise(Frequency = n()) %>% 
+  arrange(desc(Frequency))
+  
+
+```
+
+Lots missing in this spay reason variable
+
+Need to assess how many of the columns have much variation in coding of variables:
+
+bar plot of 0 vs 1 for each varr
+
+```{r}
+# remove subject ID and then factors for all rows in DF
+variables <- repro_hx_female%>% select(!c(subject_id,year_in_study,record_date,spayed_on_date,spayed_reason))
+# one variable has 0.0 and 0 and 1.0 and 1 as sep categories
+variables[variables == "0.0"]<- "0"
+variables[variables == "1.0"]<- "1"
+
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+
+ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values in female repro information ",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+
+
+```
+
+Potential columns to keep from female repro history csv (based on actually having :
+
+-   spayed_on_date
+
+-   heat_last_year
+
+-   no_pregnancy_ever/ no_pregnancy_last_year
+
+-   spayed_while_in_heat (is this a biologically relevant variable to keep?)
+
+### Repro history males
+
+1540 male dogs
+
+```{r}
+#how many males in repro hx file
+M_reproIDs <- unique(repro_hx_male$subject_id)
+missing.values_repro_m <- repro_hx_male %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_repro_m <- missing.values_repro_m %>% mutate(Proportion = num.missing / nrow(repro_hx_male) * 100)
+missing_value_repro_m
+
+```
+
+Lots of neutering date (56%) and reason (54%) missing. Check if date is missing in similar way as in F repro csv
+
+```{r}
+# group records by dog and see how many are missing date of neuter
+neut_date_missing <- repro_hx_male %>% select(subject_id,neutered_on_date) %>% 
+  group_by(subject_id) %>%
+  summarise(neutered_any_year = any(!is.na(neutered_on_date)))%>%
+  filter(neutered_any_year == FALSE)
+  
+
+```
+
+Missing date for 461 of the 1500 male dogs - \~30% (NB. this will include un-neutered dogs so need to cross-match with demog.csv).
+
+Reason for neutering:
+
+```{r}
+repro_hx_male %>% 
+  group_by(neutered_reason) %>%
+  summarise(Frequency = n()) %>% 
+  arrange(desc(Frequency))
+```
+
+May be worth keeping - as \~300 have reasons besides elective neutering
+
+```{r}
+# remove subject ID and then factors for all rows in DF
+variables <- repro_hx_male%>% select(!c(subject_id,year_in_study,record_date,neutered_on_date,neutered_reason,intact_breeding_outcome_last_year,neutered_breeding_outcome_last_year,intact_naturally_bred_count_last_year,neutered_naturally_bred_count_last_year,neutered_sired_litters_insemination,
+                                        intact_semen_collected_count_last_year,intact_sired_litters_insemination))
+# one variable has 0.0 and 0 and 1.0 and 1 as sep categories
+variables[variables == "0.0"]<- "0"
+variables[variables == "1.0"]<- "1"
+
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+
+plots <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values in male repro information ",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+
+plots
+
+
+variables2 <- repro_hx_male%>% select(c(intact_naturally_bred_count_last_year,neutered_naturally_bred_count_last_year,neutered_sired_litters_insemination,
+                                        intact_semen_collected_count_last_year,intact_sired_litters_insemination))
+
+variables2[variables2 == "0.0"]<- "0"
+variables2[variables2 == "1.0"]<- "1"
+
+
+variables2 <- variables2 %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data2 <- variables2 %>%
+  gather(key = "column_name", value = "value")
+
+
+plots2 <- ggplot(gathered_data2, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of further variable values in male repro information ",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+
+plots2
+                                      
+```
+
+Vast majority of variables are a 0. However, consider keeping one that accounts for times bred or similar
+
+From male repro hx keep:
+
+-   neutered_on_date
+
+-   neuter_reason
+
+-   neutered and entire females_bred_with_count_ever
+
+-   sired_litters variables - insemination and natural probably combine this
+
+### Repro history hormones
+
+How many dogs in this dataset and what info does it have? how much missing data?
+
+```{r}
+hormone_unique <- unique(repro_hx_hormones$subject_id)
+length(hormone_unique)
+
+#missing data
+missing.values_hormones <- repro_hx_hormones %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange((num.missing)) 
+
+missing_value_hormones <- missing.values_hormones %>% mutate(Proportion = num.missing / nrow(repro_hx_hormones) * 100)
+missing_value_hormones
+```
+
+153 dogs have hormone admin hx - this could represent significant proportion of those who are entire in our dataset (=219)
+
+Lots of missing data for product administered (92% missing) - need to check if there's not just only one main hormone therapy administered (seems to have lots of misspellings of miberone/milberone/milberon etc. in the records that do have product admin)
+
+```{r}
+
+
+#number of medication events per dog
+hormones_per_dog <- repro_hx_hormones%>%
+  group_by(subject_id) %>%
+  summarise(hormone_admin = n())%>%
+  arrange(desc(hormone_admin))
+hormones_per_dog
+#avg medication events per dog
+hormones_per_dog %>% summarise(mean=mean(hormone_admin),
+                               median=median(hormone_admin),
+                               Min=min(hormone_admin),
+                               Max=max(hormone_admin)
+                               )
+
+
+
+```
+
+Only \~10 records have duration of admin
+
+From this dataset need to create a few variables:
+
+-   hormone therapy Y N
+
+-   hormone admin date
+
+-   \# of hormone administrations
+
+### Repro history heats in females
+
+How many dogs in this dataset? How much missing data?
+
+```{r}
+heat_unique <- unique(repro_heats_female$subject_id)
+length(heat_unique)
+
+#missing data
+missing.values_heats <- repro_heats_female %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange((num.missing)) 
+
+missing_value_heats <- missing.values_heats %>% mutate(Proportion = num.missing / nrow(repro_heats_female) * 100)
+missing_value_heats
+```
+
+814 dogs in this heats dataset, large amounts of missing data for heat and litter date but remaining variables do not seem to have any missing data.
+
+```{r}
+# remove subject ID and then factors for all rows in DF
+variables <- repro_heats_female%>% select(!c(subject_id,year_in_study,record_date,heat_date,litter_date,heat_length))
+# one variable has 0.0 and 0 and 1.0 and 1 as sep categories
+variables[variables == "0.0"]<- "0"
+variables[variables == "1.0"]<- "1"
+
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of binary variables
+binary_var <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values in female heats information ",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+binary_var
+
+#histogram of heat length
+heat_hist<- ggplot(repro_heats_female, aes(x=heat_length)) + 
+  geom_histogram(binwidth=1)
+heat_hist
+```
+
+Variables to consider retaining:
+
+-   bred
+
+-   litter_any
+
+-   heat_length
+
+Unlikely to be able to calculate age at litter or age at heat as 90+ % missing here
+
+## Poison exposure
+
+```{r}
+poisons <- read_csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/poison_exposure.csv")
+
+head(poisons)
+poisons <- poisons %>% mutate(across(where(is.character), tolower))
+unique_poisons <- unique(poisons$subject_id)
+length(unique_poisons)
+
+```
+
+714 poison control episodes (this includes toxic substances like rat bait but also foreign body material eg. socks), from 536 dogs
+
+How much missing data - none
+
+```{r}
+
+#missing data
+missing.values_poisons <- poisons %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange((num.missing)) 
+
+missing_value_poisons <- missing.values_poisons %>% mutate(Proportion = num.missing / nrow(poisons) * 100)
+missing_value_poisons
+```
+
+How many dogs have repeat poison ingestion events:
+
+```{r}
+multiple_poisons <- poisons %>% filter(PoisonControlMoreThanTwice>=1)
+length(multiple_poisons)
+
+#summary stats of # poison episodes
+
+poisons_ep <- poisons %>% 
+  group_by(subject_id)%>% 
+  summarise(poison_episode=n())
+poisons_ep %>% summarise(mean=mean(poison_episode),
+                               median=median(poison_episode),
+                               Min=min(poison_episode),
+                               Max=max(poison_episode)
+                               )
+
+```
+
+Few, 11.
+
+What are the major poisons?
+
+```{r}
+substance <- poisons %>% group_by(substance) %>%
+  summarise(type= n()) %>% arrange(desc(type))
+substance
+
+
+```
+
+Major poisons - rodent poison, mushrooms, chocolate,insect poisons, raisins/grapes
+
+Dont think poisons csv particularly relevant for HSA.
+
+## Environmental conditions
+
+Several environmental csvs:
+
+-location_history.csv (travel and locations visited BESIDES home or second home)
+
+-environment_conditions.csv (exposures to various enviromental agents eg. aersols, smoke)
+
+-environment_spend_time_location.csv
+
+-activity_overview.csv
+
+### Travel locations
+
+```{r}
+#travel locations
+location_history <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/location_history.csv",na.strings=c ("","NA"))
+location_history <- location_history %>% mutate(across(where(is.character), tolower))
+#
+environment_exposures<-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
+```
+
+```{r}
+#how many dogs have other locations/travel hx
+travel_IDs <- unique(location_history$subject_id)
+length(travel_IDs)
+#missing-ness of data
+missing.values_travel <- location_history %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_travel <- missing.values_travel %>% mutate(Proportion = num.missing / nrow(location_history) * 100)
+missing_value_travel
+```
+
+\~2115 of the 3000 dogs have a travel record.
+
+Small amounts of missing data for state type and city visited for dogs
+
+Not sure if this dataset will be particularly useful
+
+.......
+
+### Environmental conditions
+
+how many dogs in this dataset and level of missingness
+
+```{r}
+#how many dogs have other exposure hx
+exposure_IDs <- unique(environment_exposures$subject_id)
+length(exposure_IDs)
+#missing-ness of data
+missing.values_exposure <- environment_exposures %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_exposure <- missing.values_exposure %>% mutate(Proportion = num.missing / nrow(environment_exposures) * 100)
+missing_value_exposure
+```
+
+Record present for whole dataset and mostly only missing data for the record date 50%. Hours of smoke has a string 'see detail rows' in 22092 records (\~50%) - unclear what this is
+
+```{r}
+no_smoke <- environment_exposures %>% group_by(smoke_exposure)%>%filter(smoke_exposure==0)
+smoke <- environment_exposures %>% group_by(smoke_exposure)%>%filter(smoke_exposure==1)
+```
+
+Examine what each of the variables looks like:
+
+```{r}
+# remove subject ID and then factors for all rows in DF
+variables <- environment_exposures%>% select(!c(subject_id,year_in_study,record_date,to_date,hours_of_smoke))
+# one variable has 0.0 and 0 and 1.0 and 1 as sep categories
+variables[variables == "0.0"]<- "0"
+variables[variables == "1.0"]<- "1"
+
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+
+ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values in environmental exposures ",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+
+#smoke hours of exposure histogram
+# remove rows with weird string
+smoke_hours <- environment_exposures %>% filter(hours_of_smoke != "see detail rows")
+smoke_hours <- smoke_hours %>% mutate_if(is.character, as.numeric) 
+smoke_hours_hist<- ggplot(smoke_hours, aes(x=hours_of_smoke)) + 
+  geom_histogram(binwidth=20)
+smoke_hours_hist
+```
+
+Most of these exposure variables have a good split between 0 and 1 - so could be taken into analyses.
+
+Hours of smoke is largely 0 so not likely to be v useful
+
+Variables to create from this:
+
+-   A dose/level for each environmental variable e.g LMH exposure level or \>1 exposure etc
+
+First need to check if many dogs have more than 1 exposure recorded for each of the different enviro exposures
+
+```{r}
+#summary stats of # each exposures for each dog
+
+subject_counts <-environment_exposures %>% 
+  group_by(subject_id) %>%
+  summarise(one_count = sum(c_across(use_aerosol:use_incense_or_candles) == 1, na.rm = TRUE))
+
+environment_exposures %>%
+  group_by(subject_id) %>%
+  summarise(across(starts_with("col"), ~sum(. == 1, na.rm = TRUE), .names = "count_{.col}"))
+
+#list of environmental variables
+enviro_vars <- colnames(environment_exposures[,sapply(environment_exposures,is.numeric)])
+#group by dog to get the count for # of exposures to each agent
+exposure_by_dog <-environment_exposures %>%
+  group_by(subject_id) %>%
+  summarise(across(c(enviro_vars), ~sum(. == 1, na.rm = TRUE), .names = "count_{.col}"))
+exposure_by_dog <- exposure_by_dog %>% select(!(count_year_in_study:count_to_date))
+exposure_by_dog
+
+
+##histograms of each of the exposures
+
+# Assuming your data frame is named 'your_data'
+exposure_by_dog_long <- gather(exposure_by_dog, key = "subject_id", value = "value")
+
+# Create a histogram with facets
+hists<- ggplot(exposure_by_dog_long, aes(x = value)) +
+  geom_histogram(binwidth = 3, fill = "blue", color = "black") +
+  facet_wrap(~subject_id, scales = "free") +
+  labs(title = "Histograms for Each Variable",
+       x = "Value",
+       y = "Frequency") +
+  theme_minimal()
+hists
+
+```
+
+All the exposure variables besides probably - moth balls and smoke hours could be useful for environmental exposure.
+
+Need to transform the variables so that we can have some form of short vs long term exposure classification, Y or N exposure classification (eg. ever, 1y prior to diagnosis, 5y prior to diagnosis)
+
+### Time spent in different environments
+
+Mostly a binary variable sheet of environment they are in indoors (eg. crate 0 1 carpet 0 1) % time spent outside, (chained, fenced,garage,kennel etc.)
+
+```{r}
+enviro_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
+
+#how many dogs have other enviro hx
+enviro_timee_IDs <- unique(enviro_time$subject_id)
+length(enviro_timee_IDs)
+#missing-ness of data
+missing.values_enviro_time <- enviro_time %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_enviro_time <- missing.values_enviro_time %>% mutate(Proportion = num.missing / nrow(enviro_time) * 100)
+missing_value_enviro_time
+```
+
+Most records have minimal missing information except for other (0 vs 1) for furniture type and indoor flooring and day outdoor.Spent most time day minimal missing data is very minimal.
+
+Columns that might be of interest:
+
+-   spent_most_time_day
+-   many many columns on type of environment they are based in indoors or outdoors although, these variables are all very not mutually exclusive eg. carpet vs lino flooring indoors - possibly good component for PCA
+
+```{r}
+variables <- enviro_time %>% 
+  select(!c(subject_id,year_in_study,record_date,indoor_other_flooring_specify,
+            day_outdoor_other_percentage_specify,furniture_type_other_specify,
+            day_outdoor_other_percentage,day_outdoor_total_percentage,
+            day_outdoor_garage, day_outdoor_kennel
+            ,day_outdoor_fenced, day_outdoor_chain_or_lead))
+#have left out the other_specify columns as they are free text and very messy or if % then are numeric
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of binary variables
+binary_var <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values environmental locations",
+       x = "Value",
+       y = "Count") +
+  theme_minimal()
+binary_var
+
+
+```
+
+Numeric % data
+
+```{r}
+#list of numeric variables
+time_vars <- c("day_outdoor_other_percentage","day_outdoor_total_percentage",
+           "day_outdoor_garage", "day_outdoor_kennel","day_outdoor_fenced", 
+           "day_outdoor_chain_or_lead")
+#only numeric variables 
+exposure_by_dog <-enviro_time %>% select(all_of(time_vars))
+
+
+# wide to long data
+exposure_by_dog_long <- gather(exposure_by_dog, key = "key", value = "value")
+
+# Create a histogram with facets
+hists<- ggplot(exposure_by_dog_long, aes(x = value)) +
+  geom_histogram(binwidth = 10, fill = "blue", color = "black") +
+  facet_wrap(~key, scales = "free") +
+  labs(title = "Histograms for each % of time variable",
+       x = "Value",
+       y = "Frequency") +
+  theme_minimal()
+hists
+```
+
+Variables to keep/modify:
+
+-   spent_most_time_day
+
+-   ? indoor and furniture binary classifiers - doubt we want all - potentially some PCA or similar to determine which of these is imp or could be amalgamated in some way to be important ?
+
+## Time spent sleeping in different environments
+
+```{r}
+enviro_sleep <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+enviro_sleep <- enviro_sleep %>% mutate(across(where(is.character), tolower))
+
+#how many dogs have other enviro hx
+enviro_sleep_IDs <- unique(enviro_sleep$subject_id)
+length(enviro_sleep_IDs)
+#missing-ness of data
+missing.values_enviro_sleep <- enviro_sleep %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_enviro_sleep <- missing.values_enviro_sleep %>% mutate(Proportion = num.missing / nrow(enviro_sleep) * 100)
+missing_value_enviro_sleep
+```
+
+So much missing data for bedding type,crate type etc.
+
+Only variables with reasonable numbers of data:
+
+-   sleep_location
+
+-   specific_sleep_location
+
+```{r}
+variables <- enviro_sleep %>% 
+  select(c(sleep_location,specific_sleep_location))
+#have left out the other_specify columns as they are free text and very messy or if % then are numeric
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of categorical variables
+cat_var <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values sleep locations",
+       x = "Value",
+       y = "Count") +
+  theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+cat_var
+```
+
+### Time spent doing activity
+
+```{r}
+activity_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/activity_overview.csv",na.strings=c("","NA"))
+activity_time <- activity_time %>% mutate(across(where(is.character), tolower))
+head(activity_time)
+```
+
+16 variables in csv based on owner questionnaire - activity level, if they swim or not, swimming location, swimming temperature, level of sun exposure and where they are exposed to sunshine
+
+Assess missingness of data
+
+```{r}
+
+#how many dogs have other activity hx
+activity_time_IDs <- unique(activity_time$subject_id)
+length(activity_time_IDs)
+#missing-ness of data
+missing.values_activity_time <- activity_time %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_activity_time <- missing.values_activity_time %>% mutate(Proportion = num.missing / nrow(activity_time) * 100)
+missing_value_activity_time
+```
+
+Large amounts of missing data for length of swim, speed of swimming and temperature of swimming water.
+
+Assess breakdown of binary/categorical variables:
+
+```{r}
+variables <- activity_time %>% 
+  select(!c(subject_id,year_in_study,record_date,activity_level, 
+            sun_exposure_other_specify,
+            sun_exposure_shade_access,
+            sun_exposure_duration,swim_cold_frequency,swim_warm_frequency,
+            swim_duration,swim_pace))
+
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of binary variables
+binary_var <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values for activity",
+       x = "Value",
+       y = "Count") +
+  theme_minimal() 
+binary_var
+
+
+variables <- activity_time %>% 
+  select(c(activity_level,sun_exposure_duration,sun_exposure_shade_access,swim_cold_frequency,
+           swim_warm_frequency,
+            swim_duration,swim_pace))
+
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of categorical variables
+var2 <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values for activity",
+       x = "Value",
+       y = "Count") +
+  theme_minimal() + theme(legend.key.size = unit(0.2, "cm"))
+var2
+
+```
+
+Most of the binary variables have a reasonable split between 0vs1 but not sure how useful activity is?
+
+Perhaps keep:
+
+-   activity level
+
+-   combine swim_cold_frequency and swim_warm_frequency = swim_frequency
+
+-   swim_location_pool/pond/river/ocean \<- could be worth retaining in case suspect pollution/enviro exposure aspect?
+
+## Washing
+
+Shampoo washing found to be RF for cancer in the RF studies in an earlier VC PhD thesis.
+
+CSV contains varying information on home or professional washing of dogs (freq and what product categories are used eg. shampoo, perfumed,flea/tick tx)
+
+```{r}
+wash_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/wash_groom.csv",na.strings=c("","NA"))
+wash_time <- wash_time %>% mutate(across(where(is.character), tolower))
+
+#how many dogs have other wash hx
+wash_timee_IDs <- unique(wash_time$subject_id)
+length(wash_timee_IDs)
+#missing-ness of data
+missing.values_wash_time <- wash_time %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_wash_time <- missing.values_wash_time %>% mutate(Proportion = num.missing / nrow(wash_time) * 100)
+missing_value_wash_time
+```
+
+Lots of missing data in the pro wash columns - potentially reflects dogs that didnt have a pro-wash or just didnt know what the dogs were washed with
+
+```{r}
+remove <- c("pro_wash_groom_products_regular_shampoo",
+            "pro_wash_groom_products_flea_tick", "pro_wash_groom_products_perfumed","pro_wash_groom_products_organic","pro_wash_groom_products_hair_skin_dye",
+            "pro_wash_groom_products_medicated","pro_wash_groom_products_other",
+            "pro_wash_groom_products_unknown",
+            "pro_wash_groom_products_other_specify",
+            "home_wash_groom_products_other_specify","wash_groom_products_other_specify", "pro_wash_groom_frequency","home_wash_groom_frequency"
+            )
+
+
+variables <- wash_time %>% 
+  select(!c(subject_id,year_in_study,record_date))
+#remove those from list above with loads of missing 
+variables <- variables %>% select(-all_of(remove))
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of binary variables
+binary_var <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values for washing",
+       x = "Value",
+       y = "Count") +
+  theme_minimal() 
+binary_var
+
+
+variables <- wash_time %>% 
+  select(!c(subject_id,year_in_study,record_date))
+#remove those from list above with loads of missing 
+variables <- variables %>% select(c(pro_wash_groom_frequency, home_wash_groom_frequency))
+# create a factor for each variable
+variables <- variables %>% 
+  mutate(across(everything(), as.character))%>%
+  mutate_if(is.character, as.factor)
+#now plot
+gathered_data <- variables %>%
+  gather(key = "column_name", value = "value")
+
+#bar plot of multi option variables
+var2 <- ggplot(gathered_data, aes(x = factor(value), fill = factor(value), group = interaction(column_name, value))) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~column_name, scales = "free_x", ncol = 3) +
+  labs(title = "Breakdown of variable values for washing",
+       x = "Value",
+       y = "Count") +
+  theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+var2
+
+```
+
+Variables to keep:
+
+-   pro and home wash groom frequency
+
+-   consider which of the many types of product might be of interest to keep (shampoo, organic, flea and tick, perfumed etc.)
+
+[Family history of neoplasia?]{.underline}
