@@ -75,7 +75,7 @@ neoplasia_at_death <- end_points %>% filter(grepl('tumor|oma|leuk|neopla',tracke
 uniqueIDs_neoplasia_at_death <- unique(neoplasia_at_death$subject_id)
 #812/958 dogs had a diagnosed neoplasia at time of death
 #write csv of all dogs that had a neoplasia diagnosis at death
-write.csv(neoplasia_at_death, "C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/GRLS_neoplasia_at_death.csv")
+write.csv(neoplasia_at_death, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/GRLS_neoplasia_at_death.csv")
 
 #death due to neoplasia
 
@@ -83,7 +83,7 @@ neoplasia_death <- neoplasia_at_death %>% filter(is_cause_of_death ==1)
 uniqueIDs_neoplasia_death <- unique(neoplasia_death$subject_id)
 #526 dogs
 #write csv for all dogs that had a neoplasia as cause of death
-write.csv(neoplasia_death,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/GRLS_neoplasia_death.csv")
+write.csv(neoplasia_death,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/GRLS_neoplasia_death.csv")
 # and non neoplastic deaths
 non_neoplastic_death <- end_points %>% filter(!grepl('tumor|oma|leuk|neopla',tracked_condition),ignore.case=TRUE)
   #alternative way to get the non neoplastic deaths but 
@@ -91,7 +91,7 @@ non_neoplastic_death <- end_points %>% filter(!grepl('tumor|oma|leuk|neopla',tra
 non_neoplastic_death <- non_neoplastic_death %>% filter(is_cause_of_death ==1)
 uniqueIDs_nonneoplasia <- unique(non_neoplastic_death$subject_id)
 #164 dogs
-write.csv(non_neoplastic_death,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/GRLS_non_neoplasia_death.csv")
+write.csv(non_neoplastic_death,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/GRLS_non_neoplasia_death.csv")
 
 ```
 
