@@ -1,0 +1,450 @@
+---
+title: "GRLS data exploration v2"
+author: "Collette Taylor"
+format: html
+editor: visual
+---
+
+## GRLS dataset March 2024 updates exploration
+
+Load in data and packages
+
+```{r}
+# Set the path to the folder containing CSV files
+folder_path <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/data version Feb 2024"
+
+
+# Get a list of all CSV files in the folder
+csv_files <- list.files(folder_path, pattern = "\\.csv$", full.names = TRUE)
+
+# Use lapply to read each CSV file into a separate data frame
+for (file in csv_files) {
+  # Extract the file name without extension
+  df_name <- tools::file_path_sans_ext(basename(file))
+  
+  # Read the CSV file and assign it to a data frame with the extracted name
+ assign(df_name, read.csv(file, header = TRUE, na.strings = c("", "NA", "N/A", "NaN")))
+}
+
+#packages
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+Exploration of end point numbers now:
+
+1270 end points recorded (from 1570 rows in the dataframe i.e some have multiple co-morbidities at death)
+
+```{r}
+study_endpoints <- study_endpoints %>% 
+  mutate(across(where(is.character), tolower))
+unique_endpoint_dogs <- unique(study_endpoints$subject_id)
+print(length(unique_endpoint_dogs))
+# Count overall occurrences of each condition
+overall_endpoints_count <- study_endpoints %>% 
+  group_by(tracked_condition) %>% 
+  summarise(count = n())%>%
+  arrange(desc(count))
+overall_endpoints_count
+
+# Count conditions for each patient
+patient_count <- study_endpoints %>% 
+  group_by(subject_id, tracked_condition) %>% 
+  summarise(count = n()) %>% 
+  pivot_wider(names_from = tracked_condition, values_from = count, values_fill = 0)
+
+patient_count2 <- study_endpoints %>% 
+  dplyr::distinct(subject_id, tracked_condition) %>% 
+  group_by(tracked_condition) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+patient_count2
+
+#average number of co-morbidities at death
+conditions_per_patient_count <-study_endpoints %>% 
+  group_by(subject_id) %>% 
+  summarise(count = n_distinct(tracked_condition)) %>%
+  arrange(desc(count))
+conditions_per_patient_count
+
+```
+
+Grouping main causes:
+
+-   Neoplasia
+
+-   Kidney disease
+
+-   Foreign body
+
+-   Cardiovascular disease
+
+```{r}
+#group end points into main themes
+# Define the patterns to search for
+neo_patterns <- c('oma', 'leuk', 'tumor', 'neopla')
+
+# Use grepl and mutate to create a new column with 1 for matches and 0 for non-matches
+study_endpoints <- study_endpoints %>% 
+  mutate(neoplasia = as.integer(grepl(paste(neo_patterns, collapse = '|'), tracked_condition, ignore.case = TRUE)))
+
+neoplasia_dogs <- study_endpoints %>%
+  filter(neoplasia ==1) 
+
+non_neoplastic_dogs <- study_endpoints %>%
+  filter(!neoplasia==1)
+```
+
+Cause of death data
+
+```{r}
+neoplasia_death <- neoplasia_dogs %>%
+  filter(is_cause_of_death==1)
+print(length(unique(neoplasia_death$subject_id)))
+non_neoplasia_death <- non_neoplastic_dogs %>%
+  filter(is_cause_of_death==1)
+print(length(unique(non_neoplasia_death$subject_id)))
+
+```
+
+HSA specifics:
+
+```{r}
+HSA <- neoplasia_dogs %>%
+  filter(grepl('hema',tracked_condition),ignore.case=TRUE)
+
+#number of individual dogs in here = 413 dogs
+unique_HSA <- unique(HSA$subject_id)
+print(length(unique_HSA))
+```
+
+Save HSA population for GB work:
+
+```{r}
+write.csv(HSA,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/HSA_cases_updated.csv")
+
+write.csv(neoplasia_dogs,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/neoplasia_cases_updated.csv")
+
+write.csv(non_neoplastic_dogs, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/non_neoplasia_cases_updated.csv")
+```
+
+Main cancer groups:
+
+Cancer cell type:
+
+-   HSA
+
+-   lymphoma
+
+-   MCT
+
+-   soft tissue sarcomas (not 100% if this should be a group?)
+
+-   
+
+```{r}
+#group by cancer types more broadly next
+#HSA
+#lymphoma
+#MCT
+#soft tissue sarcoma
+#melanoma
+#carcinoma
+#osteosarcoma
+
+# Use grepl and mutate to create a new column with recoded values
+neoplasia_dogs <- neoplasia_dogs %>% 
+  mutate(neoplasia_groups = case_when(
+    grepl('hemangi', tracked_condition, ignore.case = TRUE) ~ 'hemangiosarcoma',
+    grepl('lymph', tracked_condition, ignore.case = TRUE) ~ 'lymphoma',
+    grepl('mast', tracked_condition, ignore.case = TRUE) ~ 'MCT',
+    grepl('mamm', tracked_condition, ignore.case = TRUE) ~ 'mammary',
+    grepl('osteo', tracked_condition, ignore.case = TRUE) ~ 'osteosarcoma',
+    grepl('soft tissue', tracked_condition, ignore.case = TRUE) ~ 'soft tissue sarcoma',
+    grepl('adenocarcinoma', tracked_condition, ignore.case = TRUE) ~ 'adenocarcinoma',
+    grepl('carcinoma', tracked_condition, ignore.case = TRUE) ~ 'carcinoma',
+    grepl('melano', tracked_condition, ignore.case = TRUE) ~ 'melanoma',
+    TRUE ~ tracked_condition  # Keep the original value if no match
+  ))
+
+neoplasia_dogs_counts <-neoplasia_dogs %>%
+  group_by(neoplasia_groups)%>%
+  summarise(count=n())%>%
+  arrange(desc(count))
+
+neo_cases_tumor_type <- ggplot(data = subset(neoplasia_dogs_counts, count >= 5), aes(x = reorder(neoplasia_groups,-count), y = count)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Neoplasia with >= 5 occurences in GRLS",
+       x = "neoplasia type",
+       y = "no. cases") + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+neo_cases_tumor_type
+#tumour location grouping
+neoplasia_dogs <- neoplasia_dogs %>% 
+  mutate(neoplasia_location = case_when(
+    grepl('splen|spleen', tracked_condition, ignore.case = TRUE) ~ 'spleen',
+    grepl('live|hepa|billi', tracked_condition, ignore.case = TRUE) ~ 'liver',
+    grepl('brain|meningio|cns', tracked_condition, ignore.case = TRUE) ~ 'brain',
+    grepl('mamm', tracked_condition, ignore.case = TRUE) ~ 'mammary',
+    grepl('stomach|aliment|intest|gastri', tracked_condition, ignore.case = TRUE) ~ 'GIT',
+    grepl('cuta', tracked_condition, ignore.case = TRUE) ~ 'skin',
+    grepl('leuk|plasma|histi', tracked_condition, ignore.case = TRUE) ~ 'blood',
+    grepl('card|heart', tracked_condition, ignore.case = TRUE) ~ 'heart',
+    grepl('osteo', tracked_condition, ignore.case = TRUE) ~ 'bone',
+    grepl('endocrin|thryoid|thymo|apocrin|pitui|pancr|insulin', tracked_condition, ignore.case = TRUE) ~ 'endocrine',
+    grepl('pulm|lung', tracked_condition, ignore.case = TRUE) ~ 'respiratory',
+    grepl('ovario|test|semin', tracked_condition, ignore.case = TRUE) ~ 'repro',
+    TRUE ~ tracked_condition  # Keep the original value if no match
+  ))
+
+neoplasia_location_counts <-neoplasia_dogs %>%
+  group_by(neoplasia_location)%>%
+  summarise(count=n())%>%
+  arrange(desc(count))
+
+
+neo_cases_tumor_location <- ggplot(data = subset(neoplasia_location_counts, count >= 5), aes(x = reorder(neoplasia_location,-count), y = count)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Neoplasia with >= 5 occurences by location in GRLS",
+       x = "neoplasia type",
+       y = "no. cases") + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+neo_cases_tumor_location
+
+non_neoplastic_count <- non_neoplastic_dogs %>%
+  group_by(tracked_condition)%>%
+  summarise(count=n())%>%
+  arrange(desc(count))
+non_neoplastic_plot <- ggplot(data = subset(non_neoplastic_count, count >= 2), aes(x = reorder(tracked_condition,-count), y = count)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Non-neoplastic conditions with >= 2 occurences by location in GRLS",
+       x = "condition",
+       y = "no. cases") + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+non_neoplastic_plot
+```
+
+Explore updated data
+
+-   Dog details csv
+
+-   House details
+
+-   Physical exam csv
+
+Dog details:
+
+```{r}
+dog_details %>%
+  group_by(study_status)%>%
+  summarise(count=n())%>%
+  arrange(desc(count))
+```
+
+```{r}
+missing_values <- dog_details %>%
+  summarise_all(funs(sum(is.na(.))))
+missing_values
+
+
+missing_values_dog <- dog_details %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_dog <- missing_values_dog %>% mutate(Proportion = num.missing / nrow(dog_details) * 100)
+missing_value_dog
+
+
+#check if all the missing date for fix is as they are entire 
+intact <- dog_details %>%
+  dplyr::filter(str_detect(sex_status, "Intact"))
+
+
+
+```
+
+Only missing data in this df is neuter date in intact animals -i.e doesnt exist
+
+Missing a whole column of date of death / date of un-enrollment
+
+Physical exam
+
+-   Initially check if there are exam records (\>=1) for all patients and how many for each patient
+
+```{r}
+print(length(unique(physical_exam$subject_id)))
+#yes, at least one record for each patient
+
+physical_exam %>%
+  group_by(subject_id)%>%
+  summarise(row_count = n())
+
+
+```
+
+Missing data
+
+```{r}
+missing_values_physical <- physical_exam %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_physical <- missing_values_physical%>% mutate(Proportion = num.missing / nrow(physical_exam) * 100)
+missing_value_physical
+```
+
+-   Missing-ness
+
+    -   height missing for 7000 records but probably can correct so once 2yo height same or something
+
+    -   BCS missing in 8500 records
+
+    -   body fat index missing for lots
+
+    -   the ...specify are missing lots but that will likely corresp to U/F column where normal/abnormal/not evaluated selected
+
+    -   dehydration %
+
+-   Weird formatting data:
+
+    -   respiratory rate and respiratory rate category - but essentially will be able to classify resp rate as abnormal or normal for almost all?
+
+-   free text in
+
+    -   'general appearance normal specify'
+
+    -   'feces abnormal specify'
+
+    -   'urination abnormal specify'
+
+    -   will require tidying to use
+
+Explore the % of different categories in the data
+
+```{r}
+
+# Select relevant columns
+selected_columns <- physical_exam %>%
+  select(-subject_id, -year_in_study, -record_date, -weight_units, -height_units)
+
+
+
+
+# Create a function to generate summary tables
+summary_function <- function(col_data) {
+  if (is.numeric(col_data) && length(unique(col_data)) >= 2) {
+    return(data.frame(mean_value = mean(col_data, na.rm = TRUE)))
+  } else {
+    return(as.data.frame(table(col_data)))
+  }
+}
+
+combined_summary_table <- map_dfr(selected_columns, summary_function, .id = "column_name")
+
+
+```
+
+Minimal variation in categories - dont think ann physical exam will be very helpful for any analyses
+
+House details:
+
+```{r}
+colnames(house_details)
+```
+
+Do all dogs have a record and how many records:
+
+```{r}
+print(length(unique(house_details$subject_id)))
+#yes, at least one record for each patient
+
+house_details %>%
+  group_by(subject_id)%>%
+  summarise(row_count = n())
+
+house_details %>%
+  group_by(subject_id) %>%
+  summarise(row_count = n()) %>%
+  ungroup() %>%
+  mutate(total_rows = n()) %>%
+  summarise(average_row_count = mean(row_count))
+# approx 7 rows average per dog - so high return on questionaires
+```
+
+Missingness of data:
+
+```{r}
+missing_values_house <- house_details %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing_value_house <- missing_values_house%>% mutate(Proportion = num.missing / nrow(house_details) * 100)
+missing_value_house
+```
+
+Lots of missing data in house details but can consider:
+
+-   zipcode
+
+-   asbestos exposure
+
+-   area type
+
+-   house age and type
+
+-   heating and cooking fuel
+
+-   radon exposure
+
+-   water source/filtration
+
+-   pipe type
+
+Explore the % of different categories in the data
+
+```{r}
+selected_columns_house <- house_details %>%
+  select(-subject_id, -year_in_study, -record_date, -primary_zip_code,-secondary_zip_code)
+
+
+combined_summary_table_house <- map_dfr(selected_columns_house, summary_function, .id = "column_name")
+
+```
+
+Those with variation possibly useful to use:
+
+-   area type
+
+-   house type
+
+-   water source (NB. water source other free text could possibly be tidied into a useful way to fit into other categories better)
+
+-   pipes (NB. free text ones need tidying more to fit into categories better)
+
+-   heating fuel primary and secondary
+
+-   cooking fuel primary and secondary
+
+-   wood stove
+
+-   aircon
+
+-   radon exposure
+
+-   second house type,area,heating,pipes etc (\~1500 records have this)

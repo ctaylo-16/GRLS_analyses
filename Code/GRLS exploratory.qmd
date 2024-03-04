@@ -16,7 +16,7 @@ library(tidyverse)
 library(ggplot2)
 library(forcats)
 #neoplasia file from grls
-setwd("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data")
+#setwd("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data")
 #neoplasia <- read.csv(file="Data/conditions_neoplasia.csv")
 #having to do absolute directory currently?
 neoplasia<-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv",na.strings=c ("", "NA"))
