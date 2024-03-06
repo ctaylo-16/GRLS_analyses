@@ -16,12 +16,12 @@ library(tidyverse)
 library(ggplot2)
 library(forcats)
 #neoplasia file from grls
-#setwd("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data")
+setwd("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data")
 #neoplasia <- read.csv(file="Data/conditions_neoplasia.csv")
 #having to do absolute directory currently?
-neoplasia<-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv",na.strings=c ("", "NA"))
+neoplasia<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv",na.strings=c ("", "NA"))
 #end_points <- read.csv(file="Data/study_endpoints.csv")
-end_points <- read.csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/study_endpoints.csv",na.strings=c ("", "NA"))
+end_points <- read.csv(file="C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv",na.strings=c ("", "NA"))
 ```
 
 ## Explore end points
@@ -284,7 +284,7 @@ Ones we can likely do analyses with (\>100 cases) - mast cell tumor, hemangiosar
 
 ```{r}
 #load in medications dataset and explore
-medications <- read_csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/medications.csv")
+medications <- read_csv(file="C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv")
 
 medications <- medications %>% mutate(across(where(is.character), tolower))
 head(medications)
@@ -376,7 +376,7 @@ These meds require some grouping/organising potentially eg. lufenuron,milbemycin
 
 ```{r}
 #load in medications dataset and explore
-vaccinations <- read_csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/vaccines.csv")
+vaccinations <- read_csv(file="C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/vaccines.csv")
 vaccinations <- vaccinations %>%
   mutate(across(where(is.character), tolower))
 head(vaccinations)
@@ -442,16 +442,16 @@ There are 4x repro related csvs :
 ```{r}
 
 # female neutering and breeding information
-repro_hx_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_female.csv",na.strings=c ("", "NA"))
+repro_hx_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_female.csv",na.strings=c ("", "NA"))
 repro_hx_female <- repro_hx_female %>% mutate(across(where(is.character), tolower))
 #female heats
-repro_heats_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv",na.strings=c ("", "NA"))
+repro_heats_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv",na.strings=c ("", "NA"))
 repro_heats_female <- repro_heats_female %>% mutate(across(where(is.character), tolower))
 #male neutering and breeding info
-repro_hx_male <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_male.csv",na.strings=c ("", "NA"))
+repro_hx_male <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_male.csv",na.strings=c ("", "NA"))
 repro_hx_male <- repro_hx_male %>% mutate(across(where(is.character), tolower))
 #hormone therapy
-repro_hx_hormones <-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv",na.strings=c ("", "NA"))
+repro_hx_hormones <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv",na.strings=c ("", "NA"))
 repro_hx_hormones <- repro_hx_hormones %>% mutate(across(where(is.character), tolower))
 
 
@@ -784,7 +784,7 @@ Unlikely to be able to calculate age at litter or age at heat as 90+ % missing h
 ## Poison exposure
 
 ```{r}
-poisons <- read_csv(file="C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/poison_exposure.csv")
+poisons <- read_csv(file="C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/poison_exposure.csv")
 
 head(poisons)
 poisons <- poisons %>% mutate(across(where(is.character), tolower))
@@ -864,10 +864,10 @@ Several environmental csvs:
 
 ```{r}
 #travel locations
-location_history <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/location_history.csv",na.strings=c ("","NA"))
+location_history <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv",na.strings=c ("","NA"))
 location_history <- location_history %>% mutate(across(where(is.character), tolower))
 #
-environment_exposures<-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
 environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
 ```
 
@@ -1018,7 +1018,7 @@ Need to transform the variables so that we can have some form of short vs long t
 Mostly a binary variable sheet of environment they are in indoors (eg. crate 0 1 carpet 0 1) % time spent outside, (chained, fenced,garage,kennel etc.)
 
 ```{r}
-enviro_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
 enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
 
 #how many dogs have other enviro hx
@@ -1108,7 +1108,7 @@ Variables to keep/modify:
 ## Time spent sleeping in different environments
 
 ```{r}
-enviro_sleep <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+enviro_sleep <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
 enviro_sleep <- enviro_sleep %>% mutate(across(where(is.character), tolower))
 
 #how many dogs have other enviro hx
@@ -1162,7 +1162,7 @@ cat_var
 ### Time spent doing activity
 
 ```{r}
-activity_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/activity_overview.csv",na.strings=c("","NA"))
+activity_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv",na.strings=c("","NA"))
 activity_time <- activity_time %>% mutate(across(where(is.character), tolower))
 head(activity_time)
 ```
@@ -1263,7 +1263,7 @@ Shampoo washing found to be RF for cancer in the RF studies in an earlier VC PhD
 CSV contains varying information on home or professional washing of dogs (freq and what product categories are used eg. shampoo, perfumed,flea/tick tx)
 
 ```{r}
-wash_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/wash_groom.csv",na.strings=c("","NA"))
+wash_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/wash_groom.csv",na.strings=c("","NA"))
 wash_time <- wash_time %>% mutate(across(where(is.character), tolower))
 
 #how many dogs have other wash hx

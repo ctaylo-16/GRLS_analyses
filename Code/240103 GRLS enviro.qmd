@@ -11,9 +11,9 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 #exposures dataset
-environment_exposures<-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
 environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
-sleep_environment <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+sleep_environment <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
 sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
 
 ```
@@ -129,7 +129,7 @@ Load in cancer file:
 
 ```{r}
 # use the end_points dataset for now 
-end_points_neoplasia <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
 end_points_neoplasia <- end_points_neoplasia %>% 
   mutate(across(where(is.character), tolower))
 end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
@@ -380,12 +380,12 @@ HSA_sleep_smoking_enviro_all <- merge(result_df,result_df2,by="subject_id")
 ## Location classifying
 
 ```{r}
-enviro_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
 enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
 ```
 
 ```{r}
-enviro_time <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
 enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
 
 ```
@@ -416,5 +416,5 @@ Saving environmental data assoc with HSA
 
 ```{r}
 #NB change to final file name when file done
-write.csv(HSA_sleep_smoking_enviro_all,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/HSA_case_enviro.csv")
+write.csv(HSA_sleep_smoking_enviro_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/HSA_case_enviro.csv")
 ```
