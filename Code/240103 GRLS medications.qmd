@@ -92,7 +92,7 @@ medications2 <- medications %>%
 freq_spec_day_table <- table(medications2$frequency_specify_days)
 freq_spec_day_table
 variable_mapping <- c("eod" = 0.5, "sid" = 1, "bid" = 2, "tid"=3,"qid" = 4,
-                      "once"=1,)
+                      "once"=1)
 
 
 

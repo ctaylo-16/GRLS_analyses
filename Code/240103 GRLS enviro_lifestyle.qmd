@@ -153,6 +153,8 @@ end_HSA <- end_HSA %>%
 ### Exposure in 5y prior to diagnosis
 
 ```{r}
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
 
 #new dataframe to combine hsa diagnosis date and exposure
 end_HSA2 <- end_HSA %>%
@@ -164,7 +166,7 @@ indoors_outdoors2 <- indoors_outdoors %>%
 HSA_exposure <- left_join(indoors_outdoors2,end_HSA2,by="subject_id")
 
 # double check all HSA dogs are in this join by checking which IDs are different
-not_in_HSA <- setdiff(end_HSA2$subject_id,HSA_exposure2$subject_id)
+not_in_HSA <- setdiff(end_HSA2$subject_id,HSA_exposure$subject_id)
 #then fill in all rows for that patient with its diagnosis date (or else lose all the rwos except 1 for each dog)
 HSA_exposure <- HSA_exposure %>%
   group_by(subject_id)%>%
@@ -417,4 +419,240 @@ Saving environmental data assoc with HSA
 ```{r}
 #NB change to final file name when file done
 write.csv(HSA_sleep_smoking_enviro_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/HSA_case_enviro.csv")
+```
+
+## Lifestyle/job/function
+
+Read in dataset on what the dog is primarily used for (e.g. showing, breeding, agility):
+
+```{r}
+lifestyle <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifestyle.csv",na.strings=c ("","NA"))
+```
+
+What are all the categories of lifestyle? and what are most common ones?
+
+All lifestyle categories (41):
+
+```{r}
+lifestyle_categories <-unique(lifestyle$lifestyle)
+print(lifestyle_categories)
+```
+
+Most common (NB. this is per row of dataset, not by only keeping one value for each dog):
+
+```{r}
+multi_lifestyle_count <- lifestyle %>%
+  group_by(lifestyle) %>%
+   summarise(count = n()) %>%
+  arrange(desc(count))
+
+print(multi_lifestyle_count)
+```
+
+How many dogs have \>1 lifestyle class?
+
+-   Most, 2925 of the \~3044 dogs
+
+```{r}
+dogs_2_or_more_class <- lifestyle %>%
+  group_by(subject_id)%>%
+    summarise(unique_lifestyles = n_distinct(lifestyle), # Count unique lifestyles
+            .groups = 'drop')  %>%
+  filter(unique_lifestyles >=2)
+
+print((dogs_2_or_more_class))
+```
+
+```{r}
+
+###
+
+
+unique_lifestyles_eachdog <-lifestyle %>%
+  group_by(subject_id) %>%                                   # Group by subject_id
+  summarise(
+    lifestyles = str_c(unique(lifestyle), collapse = ", "), # Concatenate unique lifestyles
+    count = n_distinct(lifestyle),                           # Count unique lifestyles
+    .groups = 'drop'                                        # Drop grouping after summarising
+  )
+
+print(unique_lifestyles_eachdog$lifestyles)
+```
+
+Number of unique combined ones (looks like lots are "Companion/Pet, None")
+
+```{r}
+unique_lifestyles <- unique_lifestyles_eachdog %>%
+  group_by(lifestyles) %>%
+     summarise(count = n()) %>%
+  arrange(desc(count))
+
+print(unique_lifestyles)
+```
+
+-   Almost all have 'companion/pet' as a category = 2962
+
+```{r}
+unique_lifestyles_with_null <- lifestyle %>%
+  group_by(subject_id, lifestyle) %>%               # Group by subject_id and lifestyle
+ summarise(count = n(), .groups = 'drop') %>%      # Count occurrences (optional, can be omitted)
+ mutate(row = row_number()) %>%                     # Create a row number for each unique lifestyle
+ pivot_wider(names_from = lifestyle, values_from = lifestyle, 
+           values_fn = list(lifestyle = list),   # Create lists of lifestyles
+            values_fill = list(lifestyle = NA)) %>% # Fill missing values with NA
+  select(-row)    
+
+companion_pet <- unique_lifestyles_with_null %>%
+  filter(`Companion/Pet` == "Companion/Pet") 
+
+```
+
+How to group lifestyles?
+
+-   since almost all have companion/pet recorded might be more meaningful to recode as:
+
+    -   Companion/Pet only = "Companion/Pet" and "Companion/Pet, None"
+
+    -   therapy role= therapy dog, service dog, greeter, retired from AKC activities, blood donor, ambassador
+
+    -   breeding role = breeder and retired breeder
+
+    -   competitive role = dog athlete, show, agility, obedience, rally, field trials, hunt test
+
+    -   hunting role = dock diving, barn hunt, scent work, tracking work, search and rescue
+
+-   alternatively could go broader and just have companion/pet, hunting, competition?
+
+-   other possibles - group by majority recorded lifestyle over lifetime records? - think this is perhaps most logical
+
+Grouping:
+
+```{r}
+
+# groupings
+companion <- c("Companion/Pet")
+
+therapy <-c("Therapy dog","Greeter","Service dog","Blood Donor","Ambassador","Service dog, Therapy dog")
+breeding <-c("Breeder","Retired Breeder")
+competitive <-c("Dog Athlete","Show","Agility","Field Trials", "Rally","Field Trials, Obedience", "Barn Hunt, Rally, Scent Work","Agility, Companion/Pet, Rally, Tracking","Agility, Scent Work","Agility, Hunt Test, Obedience, Scent Work",
+                "Hunt Test, Obedience, Scent Work","Agility, Companion/Pet, Hunt Test", "Obedience", "Hunt Test", "Actor/Model", "Dock Diving","Dock Diving, Scent Work","Barn Hunt","Scent Work","Dock Diving, Scent Work", "Barn Hunt, Scent Work","Hunt Test, Scent Work", "Scent Work, Therapy dog")
+working <- c("Tracking","Search and Rescue", "Hunting","Fishing Dog", "Scent Work, Tracking")
+no_lifestyle_misc <- c("None",NA,"Other","Receiving medical treatment", "Retired from AKC Activities")
+all_groups <- c(companion, therapy, breeding, competitive, working,no_lifestyle_misc)
+
+# Do iteratively to check for those that are not in any group
+unclassified_lifestyle <- setdiff(lifestyle_categories, all_groups)
+
+# Display unclassified to check all classified
+print(unclassified_lifestyle)
+
+```
+
+Majority lifestyle classifier:
+
+-   main lifestyle classifier
+
+```{r}
+main_lifestyle <- lifestyle %>%
+  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
+  group_by(subject_id) %>%                                # Group by subject_id
+  slice_max(n, with_ties = FALSE) %>%                    # Get the lifestyle with the max count, no ties
+  ungroup() %>%                                           # Ungroup for a clean output
+  select(subject_id, lifestyle)                           # Select relevant columns
+
+# View the result
+print(main_lifestyle)
+
+main_lifestyle <- main_lifestyle %>%
+  rename(main_lifestyle = lifestyle)
+```
+
+-   with these 12 categories can then group further into working, competitive categories etc
+
+```{r}
+competitive <-c("Agility","Dog Athlete", "Field Trials","Obedience")
+working <-c("Hunting","Search and Rescue","Service dog")
+breed_showing <- c("Breeder","Show")
+misc <- c("Other","Therapy dog")
+companion <- "Companion/Pet"
+
+
+all_groups <- c(competitive, working,breed_showing,misc,companion)
+
+# Do iteratively to check for those that are not in any group
+unclassified_lifestyle <- setdiff(main_lifestyle$lifestyle, all_groups)
+
+# Display unclassified to check all classified
+print(unclassified_lifestyle)
+
+```
+
+-   main 2 lifestyle classes
+
+    -   this gets really messy with \~100s of combinations
+
+    -   trial how first one with just main category works
+
+```{r}
+
+
+main_lifestyles_combined <- lifestyle %>%
+  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
+  group_by(subject_id) %>%                                # Group by subject_id
+  slice_max(n, n = 2, with_ties = TRUE) %>%              # Get the top 2 lifestyles by count, allowing ties
+  summarise(main_lifestyles = paste(lifestyle, collapse = ", "), # Combine into a single string
+            .groups = 'drop')                             # Drop grouping
+
+# View the result
+print(main_lifestyles_combined)
+print(table(main_lifestyles_combined$main_lifestyles))
+
+```
+
+Determine what is main lifestyle across all records for each and reclass into further groups then add to main df:
+
+```{r}
+# add main lifestyle df in left join to original lifestyle df
+
+
+lifestyle2 <- lifestyle %>%
+  left_join(main_lifestyle, by = "subject_id")  
+
+lifestyle2 <- lifestyle2 %>%
+  dplyr::select(c(subject_id,year_in_study,record_date,lifestyle,main_lifestyle,main_lifestyle))
+
+  
+  
+lifestyle3 <- lifestyle2 %>%
+  mutate(main_lifestyle_category = case_when(
+    str_detect(main_lifestyle, paste(competitive, collapse = "|")) ~ "Competitive",
+    str_detect(main_lifestyle, paste(working, collapse = "|")) ~ "Working",
+    str_detect(main_lifestyle, paste(breed_showing, collapse = "|")) ~ "Breed/Showing",
+    str_detect(main_lifestyle, paste(misc, collapse = "|")) ~ "Miscellaneous",
+    main_lifestyle == companion ~ "Companion/Pet",
+    TRUE ~ "Other"  # For any lifestyle not matching the above categories
+  ))
+
+# View the updated dataframe
+print(lifestyle3)
+
+table(lifestyle3$main_lifestyle_category)
+
+  
+```
+
+Dataframe with overall lifestyle category for each dog:
+
+```{r}
+lifestyle_by_dog <- lifestyle3 %>%
+  distinct(subject_id, .keep_all = TRUE)
+
+table(lifestyle_by_dog$main_lifestyle_category)
+```
+
+Add back to main df:
+
+```{r}
+HSA_sleep_smoking_enviro__lifestyle_all <- HSA_sleep_smoking_enviro_all %>%
+  left_join(lifestyle_by_dog,by="subject_id")
 ```

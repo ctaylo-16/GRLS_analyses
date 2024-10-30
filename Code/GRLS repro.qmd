@@ -11,16 +11,17 @@ editor: visual
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
-demog <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/dog_profile.csv")
+demog <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+
 
 demog <- demog %>% mutate_all(na_if,"")
 # female information
-repro_hx_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_female.csv")
-repro_heats_female <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv")
+repro_hx_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_female.csv")
+repro_heats_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv")
 #male 
-repro_hx_male <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_male.csv")
+repro_hx_male <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_male.csv")
 
-repro_hx_hormones <-read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv")
+repro_hx_hormones <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv")
 #all empty cells encoded as NA
 repro_hx_female <- repro_hx_female %>%
   mutate_if(~any(. == ""), na_if, "")
@@ -204,7 +205,7 @@ Haemangiosarcoma
 ##HSA data
 
 # use the end_points dataset for now 
-end_points_neoplasia <- read.csv("C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
 end_points_neoplasia <- end_points_neoplasia %>% 
   mutate(across(where(is.character), tolower))
 end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
@@ -243,20 +244,63 @@ event1_name <- "neutering"
 event2_name <- "HSA"
 end_HSA_join <- end_HSA_join %>% mutate(diagnosis_year_month_date1 =as.POSIXct(diagnosis_date,format="%Y-%m-%d"))
 end_HSA_join <- end_HSA_join %>% mutate(neutered_on_date1 =as.POSIXct(neutered_on_date,format="%Y-%m-%d"))
-neut_cancer_timing <- timespan4(end_HSA_join,"neutered_on_date","diagnosis_date",event1_name,event2_name)
+end_HSA_join <- end_HSA_join %>% mutate(neutered_on_date1 =as.POSIXct(neutered_on_date,format="%Y-%m-%d"))
+neut_cancer_timing <- timespan4(end_HSA_join,"neutered_on_date","diagnosis_date_year_month_date1",event1_name,event2_name)
 
 
 #cannot make this function work so have done manually for now with difftime below
 
 end_HSA_join <- end_HSA_join %>% mutate(timespan_neuter_cancer_days = as.numeric(difftime(as.POSIXct(end_HSA_join$diagnosis_date), as.POSIXct(end_HSA_join$neutered_on_date, tz="UTC"), units="days"))) 
-end_HSA_join <- end_HSA_join %>% mutate(timespan_neuter_cancer_years = timespan_neuter_cancer/365)
+end_HSA_join <- end_HSA_join %>% mutate(timespan_neuter_cancer_years = timespan_neuter_cancer_days/365)
 
+
+
+```
+
+Check what sort of variability for descriptives, regression later on:
+
+```{r}
+end_HSA_join_abr <-end_HSA_join%>%
+  dplyr::select(17:47,54:57,64:68,72)
+
+
+cols_to_convert <- c(1:6,8:31,34:38,40)  # Change these indices as needed
+
+# Convert specified columns to character
+end_HSA_join_abr[cols_to_convert] <- lapply(end_HSA_join_abr[cols_to_convert], as.character)
+
+# 1. Count occurrences for character columns
+char_summary <- lapply(end_HSA_join_abr[sapply(end_HSA_join_abr, is.character)], table)
+
+# Convert list of tables to a single data frame
+char_summary_df <- do.call(rbind, lapply(char_summary, as.data.frame))
+
+# Add a column to indicate the variable name
+char_summary_df$Variable <- rep(names(char_summary), times = sapply(char_summary, nrow))
+
+# Rename columns for better readability
+colnames(char_summary_df) <- c("Value", "Count", "Variable")
+
+# 2. Numeric summaries for numeric columns
+numeric_summary <- end_HSA_join_abr %>%
+  summarise(across(where(is.numeric), list(
+    Mean = ~mean(.x, na.rm = TRUE),
+    Median = ~median(.x, na.rm = TRUE),
+    SD = ~sd(.x, na.rm = TRUE),
+    Min = ~min(.x, na.rm = TRUE),
+    Max = ~max(.x, na.rm = TRUE),
+    Count = ~length(.x[!is.na(.x)])  # Count of non-missing values
+  )))
+
+# View the summaries
+print(char_summary_df)
+print(numeric_summary)
 ```
 
 ## Export of cancer and repro variables
 
 ```{r}
 #HSA and repro
-write.csv(end_HSA_join,"C:/Users/ctaylor18/Documents/GitHub/GRLS_analyses/Data/HSA_case_repro.csv")
+write.csv(end_HSA_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_case_repro.csv")
 
 ```
