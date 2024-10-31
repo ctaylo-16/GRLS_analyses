@@ -197,6 +197,29 @@ neut_age_M3 <- neut_age_M %>%
   
 ```
 
+#### Export neutering data for all animals 
+
+-   one CSV with every record for each dog (for all years study)
+
+```{r}
+
+write.csv(neut_age_M3,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cases_all_records_repro.csv")
+
+```
+
+-   one csv with the one off values eg. age at neuter
+
+```{r}
+neut_age_M3_abr <- neut_age_M3 %>%
+  dplyr::select(c(subject_id,sex,neuter,birth_date2,mismating_ever, neutered_on_date,neutered_reason,neutered_ever_bred,spayed_while_in_heat,spayed_while_pregnant,prevent_heat_ever,no_pregnancy_ever,intact_sired_litters_natural_ever,neutered_ever_bred,neutered_females_bred_with_count_ever,neutered_sired_litters_natural_ever,age_at_neuter_months,age_at_neuter_years,heats_before_neutering,preg_pre_neuter,mated_pre_neuter,num_bred_before_neutering,num_breeding_before_neutering))
+#keep only one row per patient
+neut_age_M3_abr <- neut_age_M3_abr %>%
+  distinct(subject_id, .keep_all = TRUE)
+
+write.csv(neut_age_M3_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cases_all_records_repro.csv")
+
+```
+
 ## Cancer data
 
 Haemangiosarcoma

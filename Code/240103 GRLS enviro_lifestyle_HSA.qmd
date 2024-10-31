@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-## Environmental exposures for all endpoints
+## Environmental exposures for HSA cases
 
 ```{r}
 library(tidyverse)
@@ -119,71 +119,77 @@ indoors_outdoors <- indoors_outdoors %>% mutate(exposure_year = as.numeric(forma
 
 Now need to do for:
 
--   exposure in the 5 y prior to endpoint
+-   exposure in the 5 y prior to diagnosis
 
--   exposure in the 3 y prior to endpoint
+-   exposure in the 3 y prior to diagnosis
 
--   exposure in the 1 y prior to endpoint
+-   exposure in the 1 y prior to diagnosis
 
-NB. this is only for endpoint dataset which excludes \~1000 dogs still (have not died yet)
-
-Load in endpoint file:
+Load in cancer file:
 
 ```{r}
 # use the end_points dataset for now 
-end_points<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/data version Feb 2024/study_endpoints.csv")
-end_points2 <- end_points
-#get neoplasia diagnosis year month column into date format - check its in YMD or in MDY and if is split by - or /
-end_points2$diagnosis_year_month_date <- as.Date(end_points2$diagnosis_date, format = "%m/%d/%Y")
-# create a year column in  file so can do calculations on year (no point being more precise as questionaire done annually and may not match diagnosis time)
-end_points2$diagnosis_year <- as.numeric(format(end_points2$diagnosis_year_month_date,"%Y"))
+end_points_neoplasia <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- end_points_neoplasia %>% 
+  mutate(across(where(is.character), tolower))
+end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
 
-# set to month level (not day of month) = all on 1st day of month
-end_points2$diagnosis_year_month_date2 <- as.POSIXct(floor_date(end_points2$diagnosis_year_month_date,unit="month"))
 
-# get year month bit from column
+#get neoplasia diagnosis year month column into date format
+end_HSA$diagnosis_year_month_date <- as.POSIXct(end_HSA$diagnosis_date)
+# create a year column in HSA file so can do calculations on year (no point being more precise as questionaire done annually and may not match diagnosis time)
+end_HSA$diagnosis_year <- as.numeric(format(end_HSA$diagnosis_year_month_date,"%Y"))
 # set to month level (not day of month) = all on 1st day of month
-end_points2$diagnosis_year_month <- format(end_points2$diagnosis_year_month_date, "%Y-%m")
+end_HSA$diagnosis_year_month_date2 <- as.POSIXct(floor_date(end_HSA$diagnosis_year_month_date,unit="month"))
+#column with has cancer set as 1 for sense checking records
+end_HSA <- end_HSA %>%
+  mutate(has_HSA =1)
+
+
+#296 dogs have HSA 
 
 ```
 
-### Keep the last recorded endpoint record for each patient only
-
-```{r}
-end_points2 <- end_points2 %>%
-  group_by(subject_id)%>%
-  filter(diagnosis_year_month_date2 == max(diagnosis_year_month_date2)) %>%      # Filter for the most recent date in each group
-  ungroup()     
-```
-
-### Exposure in 5y prior to endpoint
+### Exposure in 5y prior to diagnosis
 
 ```{r}
 #read in function file for all GRLS functions:
 source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
 
-#new dataframe to combine  diagnosis date and exposure
-end_points2 <- end_points2 %>%
-  select(c(subject_id,diagnosis_year_month,diagnosis_year,diagnosis_year_month_date2))
+#new dataframe to combine hsa diagnosis date and exposure
+end_HSA2 <- end_HSA %>%
+  select(c(subject_id,diagnosis_year_month,diagnosis_year,diagnosis_year_month_date2, has_HSA))
 #delete rows with NA of record date in it in the indoors_outdoors
 indoors_outdoors2 <- indoors_outdoors %>%
   filter(!is.na(record_date))
 #join records - do it this way so that each of the years of study for enviro exposures are retained 
-exposure <- left_join(indoors_outdoors2,end_points2,by="subject_id")
+HSA_exposure <- left_join(indoors_outdoors2,end_HSA2,by="subject_id")
 
+# double check all HSA dogs are in this join by checking which IDs are different
+not_in_HSA <- setdiff(end_HSA2$subject_id,HSA_exposure$subject_id)
 #then fill in all rows for that patient with its diagnosis date (or else lose all the rwos except 1 for each dog)
-exposure <- exposure %>%
+HSA_exposure <- HSA_exposure %>%
   group_by(subject_id)%>%
   fill(diagnosis_year_month,.direction="downup")
-exposure <- exposure %>%
+HSA_exposure <- HSA_exposure %>%
   group_by(subject_id)%>%
   fill(diagnosis_year,.direction="downup")
-exposure <- exposure %>%
+HSA_exposure <- HSA_exposure %>%
   group_by(subject_id)%>%
   fill(diagnosis_year_month_date2,.direction="downup")
+HSA_exposure <- HSA_exposure %>%
+  group_by(subject_id)%>%
+  fill(has_HSA,.direction="downup")
+#only retain dogs with a HSA diagnosis - so remove all rows without a diagnosis date in them
+HSA_exposure2 <- HSA_exposure %>% 
+  filter(!is.na(has_HSA))
+
+#again check all remain 
+not_in_HSA2 <- setdiff(end_HSA2$subject_id,HSA_exposure2$subject_id)
+not_in_HSA2
 
 
-end_points2 <- years_prior_to(end_points2,diagnosis_year,5)
+end_HSA <- years_prior_to(end_HSA,diagnosis_year,5)
 # Specify the columns to check
 columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
                        "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
@@ -191,7 +197,7 @@ columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
 
 #code to check for all relevant columns 
 exposure_years <-5
-merged_df <- check_exposure(exposure, columns_to_check, diagnosis_year, exposure_years)
+merged_df <- check_exposure(HSA_exposure2, columns_to_check, diagnosis_year, exposure_years)
 ```
 
 ```         
@@ -248,7 +254,7 @@ smoking_df2 <- exposure_dosage(smoking_df,"hours_of_smoke","record_year","diagno
 
 
 #check if any records lost
-not_in_2 <- setdiff(exposure$subject_id,smoking_df2$subject_id)
+not_in_HSA2 <- setdiff(HSA_exposure2$subject_id,smoking_df2$subject_id)
 
 ```
 
@@ -291,14 +297,14 @@ Can easily apply the exposed every Y N in 1,3,5y prior to diagnosis function for
 
 ```{r}
 #join sleep to our smoking dataframe to then calculate sleep location information 
-sleep_smoking_enviro <- left_join(smoking_df2,sleep2,by=c("subject_id","year_in_study"))
+HSA_sleep_smoking_enviro <- left_join(smoking_df2,sleep2,by=c("subject_id","year_in_study"))
 
-#check no  patients lost in this 
+#check no HSA patients lost in this 
 #again check all remain 
-not_in_2 <- setdiff(sleep_smoking_enviro$subject_id,end_points2$subject_id)
+not_in_HSA2 <- setdiff(HSA_sleep_smoking_enviro$subject_id,end_HSA2$subject_id)
 
 # remove the .x suffix
-sleep_smoking_enviro <- sleep_smoking_enviro %>%
+HSA_sleep_smoking_enviro <- HSA_sleep_smoking_enviro %>%
   rename_at('exposure_year.x',~'exposure_year')
 #5,3,1y variables
 #5
@@ -306,7 +312,7 @@ columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
 
 exposure_years <- 5
 
-result_df <- check_exposure(sleep_smoking_enviro, columns_to_check, diagnosis_year, exposure_years)
+result_df <- check_exposure(HSA_sleep_smoking_enviro, columns_to_check, diagnosis_year, exposure_years)
 #3y
 columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
 
@@ -367,7 +373,7 @@ result_df2 <- result_df2 %>%
   rename_at('majority_location',~'majority_sleep_location_lifetime')
 
 
-sleep_smoking_enviro_all <- merge(result_df,result_df2,by="subject_id")
+HSA_sleep_smoking_enviro_all <- merge(result_df,result_df2,by="subject_id")
 
 
 
@@ -403,138 +409,16 @@ Can create variables something along the lines of *exposure to each flooring typ
 ## Activity details
 
 -   3 files- activity_details_through_SY2.csv, activity_details_SY3_beyond.csv and activity_overview.csv
-    -   all dogs have study year 1-2 records
-    -   missing records for \~400 dogs in years 3+ records
-    -   overview all records present
-
-```{r}
-#activity data from study y 1 and 2
-activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
-#check # dogs in it
-act_1_2 <- unique(activity_sy1_2$subject_id)
-#activity data from study y 3 + 
-activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
-act_3_plus<- unique(activity_sy3_beyond$subject_id)
-#activity overview dataset
-activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
-act_over<-unique(activity_overview$subject_id)
-```
-
-Summary/overview of what activity datasets contain:
-
--   col names of each
-
-SY1-2
-
--   details on aerobic activity length,pace frequency and how often walked
-
--   enrolment and 2y beyond this in this dataset -
-
-SY3+
-
--   activity type and how often and how long
-
--   surface activity occurs on (eg.grass, concrete)
-
--   total time spent doing activity
-
--   3y till end of life
-
-Overview
-
--   swimming activities
-
--   sun exposure
-
-```{r}
-print(colnames(activity_sy1_2))
-print(colnames(activity_sy3_beyond))
-print(colnames(activity_overview))
-```
-
-Check number of records average for each dataset:
-
--   sy1_2 median is 3 = quite complete records
-
-```{=html}
-<!-- -->
-```
--   sy3 median 7 = also quite complete
-
--   overview median 9 = also quite com\[plete - this one seems to cover whole study period ?
-
-```{r}
-sy1_2 <- activity_sy1_2 %>%
-  group_by(subject_id) %>%
-  summarise(count = n()) %>%  # Count rows per subject_id
-  summarise(
-    median_count = median(count),
-    mean_count = mean(count)
-  )
-
-print(sy1_2)
-
-
-sy3 <- activity_sy3_beyond%>%
-  group_by(subject_id) %>%
-  summarise(count = n()) %>%  # Count rows per subject_id
-  summarise(
-    median_count = median(count),
-    mean_count = mean(count)
-  )
-
-
-print(sy3)
-
-
-overview <- activity_overview%>%
-  group_by(subject_id) %>%
-  summarise(count = n()) %>%  # Count rows per subject_id
-  summarise(
-    median_count = median(count),
-    mean_count = mean(count)
-  )
-
-
-print(overview)
-```
-
-#### Modifying/organising data from activity
-
-'Early life' (0-2y) activity
-
-For each subject ID across all their records in dataset:
-
--   calculate an average aerobic duration
-
--   calculate an average aerobic frequency
-
--   calculate an average walk frequency
-
--   calculate an average walk duration
-
--   calculate an average aerobic duration
 
 ```{r}
 
 ```
 
--   calculate an average aerobic frequency
+Saving environmental data assoc with HSA
 
 ```{r}
-
-```
-
--   calculate an average walk frequency
-
-```{r}
-
-```
-
--   calculate an average walk duration
-
-```{r}
-
+#NB change to final file name when file done
+write.csv(HSA_sleep_smoking_enviro_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/HSA_case_enviro.csv")
 ```
 
 ## Lifestyle/job/function
@@ -696,7 +580,7 @@ companion <- "Companion/Pet"
 all_groups <- c(competitive, working,breed_showing,misc,companion)
 
 # Do iteratively to check for those that are not in any group
-unclassified_lifestyle <- setdiff(main_lifestyle$main_lifestyle, all_groups)
+unclassified_lifestyle <- setdiff(main_lifestyle$lifestyle, all_groups)
 
 # Display unclassified to check all classified
 print(unclassified_lifestyle)
@@ -769,25 +653,15 @@ table(lifestyle_by_dog$main_lifestyle_category)
 Add back to main df:
 
 ```{r}
-sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_all %>%
+HSA_sleep_smoking_enviro__lifestyle_all <- HSA_sleep_smoking_enviro_all %>%
   left_join(lifestyle_by_dog,by="subject_id")
 ```
 
 #### Export datasets
 
--    Data for final endpoint date for dogs in endpoint dataset (\~1k dogs):
+-   HSA dataset
 
 ```{r}
-#check only have the row/s with latest diagnosis date 
-sleep_smoking_enviro_all_final_date <- sleep_smoking_enviro_lifestyle_all %>%
-  group_by(subject_id)%>%
-  filter(diagnosis_year_month_date2 == max(diagnosis_year_month_date2)) %>%      # Filter for the most recent date in each group
-  ungroup() 
-
-sleep_smoking_enviro_all_final_date<- sleep_smoking_enviro_all_final_date%>%
-  distinct(subject_id, .keep_all = TRUE)
-
-#NB change to final file name when file done
-write.csv(sleep_smoking_enviro_all_final_date,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/endpoints_sleep_smoking_enviro_lifestyle_enviro.csv")
+write.csv(HSA_sleep_smoking_enviro__lifestyle_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_case_sleep_smoking_enviro_lifestyle.csv")
 
 ```
