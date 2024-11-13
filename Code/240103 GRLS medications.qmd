@@ -60,9 +60,9 @@ NB. new row for every vaccine (multiple rows for same study year) for each subje
 
 Want to determine:
 
-Exposure to various different medications ever (likely broad classes eg. ABs, anthelminitics, flea tx, NSAID etc.)
+-   Exposure to various different medications ever (likely broad classes eg. ABs, anthelminitics, flea tx, NSAID etc.)
 
-Exposure to various different medications in past X years
+-   Exposure to various different medications in past X years
 
 Dosage administered of a drug over lifetime/x time
 
@@ -112,3 +112,5 @@ dosing_frequency <- c(
 
 
 ```
+
+-   confused on the q (days) in the dataset - conventionally q days would mean give every X days not a course that lasts X days but that seems weird and unlikely for things like q (days) 84, q (days) 96 etc.
