@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-## GRLS activity classifier
+# GRLS activity classification
 
 Packages:
 
@@ -285,6 +285,8 @@ ggplot(training, aes(x = value)) +
 
 Assess if worthwhile creating combined walk + aerobic column for duration +/- intensity to not lose data on dogs that are off leash:
 
+= Combined all activity level
+
 ```{r}
 #of dogs that are walked off leash how many of these dont have activity recorded in walk_duration
 dogs_off_leash <- activity_sy1_2 %>%
@@ -322,6 +324,22 @@ duration <- setdiff(activity_sy1_2$total_activity_duration, all_groups)
 # Display unclassified clinical signs
 print(duration)
 
+
+#recode in df
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_duration_regroup = case_when(
+      total_activity_duration %in% less_than_30min ~ "less_than_30min",
+      total_activity_duration %in% between_31_60min ~ "between_31_60min",
+      total_activity_duration %in% between_61_90min ~ "between_61_90min",
+      total_activity_duration %in% between_91_120min ~ "between_91_120min",
+      total_activity_duration %in% more_than_120min ~ "more_than_120min",
+      TRUE ~ "no_duration_recorded" # For values not in any group
+    )
+  )
+
+
+
 #frequency recoding
 never <- c("Never_","Never_Less than once/month") 
 less_than_weekly <- c("Less than once/month_","Less than once/month_Less than once/month", "Less than once/month_Less than once/week","Less than once/week_Less than once/month","Never_Less than once/week","Less than once/week_",
@@ -340,18 +358,89 @@ multi_daily <-c("Once/day_Once/day","Once/day_More than once a day","More than o
 all_groups_freq <- c(never,less_than_weekly,min_weekly,daily,multi_daily)
 freq <- setdiff(activity_sy1_2$total_activity_freq, all_groups_freq)
 
-# Display unclassified clinical signs
+# Display unclassified freq
 print(freq)
+
+#recode in df
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_freq_regroup = case_when(
+      total_activity_freq %in% never ~ "never",
+      total_activity_freq %in% less_than_weekly ~ "less_than_weekly",
+      total_activity_freq %in% min_weekly ~ "min_weekly",
+      total_activity_freq %in% daily ~ "daily",
+      total_activity_freq %in% multi_daily ~ "multi_daily",
+      TRUE ~ "no_freq_recorded" # For values not in any group
+    )
+  )
+#create recoded freq column
+
 #intensity recoding
 low_only <-c("_Bursts of exercise less than 30% of the time","Slow_","Slow_Bursts of exercise less than 30% of the time"
              )
-moderate <-c("Average_","_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Brisk_","Brisk_Bursts of exercise less than 30% of the time","Average_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Jog_")
-high <-c(" _Engages in strenuous exercise most of the time (greater than 60%)","Run_","Average_Engages in strenuous exercise most of the time (greater than 60%)","Brisk_Engages in strenuous exercise most of the time (greater than 60%)","_Engages in strenuous exercise most of the time (greater than 60%)","Jog_Engages in strenuous exercise most of the time (greater than 60%)","Run_Engages in strenuous exercise most of the time (greater than 60%)")
+moderate <-c("Average_","_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Brisk_","Brisk_Bursts of exercise less than 30% of the time","Average_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Jog_","Average_Bursts of exercise less than 30% of the time","Jog_Bursts of exercise less than 30% of the time","Brisk_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Slow_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)")
+high <-c(" _Engages in strenuous exercise most of the time (greater than 60%)","Run_","Average_Engages in strenuous exercise most of the time (greater than 60%)","Brisk_Engages in strenuous exercise most of the time (greater than 60%)","_Engages in strenuous exercise most of the time (greater than 60%)","Jog_Engages in strenuous exercise most of the time (greater than 60%)","Run_Engages in strenuous exercise most of the time (greater than 60%)","Run_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)", "Slow_Engages in strenuous exercise most of the time (greater than 60%)",
+         "Jog_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Run_Bursts of exercise less than 30% of the time")
 
 all_groups_int <- c(low_only,moderate,high)
 int <- setdiff(activity_sy1_2$total_activity_intensity, all_groups_int)
 print(int)
 
+
+#create recoded intensity column
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_intensity_regroup = case_when(
+      total_activity_intensity %in% low_only ~ "low_int",
+      total_activity_intensity %in% moderate ~ "mod_int",
+      total_activity_intensity %in% high ~ "high_int",
+      TRUE ~ "no_int_recorded" # For values not in any group
+    )
+  )
+
+```
+
+Create numeric versions of these columns for creating whole early life averages
+
+```{r}
+
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_duration_regroup_num = case_when(
+      total_activity_duration %in% less_than_30min ~ "1",
+      total_activity_duration %in% between_31_60min ~ "2",
+      total_activity_duration %in% between_61_90min ~ "3",
+      total_activity_duration %in% between_91_120min ~ "4",
+      total_activity_duration %in% more_than_120min ~ "5",
+      TRUE ~ "0" # For values not in any group
+    )
+  )
+
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_freq_regroup_num = case_when(
+      total_activity_freq %in% never ~ "1",
+      total_activity_freq %in% less_than_weekly ~ "2",
+      total_activity_freq %in% min_weekly ~ "3",
+      total_activity_freq %in% daily ~ "4",
+      total_activity_freq %in% multi_daily ~ "5",
+      TRUE ~ "0" # For values not in any group
+    )
+  )
+
+
+
+
+#create recoded intensity column
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_intensity_regroup_num = case_when(
+      total_activity_intensity %in% low_only ~ "1",
+      total_activity_intensity %in% moderate ~ "2",
+      total_activity_intensity %in% high ~ "3",
+      TRUE ~ "0" # For values not in any group
+    )
+  )
 ```
 
 To take forward:
@@ -382,9 +471,7 @@ Ditch:
 
 -   walk reason training
 
--   
-
-### Giving dogs a score for the classifier
+### Giving dogs a score for the classifier?
 
 -   Convert characters eg. duration/freq to numeric
 
@@ -402,23 +489,272 @@ Keeping relevant columns:
 
 ```{r}
 #keeping only relevant columns
-activity_sy1_2_use <- activity_sy1_2 %>%
-  dplyr::select(c(subject_id,year_in_study,record_date,walk_duration,walk_pace,walk_frequency,fetch_games_frequency))
 
 
 #create column for USDA activity <30min or >30 min
 activity_sy1_2 <- activity_sy1_2 %>%
-  mutate(USDA_30min_walk = case_when (
-    walk_duration %in% c("10-30 minutes", "Less than 10 minutes") ~ "0",  walk_duration %in% c("30-60 minutes", "Greater than 60 minutes") ~ "1", 
-                                 TRUE ~ "not_recorded"))
+  mutate(USDA_30min = case_when (
+    total_activity_duration_regroup %in% c("less_than_30min") ~ "below_USDA",  total_activity_duration_regroup %in% c("between_31_60min", "between_61_90min","between_91_120min","more_than_120min") ~ "more_than_USDA", 
+                                 TRUE ~ NA ))
 
 #create column for UKKC recommendaiton <2h but cannot do this one so >1h
 activity_sy1_2 <- activity_sy1_2 %>%
-  mutate(walk_1h_min = case_when (
-    walk_duration %in% c("10-30 minutes", "Less than 10 minutes","30-60 minutes") ~ "0",  walk_duration %in% c( "Greater than 60 minutes") ~ "1", 
-                                 TRUE ~ "not_recorded"))
+  mutate(activity_1h_min = case_when (
+total_activity_duration_regroup %in% c("less_than_30min","between_31_60min") ~ "below_1h",  total_activity_duration_regroup %in% c("between_61_90min","between_91_120min","more_than_120min") ~ "more_than_1h", 
+                                 TRUE ~ NA ))
 
 
 
+activity_sy1_2 <- activity_sy1_2 %>%
+  mutate(activity_KC_2h_min = case_when (
+total_activity_duration_regroup %in% c("less_than_30min","between_31_60min","between_61_90min","between_91_120min") ~ "below_KC",  total_activity_duration_regroup %in% c("more_than_120min") ~ "more_than_KC", 
+                                 TRUE ~ NA ))
 
+```
+
+### Overall early life  (first 2y of study)
+
+Data to numeric
+
+```{r}
+activity_sy1_2 <- activity_sy1_2 %>%
+  mutate(across(22:24, as.numeric))
+
+
+
+```
+
+Sum across study years:
+
+```{r}
+#group by dog then total up counts
+totals <- activity_sy1_2 %>%
+  group_by(subject_id) %>%
+  summarise(
+    sum_activity_duration = sum(total_activity_duration_regroup_num, na.rm = TRUE),
+    sum_activity_intensity = sum(total_activity_intensity_regroup_num, na.rm = TRUE),
+    sum_activity_freq=sum(total_activity_freq_regroup_num,na.rm=TRUE)# Replace with your column
+  )
+
+# Join the totals back to the original dataset
+activity_sy1_2 <- activity_sy1_2 %>%
+  left_join(totals, by = "subject_id")
+```
+
+Average across the study years score:
+
+```{r}
+
+
+
+totals_avg <- activity_sy1_2 %>%
+  group_by(subject_id) %>%
+  summarise(
+    avg_activity_duration = mean(total_activity_duration_regroup_num, na.rm = TRUE),
+    avg_activity_intensity = mean(total_activity_intensity_regroup_num, na.rm = TRUE),
+    avg_activity_freq = mean(total_activity_freq_regroup_num,na.rm = TRUE)
+  )
+
+# Join the average values back to the original dataset
+activity_sy1_2 <- activity_sy1_2 %>%
+  left_join(totals_avg, by = "subject_id")
+
+```
+
+#### Summary stats of these new variables:
+
+Barplots of categorical data
+
+```{r}
+cols_to_plot <- c("total_activity_duration_regroup", "total_activity_intensity_regroup", "total_activity_freq_regroup","USDA_30min","activity_1h_min","activity_KC_2h_min")
+
+
+
+for (col in cols_to_plot) {
+  # Create bar plot for each variable, counting the frequency of each value
+  plot <- ggplot(activity_sy1_2, aes(x = get(col))) + 
+    geom_bar() +  # This will count the frequency of each unique value in the column
+    ggtitle(paste("Bar plot for", col)) +
+    theme_minimal() +
+    ylab("Frequency") +
+    xlab(col)
+  
+  # Print the plot
+  print(plot)
+}
+```
+
+Histograms for average and total count data:
+
+```{r}
+cols_to_plot2 <-c("sum_activity_duration","sum_activity_intensity", "sum_activity_freq",
+                 "avg_activity_duration","avg_activity_intensity", "avg_activity_freq" )
+
+for (col in cols_to_plot2) {
+  # Create histogram for each numeric variable
+  plot <- ggplot(activity_sy1_2, aes(x = get(col))) + 
+    geom_histogram(binwidth = 1) +  # Adjust binwidth as needed based on your data
+    ggtitle(paste("Histogram for", col)) +
+    theme_minimal() +
+    ylab("Frequency") +
+    xlab(col)
+  
+  # Print the plot
+  print(plot)
+}
+```
+
+#### Recode average and sums across 3y period back into categorical OR ... just split the numeric data into quart/quintiles? 
+
+```{r}
+
+```
+
+Thoughts:
+
+-   almost no dogs getting KC suggestion of \>=2h exercise - probably not a good discriminatory variable but perhaps 1h or USDA 30 min is?
+
+-   Can choose between sum or average activity metrics?
+
+-   Consider having 2-3 BCS variables in model eg. early life avg BCS/weight , overall life avg BCS/weight , adult life avg BCS/weight
+
+## Adult life (3y+ in study)
+
+### Data explore
+
+```{r}
+table(activity_sy3_beyond$activity)
+
+#check how many dogs are in this annoying other specify bit
+other <- activity_sy3_beyond %>%
+  filter(activity == "Other Specify" | activity == "Other")
+
+num_dogs_other <- unique(other$subject_id)
+```
+
+\~880 dogs have other recorded for activity = worth tidying at least main categories
+
+```{r}
+table(activity_sy3_beyond$activity_other)
+```
+
+Duration of exercise:
+
+\~2000 dogs missing in \>= 1 record
+
+```{r}
+table(activity_sy3_beyond$duration)
+
+other <- activity_sy3_beyond %>%
+  filter(duration == "")
+
+num_dogs_other <- unique(other$subject_id)
+```
+
+Frequency
+
+```{r}
+table(activity_sy3_beyond$frequency)
+
+
+```
+
+-   Only one dog missing frequency
+
+Intensity:
+
+```{r}
+table(activity_sy3_beyond$pace)
+table(activity_sy3_beyond$grade)
+```
+
+Think ditch grade as referring to surface walking conditions and less useful but majority (only missing for 6) have a pace
+
+From this dataset use:
+
+-   pace and frequency
+
+-   duration (albeit with lots missing)
+
+### Data manipulation
+
+#### Total activity pace, duration and frequency over SY3-\>end
+
+Recode pace to numbers:
+
+```{r}
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  mutate(pace_num = case_when(
+    pace == "Slow walk" ~ 1,
+    pace == "Average walk" ~ 2,
+    pace == "Brisk walk" ~ 3,
+    pace == "Jog" ~ 4,
+    pace == "Run" ~ 5,
+    pace == "" ~ 0  # empty cells replace with 0 for calculation purposes
+  ))
+```
+
+Recode duration to numbers:
+
+```{r}
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  mutate(duration_num = case_when(
+    duration == "Less than 10 minutes" ~ 1,
+    duration == "10-30 minutes" ~ 2,
+    duration == "31-60 minutes" ~ 3,
+    duration == "Greater than 60 minutes" ~ 4,
+    duration == "" ~ 0  # empty cells replace with 0 for calculation purposes
+  ))
+```
+
+Recode frequency to numbers:
+
+```{r}
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  mutate(frequency_num = case_when(
+    frequency == "Rarely" ~ 1,
+    frequency == "Monthly" ~ 2,
+    frequency == "Weekly" ~ 3,
+    frequency == "Daily" ~ 4,
+    frequency == "More than daily" ~ 5,
+    frequency == "" ~ 0  # empty cells replace with 0 for calculation purposes
+  ))
+```
+
+```{r}
+totals_y3 <- activity_sy3_beyond %>%
+  group_by(subject_id) %>%
+  summarise(
+    sum_activity_duration = sum(duration_num, na.rm = TRUE),
+    sum_activity_intensity = sum(pace_num, na.rm = TRUE),
+    sum_activity_freq=sum(frequency_num,na.rm=TRUE)# Replace with your column
+  )
+
+# Join the totals back to the original dataset
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  left_join(totals_y3, by = "subject_id")
+```
+
+#### Average activity pace,duration and frequency over SY3 -\> end 
+
+```{r}
+totals_y3 <- activity_sy3_beyond %>%
+  group_by(subject_id) %>%
+  summarise(
+    avg_activity_duration = mean(duration_num, na.rm = TRUE),
+    avg_activity_intensity = mean(pace_num, na.rm = TRUE),
+    avg_activity_freq=mean(frequency_num,na.rm=TRUE)# Replace with your column
+  )
+
+# Join the totals back to the original dataset
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  left_join(totals_y3, by = "subject_id")
+```
+
+## Overview dataset
+
+This is dataset across all years of study but only contains activity_level and swimming specifics (not all activity)
+
+```{r}
+head(activity_overview)
 ```

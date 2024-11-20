@@ -456,9 +456,8 @@ Check number of records average for each dataset:
 
 -   sy1_2 median is 3 = quite complete records
 
-```{=html}
 <!-- -->
-```
+
 -   sy3 median 7 = also quite complete
 
 -   overview median 9 = also quite com\[plete - this one seems to cover whole study period ?
@@ -775,7 +774,7 @@ sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_all %>%
 
 #### Export datasets
 
--    Data for final endpoint date for dogs in endpoint dataset (\~1k dogs):
+-   Data for final endpoint date for dogs in endpoint dataset (\~1k dogs):
 
 ```{r}
 #check only have the row/s with latest diagnosis date 
