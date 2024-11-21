@@ -4,7 +4,11 @@ format: html
 editor: visual
 ---
 
-# GRLS activity classification
+# GRLS activity classification - modifiying activity score
+
+Using paper method to change scoring system for activity: Development, factor structure and application of the Dog Obesity Risk and Appetite (DORA) questionnaire \[PeerJ\] - Raffan et al., 2015:
+
+"Since both 4 and 5 option scales were used, items were scored as a percentage of the maximum to avoid 5 option scaled questions having a greater impact than 4 option scaled questions. Therefore, ‘never’ was assigned 0, ‘rarely’ 25, ‘sometimes’ 50, ‘often’ 75, and ‘always’ 100. Similarly, ‘not at all true’ was assigned 0, ‘somewhat true’ 33.3, ‘mainly true’ 66.6, and ‘definitely true’ 100.Where items within a factor invited opposite answers for the same dog, scores for the minority items were reversed. (For instance, within a theoretical factor about dog size, ‘true’ for ‘my dog is very small’ would score 100 as would ‘false’ for ‘my dog is very big’.) The working scores for the questionnaire were the individual factor scores, a combined ‘dog food-motivation score’, and a combined ‘owner management score’. Individual factor scores were calculated as percentages: = (sum of item scores for that factor)/(sum ofmaximum possible item scores for that factor) × 100."
 
 Packages:
 
@@ -402,16 +406,18 @@ activity_sy1_2 <- activity_sy1_2  %>%
 
 Create numeric versions of these columns for creating whole early life averages
 
+(making these out of 100 rather than 1-5 )
+
 ```{r}
 
 activity_sy1_2 <- activity_sy1_2  %>%
   mutate(
     total_activity_duration_regroup_num = case_when(
-      total_activity_duration %in% less_than_30min ~ "1",
-      total_activity_duration %in% between_31_60min ~ "2",
-      total_activity_duration %in% between_61_90min ~ "3",
-      total_activity_duration %in% between_91_120min ~ "4",
-      total_activity_duration %in% more_than_120min ~ "5",
+      total_activity_duration %in% less_than_30min ~ "20",
+      total_activity_duration %in% between_31_60min ~ "40",
+      total_activity_duration %in% between_61_90min ~ "60",
+      total_activity_duration %in% between_91_120min ~ "80",
+      total_activity_duration %in% more_than_120min ~ "100",
       TRUE ~ "0" # For values not in any group
     )
   )
@@ -419,11 +425,11 @@ activity_sy1_2 <- activity_sy1_2  %>%
 activity_sy1_2 <- activity_sy1_2  %>%
   mutate(
     total_activity_freq_regroup_num = case_when(
-      total_activity_freq %in% never ~ "1",
-      total_activity_freq %in% less_than_weekly ~ "2",
-      total_activity_freq %in% min_weekly ~ "3",
-      total_activity_freq %in% daily ~ "4",
-      total_activity_freq %in% multi_daily ~ "5",
+      total_activity_freq %in% never ~ "20",
+      total_activity_freq %in% less_than_weekly ~ "40",
+      total_activity_freq %in% min_weekly ~ "60",
+      total_activity_freq %in% daily ~ "80",
+      total_activity_freq %in% multi_daily ~ "100",
       TRUE ~ "0" # For values not in any group
     )
   )
@@ -435,9 +441,9 @@ activity_sy1_2 <- activity_sy1_2  %>%
 activity_sy1_2 <- activity_sy1_2  %>%
   mutate(
     total_activity_intensity_regroup_num = case_when(
-      total_activity_intensity %in% low_only ~ "1",
-      total_activity_intensity %in% moderate ~ "2",
-      total_activity_intensity %in% high ~ "3",
+      total_activity_intensity %in% low_only ~ "33.3",
+      total_activity_intensity %in% moderate ~ "66.7",
+      total_activity_intensity %in% high ~ "100",
       TRUE ~ "0" # For values not in any group
     )
   )
@@ -524,23 +530,6 @@ activity_sy1_2 <- activity_sy1_2 %>%
 
 ```
 
-Sum across study years:
-
-```{r}
-#group by dog then total up counts
-totals <- activity_sy1_2 %>%
-  group_by(subject_id) %>%
-  summarise(
-    sum_activity_duration = sum(total_activity_duration_regroup_num, na.rm = TRUE),
-    sum_activity_intensity = sum(total_activity_intensity_regroup_num, na.rm = TRUE),
-    sum_activity_freq=sum(total_activity_freq_regroup_num,na.rm=TRUE)# Replace with your column
-  )
-
-# Join the totals back to the original dataset
-activity_sy1_2 <- activity_sy1_2 %>%
-  left_join(totals, by = "subject_id")
-```
-
 Average across the study years score:
 
 ```{r}
@@ -550,9 +539,13 @@ Average across the study years score:
 totals_avg <- activity_sy1_2 %>%
   group_by(subject_id) %>%
   summarise(
-    avg_activity_duration = mean(total_activity_duration_regroup_num, na.rm = TRUE),
-    avg_activity_intensity = mean(total_activity_intensity_regroup_num, na.rm = TRUE),
-    avg_activity_freq = mean(total_activity_freq_regroup_num,na.rm = TRUE)
+    avg_activity_duration = (mean(sum(total_activity_duration_regroup_num, na.rm = TRUE)) /
+                              (n() * 100)) * 100,
+    avg_activity_intensity = (mean(sum(total_activity_intensity_regroup_num, na.rm = TRUE)) /
+                              (n() * 100)) * 100,
+    avg_activity_freq = (mean(sum(total_activity_freq_regroup_num, na.rm = TRUE)) /
+                              (n() * 100)) * 100
+
   )
 
 # Join the average values back to the original dataset
@@ -587,7 +580,7 @@ for (col in cols_to_plot) {
 Histograms for average and total count data:
 
 ```{r}
-cols_to_plot2 <-c("sum_activity_duration","sum_activity_intensity", "sum_activity_freq",
+cols_to_plot2 <-c(
                  "avg_activity_duration","avg_activity_intensity", "avg_activity_freq" )
 
 for (col in cols_to_plot2) {
@@ -685,11 +678,11 @@ Recode pace to numbers:
 ```{r}
 activity_sy3_beyond <- activity_sy3_beyond %>%
   mutate(pace_num = case_when(
-    pace == "Slow walk" ~ 1,
-    pace == "Average walk" ~ 2,
-    pace == "Brisk walk" ~ 3,
-    pace == "Jog" ~ 4,
-    pace == "Run" ~ 5,
+    pace == "Slow walk" ~ 20,
+    pace == "Average walk" ~ 40,
+    pace == "Brisk walk" ~ 60,
+    pace == "Jog" ~ 80,
+    pace == "Run" ~ 100,
     pace == "" ~ 0  # empty cells replace with 0 for calculation purposes
   ))
 ```
@@ -699,10 +692,10 @@ Recode duration to numbers:
 ```{r}
 activity_sy3_beyond <- activity_sy3_beyond %>%
   mutate(duration_num = case_when(
-    duration == "Less than 10 minutes" ~ 1,
-    duration == "10-30 minutes" ~ 2,
-    duration == "31-60 minutes" ~ 3,
-    duration == "Greater than 60 minutes" ~ 4,
+    duration == "Less than 10 minutes" ~ 25,
+    duration == "10-30 minutes" ~ 50,
+    duration == "31-60 minutes" ~ 75,
+    duration == "Greater than 60 minutes" ~ 100,
     duration == "" ~ 0  # empty cells replace with 0 for calculation purposes
   ))
 ```
@@ -712,27 +705,17 @@ Recode frequency to numbers:
 ```{r}
 activity_sy3_beyond <- activity_sy3_beyond %>%
   mutate(frequency_num = case_when(
-    frequency == "Rarely" ~ 1,
-    frequency == "Monthly" ~ 2,
-    frequency == "Weekly" ~ 3,
-    frequency == "Daily" ~ 4,
-    frequency == "More than daily" ~ 5,
+    frequency == "Rarely" ~ 20,
+    frequency == "Monthly" ~ 40,
+    frequency == "Weekly" ~ 60,
+    frequency == "Daily" ~ 80,
+    frequency == "More than daily" ~ 100,
     frequency == "" ~ 0  # empty cells replace with 0 for calculation purposes
   ))
 ```
 
 ```{r}
-totals_y3 <- activity_sy3_beyond %>%
-  group_by(subject_id) %>%
-  summarise(
-    sum_activity_duration = sum(duration_num, na.rm = TRUE),
-    sum_activity_intensity = sum(pace_num, na.rm = TRUE),
-    sum_activity_freq=sum(frequency_num,na.rm=TRUE)# Replace with your column
-  )
 
-# Join the totals back to the original dataset
-activity_sy3_beyond <- activity_sy3_beyond %>%
-  left_join(totals_y3, by = "subject_id")
 ```
 
 #### Average activity pace,duration and frequency over SY3 -\> end
@@ -741,10 +724,16 @@ activity_sy3_beyond <- activity_sy3_beyond %>%
 totals_y3 <- activity_sy3_beyond %>%
   group_by(subject_id) %>%
   summarise(
-    avg_activity_duration = mean(duration_num, na.rm = TRUE),
-    avg_activity_intensity = mean(pace_num, na.rm = TRUE),
-    avg_activity_freq=mean(frequency_num,na.rm=TRUE)# Replace with your column
+    avg_activity_duration = (mean(duration_num, na.rm = TRUE)/
+                              (n() * 100)) * 100,
+    avg_activity_intensity = (mean(pace_num, na.rm = TRUE)/
+                              (n() * 100)) * 100,
+    avg_activity_freq=(mean(frequency_num,na.rm=TRUE)/
+                              (n() * 100)) * 100# Replace with your column
   )
+
+
+
 
 # Join the totals back to the original dataset
 activity_sy3_beyond <- activity_sy3_beyond %>%
@@ -792,10 +781,10 @@ Median, mode or mean for overall activity level across whole study period
 ```{r}
 activity_overview <- activity_overview %>%
   mutate(activity_level_num = case_when(
-    activity_level == "None" ~ 1,
-    activity_level == "Little" ~ 2,
-    activity_level == "Moderate" ~ 3,
-    activity_level == "Very active" ~ 4,
+    activity_level == "None" ~ 25,
+    activity_level == "Little" ~ 50,
+    activity_level == "Moderate" ~ 75,
+    activity_level == "Very active" ~ 100,
     activity_level == "" ~ 0)
     )
 ```
@@ -806,12 +795,8 @@ Median activity level
 
 totals <- activity_overview %>%
   group_by(subject_id) %>%
-  summarise(
-    median_activity_level = median(activity_level_num),
-    mode_activity_level = mode(activity_level_num),
-    mean_activity_level=mean(activity_level_num),
-    total_activity_level=sum(activity_level_num),# Replace with your column
-  )
+  summarise(mean_activity_level=(mean(activity_level_num, na.rm=TRUE)/(n() * 100)) * 100)
+                              
 
 # Join the totals back to the original dataset
 activity_overview <- activity_overview %>%
@@ -820,90 +805,39 @@ activity_overview <- activity_overview %>%
 
 #### Combine all the datasets:
 
-Abridge datasets:
-
-```{r}
-activity_sy1_2_abr <- activity_sy1_2 %>%
-  dplyr::select(c(subject_id,year_in_study,total_activity_duration_regroup,total_activity_freq_regroup,total_activity_intensity_regroup, total_activity_duration_regroup_num, total_activity_freq_regroup_num, total_activity_intensity_regroup_num,USDA_30min,activity_1h_min,activity_KC_2h_min))
-
-activity_sy3_beyond_abr <- activity_sy3_beyond %>%
-  dplyr::select(c(subject_id,year_in_study,
-                  #frequency,pace,duration,frequency_num,pace_num,duration_num,<- not keeping as multi rows same year
-                  sum_activity_duration,sum_activity_freq,sum_activity_intensity,avg_activity_duration,avg_activity_freq,avg_activity_intensity, USDA_30min, activity_1h_min))
-
-activity_overview_abr <- activity_overview %>%
-  dplyr::select(c(subject_id, year_in_study,activity_level))
-
-#keep only a single row for each year of study in each dataset - single unique row for each subject ID and each year in study
-#sy1 -2
-activity_sy1_2_abr2 <- activity_sy1_2_abr %>%
-  distinct(subject_id, year_in_study, .keep_all = TRUE)
-#sy 3+ 
-activity_sy3_beyond_abr2 <- activity_sy3_beyond_abr %>%
-  distinct(subject_id, year_in_study, .keep_all = TRUE)
-#overview
-activity_overview_abr2 <- activity_overview_abr %>%
-  distinct(subject_id, year_in_study, .keep_all = TRUE)
-
-###adding sy1_2 string to column relating to early years
-activity_sy1_2_abr2 <- activity_sy1_2_abr2 %>%
-  rename_with(~ paste0(., "_sy1_2"), .cols = 3:11)
-
-###adding sy3 to columns relating to rest of life
-activity_sy3_beyond_abr2 <- activity_sy3_beyond_abr2 %>%
-  rename_with(~ paste0(., "_sy3"), .cols = 3:10)
-###adding overview to columns relating to whole study period dataset
-activity_overview_abr2 <- activity_overview_abr2 %>%
-  rename_with(~ paste0(., "_overview"), .cols = 3:3)
-
-
-```
-
-Merge datasets together for final dataset:
-
-```{r}
-activity_over_sy12_2 <- activity_overview_abr2 %>%
-  left_join(activity_sy1_2_abr2, by=c("subject_id","year_in_study"))
-
-activity_all_2 <- activity_over_sy12_2 %>%
-  left_join(activity_sy3_beyond_abr2,by=c("subject_id","year_in_study"))
-
-write.csv(activity_all_2, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables.csv")
-```
-
 Modify further to create final single values for early life activity, rest of life and overview life activity
 
 ```{r}
 activity_sy1_2_abr_3 <- activity_sy1_2 %>%
-  dplyr::select(c(subject_id,year_in_study, USDA_30min,activity_1h_min,activity_KC_2h_min, sum_activity_duration,sum_activity_intensity,sum_activity_freq,avg_activity_duration,avg_activity_intensity,avg_activity_freq))
+  dplyr::select(c(subject_id,year_in_study, USDA_30min,activity_1h_min,activity_KC_2h_min,avg_activity_duration,avg_activity_intensity,avg_activity_freq))
 
 
 activity_sy3_beyond_abr_3 <- activity_sy3_beyond %>%
   dplyr::select(c(subject_id,year_in_study,
                   #frequency,pace,duration,frequency_num,pace_num,duration_num,<- not keeping as multi rows same year
-                  sum_activity_duration,sum_activity_freq,sum_activity_intensity,avg_activity_duration,avg_activity_freq,avg_activity_intensity, USDA_30min, activity_1h_min))
+                  avg_activity_duration,avg_activity_freq,avg_activity_intensity, USDA_30min, activity_1h_min))
 
 activity_overview_abr_3 <- activity_overview %>%
-  dplyr::select(c(subject_id,year_in_study,mean_activity_level,total_activity_level))
+  dplyr::select(c(subject_id,year_in_study,mean_activity_level))
 
 
 activity_sy1_2_abr_3 <- activity_sy1_2_abr_3 %>%
   distinct(subject_id, .keep_all = TRUE)  %>%
  # mutate(study_year = "y1_2")%>%
-  rename_with(~ paste0(., "_sy1_2"), .cols = 3:11)%>%
+  rename_with(~ paste0(., "_sy1_2"), .cols = 3:8)%>%
   dplyr::select(-c(year_in_study))
 #sy 3+ 
 activity_sy3_beyond_abr_3 <- activity_sy3_beyond_abr_3 %>%
   distinct(subject_id,  .keep_all = TRUE)  %>%
   #  mutate(study_year = "y3_on")%>%
-  rename_with(~ paste0(., "_sy3"), .cols = 3:10)%>%
+  rename_with(~ paste0(., "_sy3"), .cols = 3:7)%>%
   dplyr::select(-c(year_in_study))
   
 #overview
 activity_overview_abr_3 <- activity_overview_abr_3 %>%
   distinct(subject_id, .keep_all = TRUE)  %>%
  # mutate(study_year="all_years") %>%
-  rename_with(~ paste0(., "_overview"), .cols = 3:4)%>%
+  rename_with(~ paste0(., "_overview"), .cols = 3:3)%>%
   dplyr::select(-c(year_in_study))
 ```
 
@@ -916,7 +850,7 @@ activity_all_3_3 <- activity_all_3 %>%
   left_join(activity_sy3_beyond_abr_3,by="subject_id")
 
 
-write.csv(activity_all_3_3, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_one_row_per_dog.csv")
+write.csv(activity_all_3_3, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_one_row_per_dog_outof100.csv")
 ```
 
 what does each column mean?
@@ -931,5 +865,5 @@ print(colnames(activity_all_3_3))
 
 "USDA_30min_sy3" "activity_1h_min_sy3" \<- as above except for SY3 and beyond. no KC one as questionaire criteria changed so no \>120 min option available
 
-"sum_activity_duration_sy1_2" "sum_activity_intensity_sy1_2" "sum_activity_freq_sy1_2" "avg_activity_duration_sy1_2" "avg_activity_intensity_sy1_2" "avg_activity_freq_sy1_2"\
-"sum_activity_duration_sy3" "sum_activity_freq_sy3" "sum_activity_intensity_sy3" "avg_activity_duration_sy3" "avg_activity_freq_sy3" "avg_activity_intensity_sy3" \<- these are all sums/total or averages across either SY1_2 or SY3 and beyond for O reported activity frequency, intensity and duration
+"avg_activity_duration_sy1_2" "avg_activity_intensity_sy1_2" "avg_activity_freq_sy1_2"\
+"avg_activity_duration_sy3" "avg_activity_freq_sy3" "avg_activity_intensity_sy3" \<- these are all sums/total or averages across either SY1_2 or SY3 and beyond for O reported activity frequency, intensity and duration

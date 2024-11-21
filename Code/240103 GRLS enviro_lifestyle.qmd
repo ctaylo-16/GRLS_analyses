@@ -655,6 +655,8 @@ working <- c("Tracking","Search and Rescue", "Hunting","Fishing Dog", "Scent Wor
 no_lifestyle_misc <- c("None",NA,"Other","Receiving medical treatment", "Retired from AKC Activities")
 all_groups <- c(companion, therapy, breeding, competitive, working,no_lifestyle_misc)
 
+
+# JL paper - seperate show group vs other competitive (possibly also down to level of companion vs working )
 # Do iteratively to check for those that are not in any group
 unclassified_lifestyle <- setdiff(lifestyle_categories, all_groups)
 
