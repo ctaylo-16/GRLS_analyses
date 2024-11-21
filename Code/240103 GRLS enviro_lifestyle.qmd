@@ -223,9 +223,27 @@ exposure_years <- 1
 result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposure_years)
 ```
 
+### Exposure in early years of life (SY1-2)
+
+```{r}
+
+```
+
+### Exposure in mid-later years (SY3+)
+
+```{r}
+
+```
+
+### Exposure over whole life
+
+```{r}
+
+```
+
 ## Smoke exposure
 
-Calculate hours of smoke exposure before diagnosis:
+#### Calculate hours of smoke exposure before diagnosis:
 
 ```{r}
 
@@ -253,6 +271,12 @@ not_in_2 <- setdiff(exposure$subject_id,smoking_df2$subject_id)
 ```
 
 Could also create a further function to calculate dosage 1,3,5y before diagnosis or similar - if needed.
+
+### Hours of smoke exposure SY1-2
+
+### Hours of smoke exposure SY3
+
+### Lifetime hours of smoke exposure
 
 ## Sleep location
 
@@ -394,7 +418,7 @@ Can create variables something along the lines of *exposure to each flooring typ
 
 ```
 
-## Wash groom products
+## Wash groom products?
 
 ```{r}
 
@@ -402,6 +426,11 @@ Can create variables something along the lines of *exposure to each flooring typ
 
 ## Activity details
 
+-   analyses for this in seperate activity script
+
+```{=html}
+<!-- -->
+```
 -   3 files- activity_details_through_SY2.csv, activity_details_SY3_beyond.csv and activity_overview.csv
     -   all dogs have study year 1-2 records
     -   missing records for \~400 dogs in years 3+ records
@@ -496,44 +525,6 @@ overview <- activity_overview%>%
 
 
 print(overview)
-```
-
-#### Modifying/organising data from activity
-
-'Early life' (0-2y) activity
-
-For each subject ID across all their records in dataset:
-
--   calculate an average aerobic duration
-
--   calculate an average aerobic frequency
-
--   calculate an average walk frequency
-
--   calculate an average walk duration
-
--   calculate an average aerobic duration
-
-```{r}
-
-```
-
--   calculate an average aerobic frequency
-
-```{r}
-
-```
-
--   calculate an average walk frequency
-
-```{r}
-
-```
-
--   calculate an average walk duration
-
-```{r}
-
 ```
 
 ## Lifestyle/job/function
