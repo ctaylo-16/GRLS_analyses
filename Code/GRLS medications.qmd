@@ -5,24 +5,47 @@ format: html
 editor: visual
 ---
 
-Files and packages to import
+# Medication in GRLS dataset
+
+Files and packages to import:
 
 ```{r}
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
 
+#original medications datasets
 medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv",na.strings=c ("","NA"))
 vaccinations <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/vaccines.csv",na.strings=c ("","NA"))
+OTC_meds <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/over_the_counter_medications.csv",na.strings=c ("","NA"))
+parasite_control <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/flea_tick_heartworm.csv",na.strings=c ("","NA"))
 #ensure all lower case
-medications <- medications %>% mutate(across(where(is.character), tolower))
-vaccinations <- vaccinations %>% mutate(across(where(is.character), tolower))
-
+medications <- medications %>%
+  mutate(across(where(is.character), tolower))
+vaccinations <- vaccinations %>%
+  mutate(across(where(is.character), tolower))
+OTC_meds <- OTC_meds %>%
+  mutate(across(where(is.character), tolower))
+parasite_control <- parasite_control %>%
+  mutate(across(where(is.character), tolower))
+  
 
 # use the end_points dataset for now 
-end_points_neoplasia <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
-end_points_neoplasia <- end_points_neoplasia %>% 
+end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- end_points %>% 
   mutate(across(where(is.character), tolower))
+
+#subset of those dying with any neoplasia
+neo_patterns <- c('oma', 'leuk', 'tumor', 'neopla')
+
+end_points_neoplasia <- end_points_neoplasia %>% 
+  mutate(neoplasia = as.integer(grepl(paste(neo_patterns, collapse = '|'), tracked_condition, ignore.case = TRUE)))
+
+end_points_neoplasia <- end_points_neoplasia %>%
+  filter(neoplasia ==1) 
+
+  
+
 end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
 
 
@@ -37,26 +60,291 @@ end_HSA <- end_HSA %>%
   mutate(has_HSA =1)
 
 
-#296 dogs have HSA 
+
+
+
 ```
 
-## Vaccinations
+Nov 2024- 301 HSA dogs in study endpoints, 981 total of neoplasia recorded at death (not necess cause of death)
 
-Want to determine:
+## Medications
 
-A number of vaccines in lifetime ('dosage')
+Remove rows in medications dataset that do not have any medication ingredient info:
 
-Vaccination within past X years
+```{r}
+medications_2 <- medications %>% 
+  filter(!is.na(medication_name) & !is.na(medication_ingredients))
 
-What were they vaccinated with in past X years
+#double check not formatted wrong and losing info in these NA ones
+medications_miss <- medications %>% 
+  filter(is.na(medication_name) & is.na(medication_ingredients))
+# no, these are totally empty
+```
 
-NB. new row for every vaccine (multiple rows for same study year) for each subject id
+### Medication name and ingredients:
+
+```{r}
+ingredients <- medications_2 %>%
+  dplyr::select(medication_name,medication_name_specify,medication_ingredients)
+```
+
+Full list (desc) of medication name:
+
+```{r}
+med_name_count <- ingredients %>%
+  count(medication_name, name = "Count") %>%
+  arrange(desc(Count))
+med_name_count
+```
+
+\~1400 medication names
+
+Full list (desc) of ingredients :
+
+```{r}
+med_ingredients_count <- ingredients %>%
+  count(medication_ingredients, name = "Count") %>%
+  arrange(desc(Count))
+med_ingredients_count
+
+write.csv(med_ingredients_count,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/medications_all.csv")
+```
+
+\~800 ingredients
+
+### Medications dictionary of active ingredient groups:
+
+Many ways to group, some redundancy/overlap eg. pred multi-use
+
+NOAH compendium groupings (NB. not all drugs will be licensed so cascade use eg. mycophenolate but will use these grouping terms generally)
+
+```{r}
+anti_inflam<-c("carprofen","prednisone","meloxicam","deracoxib","grapiprant","dexamethasone","firocoxib","predisolone acetate","trimeprazine tartrate, prednisone", "triamcinolone acetonide", "diclofenac", "methylpredisolone", "hydrocortisone, gentamicin sulfate, miconazole nitrate", "ketorolac","budesonide","burow's solution, hydrocortisone","dexamethasone, miconazole nitrate
+","dimethyl sulfoxide, fluocinolone acetonide","flurbiprofen","piroxicam","hydrocortisone", "dexamethasone, enrofloxacin, ketoconazole, tris-edta","beclomethasone, clotrimazole, neomycin sulfate", "dexamethasone, ketoconazole, tris-edta","ketoprofen","acetic acid, boric acid, ceramide complex, hydrocortisone, ketoconazole", "betamethasone","ketotifen","mometasone furoate","robenacoxib","dexamethasone", "flunixin", "betamethasone", "hydrocortisone", "prednisolone", "methylprednisolone", "triamcinolone acetonide", "difluprednate", "fluticasone", "burow's solution","carprofen","dexamethasone","prednisolone acetate","hydroxyzine", "diphenhydramine", "dexamethasone, miconazole nitrate", 
+  "amikacin sulfate, dexamethasone", "dexamethasone, methylprednisolone", 
+  "meclizine", "clemastine fumarate", "desmopressin acetate", "chlorphenamine", 
+  "sevelamer", "loratadine", "fexofenadine", "dexamethasone, triamcinolone acetonide", 
+  "hydrocortisone, ketoconazole", "hydroxyethyl starch, sodium chloride", 
+  "dexamethasone, ketoconazole, phytosphingosine", "miconazole nitrate, salicylic acid", 
+  "dexamethasone, diphenhydramine", "betamethasone, clotrimazole, gentamicin sulfate, mometasone furoate", 
+  "dimethyl sulfoxide, fluocinolone acetonide, gentamicin sulfate, miconazole nitrate", 
+  "dimethyl sulfoxide, flunixin, fluocinolone acetonide", "hydrocortisone, troleandomycin","Dimenhydrinate", "Dexamethasone", "Betamethasone", "Mibolerone","nepafenac",
+  "dexamethasone",
+  "betamethasone",
+  "hydrocortisone",
+  "butorphanol tartrate",
+  "dimethyl sulfoxide",
+  "menthol, hydrocortisone",
+  "dexamethasone, ketoconazole",
+  "dexamethasone, enrofloxacin",
+  "dexamethasone, dimethyl sulfoxide, enrofloxacin, lidocaine",
+  "dexamethasone, enrofloxacin, ketoconazole",
+  "dexamethasone, penicillin",
+  "dexamethasone, tobramycin","betamethasone, ofloxacin", "chloramphenicol, dexamethasone","betamethasone, chloramphenicol, ketoconazole"  , "enrofloxacin, dexamethasone, tris-edta"  ,"dexamethasone, miconazole nitrate, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide","betamethasone, burow's solution, gentamicin sulfate, hydrocortisone, miconazole nitrate"  , "ketoconazole, hydrocortisone", "bacitracin, hydrocortisone", "dexamethasone, miconazole nitrate, tris-edta"  , "chlorhexidine gluconate, dexamethasone"   , "dexamethasone, enrofloxacin, tris-edta"  , "dexamethasone, enrofloxacin, silver sulfadiazine", "dexamethasone, miconazole nitrate, neomycin sulfate, polymyxin b, prednisolone acetate, thiabendazole" , "betamethasone, enrofloxacin" , "dexamethasone, ear cleaner (epi-otic advanced), enrofloxacin" , "betamethasone, tobramycin"            
+)
+
+
+anti_histamine <- c("diphenhydramine","hydroxyzine","trimeprazine tartrate, prednisone","cetirizine","loratadine","chlorphenamine","meclizine", "clemastine fumarate","dimenhydrinate","fexofenadine", "diphenhydramine", "loratadine", "cetirizine", "hydroxyzine", "chlorpheniramine", "desloratadine","cetirizine" )
+
+
+anti_microbials <-c("metronidazole","cephalexin","cefpodoxime proxetil","amoxicillin, clavulanate potassium","clotrimazole, gentamicin sulfate, mometasone furoate","doxycycline","amoxicillin","betamethasone, clotrimazole, gentamicin sulfate","enrofloxacin","betamethasone, gentamicin sulfate", "clindamycin","dexamethasone, neomycin sulfate, polymyxin b", "florfenicol, mometasone furoate, terbinafine","mometasone furoate, orbifloxacin, posaconazole","sulfadimethoxine", "tylosin tartrate","isoflupredone acetate, neomycin sulfate, tetracaine","ketoconazole", "ketoconazole, tris-edta", "bacitracin zinc, neomycin sulfate, polymyxin b", "dexamethasone, neomycin sulfate, thiabendazole", "ciprofloxacin", "enrofloxacin, ketoconazole, triamcinolone acetonide", "marbofloxacin","mupirocin","betamethasone, florfenicol, terbinafine","sulfamethoxazole, trimethoprim", "cefovecin","miconazole nitrate, polymyxin b, prednisolone acetate", "ampicillin", "miconazole nitrate","fluconazole", "minocycline","tobramycin","hydrocortisone, gentamicin sulfate, miconazole nitrate", "cefazolin", "ofloxacin","gentamicin sulfate, hydrocortisone, miconazole nitrate", "azithromycin","acetic acid, chlorhexidine gluconate, ketoconazole","bacitracin zinc, hydrocortisone, neomycin sulfate, polymyxin b","enrofloxacin, silver sulfadiazine", "chlorhexidine gluconate, ketoconazole, phytosphingosine","bacitracin zinc, dexamethasone, neomycin sulfate, polymyxin b","chlorhexidine gluconate, miconazole nitrate","chlorhexidine gluconate, miconazole nitrate, tris-edta","gentamicin sulfate","ormetoprim, sulfadimethoxine","acetic acid, boric acid, hydrocortisone, ketoconazole","penicillin","ampicillin, sulbactam","sulfamethoxazole","chloramphenicol","oxytetracycline, polymyxin b","ceftiofur sodium","sulfadiazine, trimethoprim","chloroxylenol, ketoconazole","dexamethasone, enrofloxacin, miconazole nitrate", "ketoconazole, phytosphingosine", "sulfadimidine, trimethoprim", "neomycin sulfate, polymyxin b, gramicidin", "orbifloxacin", "chlorhexidine gluconate, phytosphingosine", "nitrofurantoin", "penicillin g","beclomethasone, clotrimazole, neomycin sulfate", "dexamethasone, ketoconazole, tris-edta","neomycin","penicillin g procaine","acetic acid, boric acid, ceramide complex, hydrocortisone, ketoconazole","ketoconazole, triamcinolone acetonide", "amikacin sulfate","dimethyl sulfoxide, enrofloxacin, fluocinolone acetonide","meropenem","amforol","bacitracin zinc, neomycin sulfate, polymyxin b, unspecified steroid","ceftazidime","enrofloxacin", "miconazole nitrate", "triamcinolone acetonide","polymyxin b", "povidone-iodine", "trimethoprim", "unspecified antibiotic", "ceftiofur", "cephalosporin", "ciprofloxacin", "chloramphenicol", "gentamicin sulfate", "ofloxacin", "bacitracin zinc", "bacitracin", "neomycin sulfate", "nystatin", 
+                 "tetracycline", "erythromycin", "rifampin", "amoxicillin", "amikacin sulfate","clotrimazole", "miconazole nitrate", "ketoconazole", "fluconazole", "nystatin", 
+                "terbinafine", "itraconazole", "griseofulvin", "enrofloxacin, tris-edta", "enrofloxacin, tobramycin", "enrofloxacin, ketoconazole, neomycin sulfate", 
+  "chloramphenicol, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide", 
+  "enrofloxacin, triamcinolone acetonide", "clotrimazole, dexamethasone, enrofloxacin", 
+  "clotrimazole, dexamethasone", "enrofloxacin, ketoconazole", "gentamicin sulfate, ketoconazole", 
+  "chlorhexidine gluconate, enrofloxacin, tris-edta", "chloroxylenol, salicylic acid, sodium thiosulfate","Chloramphenicol","Amikacin sulfate", "Gentamicin sulfate", "Enrofloxacin", "Neomycin sulfate", "Nystatin", 
+  "Penicillin", "Miconazole nitrate", "Clotrimazole", "Ofloxacin",   "amikacin sulfate",
+  "gentamicin sulfate",
+  "miconazole nitrate",
+  "enrofloxacin",
+  "ofloxacin",
+  "gentamicin sulfate, miconazole nitrate",
+  "chloramphenicol",
+  "penicillin",
+  "oseltamivir",
+  "florfenicol",
+  "ketoconazole",
+  "mupirocin",
+  "nystatin",
+  "triamcinolone acetonide",    "ofloxacin, unspecified nsaid", "amikacin sulfate, miconazole nitrate","amikacin sulfate, gentamicin sulfate, triamcinolone acetonide", "penicillin g benzathine, penicillin g procaine","neomycin sulfate, tetracaine , triamcinolone acetonide","enrofloxacin, miconazole nitrate, triamcinolone acetonide","itraconazole, ketoconazole, triamcinolone acetonide", "ketoconazole, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide, tris-edta","betamethasone, ofloxacin" , "piroctone olamine" ,"chloramphenicol, dexamethasone" ,"ketoconazole, mupirocin, triamcinolone acetonide" ,"clotrimazole, enrofloxacin, triamcinolone acetonide" ,"betamethasone, chloramphenicol, ketoconazole" , "voriconazole" ,"enrofloxacin, dexamethasone, tris-edta","dexamethasone, miconazole nitrate, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide" ,"betamethasone, burow's solution, gentamicin sulfate, hydrocortisone, miconazole nitrate" ,"ketoconazole, hydrocortisone","enrofloxacin, ketoconazole, tris-edta" ,"ketoconazole, sodium hypochlorite","moxifloxacin","neomycin sulfate, nystatin" , "attapulgite, bismuth subsalicylate, kanamycin","bacitracin zinc, miconazole nitrate, polymyxin b","neomycin sulfate, nystatin, triamcinolone acetonide" ,"ciprofloxacin, ketoconazole, triamcinolone acetonide" ,"chloramphenicol, ketoconazole, triamcinolone acetonide","potentiated sulfonamides", "kaolin, neomycin sulfate, pectin", "cefadroxil" , "dexamethasone, enrofloxacin, tris-edta","fenbendazole, maropitant citrate, metronidazole, omeprazole, sucralfate","dexamethasone, enrofloxacin, silver sulfadiazine", "dexamethasone, miconazole nitrate, neomycin sulfate, polymyxin b, prednisolone acetate, thiabendazole", "betamethasone, enrofloxacin", "dexamethasone, ear cleaner (epi-otic advanced), enrofloxacin" , "betamethasone, tobramycin"                                                                                      )
+
+
+anti_parasites <-c("ivermectin, pyrantel pamoate","afoxolaner","lufenuron, milbemycin oxime","ivermectin","milbemycin oxime","fluralaner","fipronil, (s)-methoprene","milbemycin oxime, spinosad", "neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide","fenbendazole"<"pyrantel pamoate","dinotefuran, permethrin, pyriproxyfen","imidacloprid, pyriproxyfen","sarolaner" , "milbemycin oxime, praziquantel","ivermectin, praziquantel, pyrantel pamoate","selamectin", "flumethrin, imidacloprid","moxidectin","lufenuron, milbemycin oxime, praziquantel", "spinosad","fipronil, permethrin, pyriproxyfen","febantel, praziquantel, pyrantel pamoate","imidacloprid, permethrin", "praziquantel","praziquantel, pyrantel pamoate", "imidacloprid, moxidectin", "fipronil, pyriproxyfen, (s)-methoprene", "fipronil","lotilaner", "lufenuron", "cyphenothrin, fipronil","ponazuril","cyphenothrin, fipronil, (s)-methoprene","clorsulon, ivermectin","imidacloprid", "nitenpyram","terbinafine","indoxacarb","deltamethrin","(s)-methoprene","mebendazole","itraconazole","fipronil, permethrin", "unspecified heartworm preventative", "amitraz", "epsiprantel","permethrin","afoxolaner, milbemycin oxime","indoxacarb, permethrin","permethrin, pyriproxyfen","dinotefuran","ivermectin, lufenuron, mebendazole, praziquantel, pyrantel pamoate","febantel", "milbemycin oxime", "moxidectin", "fenbendazole", "praziquantel", 
+                  "pyrantel pamoate", "oxantel", "diethylcarbamazine citrate","amitraz", "permethrin", "imidacloprid", "fipronil","etofenprox","selamectin", "pyriproxyfen", "s-methoprene", "diatomaceous earth", "nitenpyram","amitraz, metaflurimon", "etofenprox, (s)-methoprene, piperonyl butoxide", 
+  "etofenprox, n-octyl bicycloheptene dicarboximide, piperonyl butoxide, pyriproxyfen, (s)-methoprene", 
+  "unspecified herbal flea/tick preventative", "unspecified flea/tick preventative","Ivermectin",  "milbemycin oxime",
+  "oxantel",
+  "praziquantel",
+  "moxidectin",
+  "pyrantel pamoate",
+  "sarolaner",
+  "unspecified parasite preventative",
+    "moxidectin, pyrantel pamoate, sarolaner", "milbemycin oxime, oxantel, praziquantel", "fatal plus","unspecified flea preventative","toltrazuril","mebendazole, praziquantel, pyrantel pamoate","imidacloprid, permethrin, pyriproxyfen","fenbendazole, maropitant citrate, metronidazole, omeprazole, sucralfate"        
+)
+
+
+anti_septics<-c("chlorhexidine gluconate","chlorhexidine gluconate, ophytrium","chlorhexidine gluconate, ketoconazole","chlorhexidine gluconate, climbazole, phytosphingosine","chlorhexidine gluconate, tris-edta", "chlorhexidine gluconate, ketoconazole, tris-edta","chlorhexidine gluconate, hydrocortisone, tris-edta","chloroxylenol, lactic acid, salicylic acid", "colloidal silver", "chloroxylenol, salicylic acid, sodium thiosulfate","Silver sulfadiazine", "Gentian violet", "Boric acid","silver sulfadiazine",
+  "hydrogen peroxide",
+  "chlorhexidine gluconate","silver sulfadiazine, insulin","ceramide iii, chlorhexidine gluconate, microsilver" ,"boric acid, gentian violet, silver sulfadiazine","polyvinyl alcohol, povidone" ,"benzoyl peroxide, salicylic acid" ,"unspecified antiseptic"  , "chlorhexidine gluconate, dexamethasone" , "benzoic acid, chlorhexidine gluconate, malic acid, salicylic acid" , "benzoyl peroxide, phytosphingosine, salicylic acid, sulfur"        )
+
+
+cardio_respiratory<-c("pimobendan","dextromethorphan hydrobromide, guaifenesin","enalapril","homatropine, hydrocodone","benazepril hcl","amlodipine","sotalol","spironolactone", "prazosin", "clopidogrel","mexiletine","sildenafil", "dextromethorphan hydrobromide","guaifenesin","albuterol sulfate","pentoxifylline","theophylline","timolol","amiodarone", "lidocaine", "mexiletine","propranolol", "terbutaline", "oxygen", "diltiazem","Epoetin alfa-epbx", "Tyrosine","pseudoephedrine",
+  "dimenhydrinate",
+  "dextromethorphan, guaifenesin","aminocaproic acid","clonidine")
+
+
+dietary_supplements<-c("probiotic","omega 3","joint supplement (chondroitin sulfate/glucosamine hcl/msm)","joint supplement (chondroitin sulfate/glucosamine hcl)", "digestive supplement", "multivitamin", "butorphanol tartrate", "vitamin b", "joint supplement (glucosamine hcl/msm)","taurine","liver supplement","joint supplement (glucosamine hcl)", "urinary tract supplement", "yunnan baiyao", "prebiotic, probiotic","joint supplement (other)","immune support supplement","calming supplement", "vitamin c","skin and coat supplement", "vision supplement","vitamin d","cisapride","l-carnitine","joint supplement (chondroitin sulfate)","vitamin k","kidney health supplement","vitamin e", "melatonin", "thyroid support supplement", "liver happy","omega 3-6-9","shen calmer", "turmeric", "calcium", "niacinamide","l-asparaginase","unspecified supplement","vitamin a","wei qi booster","coenzyme q10","curcumin", "dl-methionine","flaxseed", "joint supplement (msm)","kelp","omega 3-6","acetylcysteine","anal gland supplement","coprophagia supplement","digestive supplement, joint supplement (glucosamine hcl/msm), probiotic, skin and coat supplement, vitamins and minerals", "joint supplement (chondroitin sulfate/glucosamine hcl/msm), multivitamin","seasonal and environmental allergy supplement","unspecified herbal supplement","cardiac support supplement","cognitive supplement","garlic", "joint supplement (other), skin and coat supplement","lung supplement","digestive supplement", "prebiotic", "probiotic", "immune support supplement",  "silymarin", "milk thistle", "colostrum", "echinacea", "reishi mushroom", "astragalus","high calorie nutritional supplement", "gallbladder function supplement",  "joint supplement (glucosamine hcl)", "omega 3", "puppy growth supplement",  "lutein supplement", "vitamin E", "biotin", "selenium", "zinc", "iron", 
+                        "magnesium citrate", "nourish essence formula", "ca support", "bee pollen", "brewers yeast, garlic", 
+  "xiao chai hu jia qin jiao tang", "liu jun zi tang", "yi zhi ren", "bitter melon", 
+  "spinal support supplement", "mangosteen extract", "shu jin i", "juan bi 1", 
+  "amylase, lipase, protease", "cognitive supplement, liver supplement", "musculoskeletal supplement", 
+  "hairball control supplement", "wheat germ", "gm np hsa formula", "cognitive supplement, liver supplement","rx diet - renal health", "rx diet - selected protein (duck)", "rx diet - skin and food sensitivity", 
+  "rx diet - gi low fat", "rx diet - food sensitivities", "rx diet - gi low fat", "unspecified thyroid medication or supplement", "Sodium carboxymethylcellulose", "Ba Zheng Wan", "Jin Gui Shen Qi Wan", 
+  "Digestive supplement, prebiotic, probiotic", "General female health supplement", 
+  "Strengthen metal", "Gather vitality", "Xue Fu Zhu Yu Tang", "Bilberry", 
+  "Puppy supplement", "Digestive supplement, immune support supplement, skin and coat supplement", 
+  "Silver sulfadiazine, insulin", "Squalane", "Chitosan", "Ashwagandha", "Homeopathic vaccine spray", 
+  "Sulforaphane producing supplement", "Liu Wei Di Huang Wan", "Vitamin-iron supplement", 
+  "Fenofibrate", "Mibolerone", "Corneal repair", "Slippery elm", "Jia Wei Xue Fu Zhu Yu Tang", 
+  "Viscoadaptive hyaluronan", "Rx diet - weight management", "Epoetin alfa-epbx", "Geraniol", 
+  "Tyrosine", "Aluminium hydroxide, magnesium hydroxide", "Phytosphingosine, pramoxine","Slippery elm","Sodium carboxymethylcellulose", "Ba Zheng Wan", "Jin Gui Shen Qi Wan", "Digestive supplement, prebiotic, probiotic", 
+  "General female health supplement", "Strengthen metal", "Gather vitality", "Xue Fu Zhu Yu Tang", "Bilberry", 
+  "Puppy supplement", "Digestive supplement, immune support supplement, skin and coat supplement" ,"Squalane", "Chitosan", "Ashwagandha", "Homeopathic vaccine spray", 
+  "Sulforaphane producing supplement", "Liu Wei Di Huang Wan", "Vitamin-iron supplement","sodium carboxymethylcellulose",
+  "unspecified herbal thyroid support supplement",
+  "digestive supplement, prebiotic, probiotic",
+  "unspecified digestive medication",
+  "puppy supplement",
+  "digestive supplement, immune support supplement, skin and coat supplement",
+  "general female health supplement",
+  "strengthen metal",
+  "xue fu zhu yu tang",
+  "bilberry",
+  "tear stain supplement",
+  "magnesium",
+  "sulforaphane producing supplement",
+  "slippery elm",
+  "vitamin-iron supplement",
+  "chitosan",
+  "vitamin-iron supplement",
+  "geranium oil, lavender oil, neem oil, peppermint oil, yarrow",
+  "ashwagandha",
+  "gexia-zhuyu tang",
+  "gather vitality",
+  "squalane",
+  "diatomaceous earth, neem oil, yarrow",
+  "gexia-zhuyu tang", "joint supplement (chondroitin sulfate/msm)","medium-chain triglycerides" ,"joint supplement (unspecified)","colon supplement",
+"cbd or hemp oil, joint supplement (unspecified)","stomach happy", "tyrosine" ,"spleen support supplement","testicular health supplement","endocrine system support","unspecified vitamin", "gut restore supplement" ,"apoptosis supplement" ,"vitamin b, vitamin b complex, vitamin b12, vitamin e" ,"palmitoylethanolamide" ,"chondroitin sulfate, hyaluronic acid, n-acetyl-d-glucosamine, triamcinolone acetonide","graviola" , "pancreatic enzyme supplement", "rx diet - aging care", "l-lysine"  , "joint supplement (glucosamine hcl), omega 3"      )
+
+
+diuretics <-c("furosemide")
+
+enteric<-c("maropitant citrate","famotidine","sucralfate","omeprazole","metoclopramide", "ondansetron","apomorphine hcl","ursodiol","mirtazapine","loperamide","ranitidine", "activated charcoal, bismuth subsalicylate, kaolin, pectin","pantoprazole", "activated charcoal", "bismuth subsalicylate","lactulose","simethicone", "activated charcoal, kaolin","activated charcoal, kaolin, sorbitol",
+"activated charcoal, sorbitol","apple cider vinegar","dolasetron", "metoclopramide", "ondansetron", "cerenia", "maropitant citrate", "crofelemer","cimetidine","aluminium hydroxide, magnesium hydroxide, simethicone","diphemanil metilsulfate" , "aluminium hydroxide"        )
+
+
+fluid_metabolites <-c("lactated ringer's solution","plasma-lyte","electrolyte injection","sodium chloride","dextrose","whole blood transfusion", "iron dextran", "platelet transfusion", "donor lymphocyte infusion (dli)", 
+  "hydroxyethyl starch, sodium chloride", "potassium chloride",
+  "plasma","magnesium", "potassium chloride", "sodium chloride", "calcium carbonate","saline","hypertonic saline","unspecified fluid therapy"  , "phosphorus" , "sodium"    )
+
+
+hormones_and_related <-c("levothyroxine", "thryoxine","diethylstilbestrol","oxytocin","trilostane","estriol", "pyridostigmine bromide","finasteride","aglepristone","nph insulin", "megestrol acetate", "cabergoline", "thyroxine",  "fludrocortisone", "leflunomide", "paroxetine", "metformin","desmopressin acetate", "cosyntropin", "bethanechol", "epinephrine", "pamidronate", "thiamazole", 
+  "Silver sulfadiazine, insulin","Epoetin alfa-epbx","insulin","epoetin alfa-epbx", "melatonin", "oxytocin", "progesterone","dinoprost tromethamine","silver sulfadiazine, insulin","mibolerone","fuzapladib sodium" , "misoprostol")
+
+
+neurological <-c("gabapentin","tramadol","trazodone", "acepromazine","fluoxetine", "dexmedetomidine", "propofol","alprazolam","levetiracetam","phenobarbital","buprenorphine", "ketamine", "diazepam","midazolam","hydromorphone","zonisamide","hydrocodone", "isoflurane","capromorelin", "amantadine","potassium bromide","atipamezole","morphine","tiletamine, zolazepam","clomipramine","codeine","fentanyl","methadone","lidocaine","amitriptyline","diphenoxylate","pramoxine", "sevoflurane", "bupivacaine","glycopyrrolate", "alfaxalone", "aminopentamide hydrogen sulfate","trimeprazine tartrate","acepromazine, atropine sulfate, butorphanol tartrate", "acepromazine, hydromorphone", "acepromazine, ketamine", "acetaminophen","acetaminophen, hydrocodone", "oxycodone","sertraline","xylazine","butorphanol tartrate", "gabapentin", "acetaminophen", "methadone", "buprenorphine", 
+ "hydromorphone", "tramadol",  "fentanyl","buspirone", "paroxetine", "doxepin", "clonazepam", "lorazepam", "sertraline",  "escitalopram", "fluoxetine", "amitriptyline", "mirtazapine","butorphanol tartrate, dexmedetomidine", "ketamine, xylazine", "pregabalin", "belladonna alkaloids, phenobarbital", "Clorazepate", "dimethyl sulfoxide",
+  "clorazepate",
+  "butorphanol tartrate",
+  "betamethasone, gentamicin sulfate, miconazole nitrate","tramadol", "gabapentin", "diazepam", "carbamazepine", "phenobarbital","bupivacaine, lidocaine","phenobarbital, potassium bromide",
+  "butorphanol tartrate, dexmedetomidine, tiletamine, zolazepam","menthol, lidocaine","hydrocortisone, pramoxine","felbamate", "gabapentin, trazodone" )
+
+
+immunologicals <- c("oclacitinib","lokivetmab","bedinvetmab", "cyclosporine", "chlorambucil","cyclophosphamide","doxorubicin","azathioprine","vincristine","sulfasalazine", "lomustine", "mycophenolate mofetil","tacrolimus","anti-cd52 monoclonal antibodies","procarbazine","vinblastine","melphalan","carboplatin","temozolomide", "dactinomycin", "cyclophosphamide", "doxorubicin", "vincristine",  "cisplatin", "melanoma vaccine", "egft/her2", "imatinib","chop protocol (cyclophosphamide/doxorubicin/prednisone/vincristine)","trametinib","lapatinib","elspar","vorinostat","verdinexor","vinorelbine","masitinib",   "tigilanol tiglate" )
+
+
+anti_viral <- c("imatinib", "interferon alfa", "acyclovir", "valacyclovir", "zidovudine","oseltamivir", "acyclovir")
+
+misc<-c("polysulfated glycosaminoglycan","phenylpropanolamine","methocarbamol", "ear cleaner (epi-otic advanced)","ear cleaner (zymox), hydrocortisone","atropine sulfate", "allergy immunotherapy - unspecified","ear cleaner (zymox)", "toothpaste/dental health solution or chews","acetic acid, boric acid","unspecified medication","cbd or hemp oil","allergy immunotherapy - drops", "allergy immunotherapy - injection","telmisartan","phytosphingosine","carvacrol","dorzolamide, timolol","coconut oil","latanoprost","silver sulfadiazine","toceranib","unspecified thyroid medication","unspecified otic ear pack","aspirin","atropine sulfate, diphenoxylate","acetaminophen, codeine","arnica","hypochlorous acid","tris-edta","tropicamide", "benzocaine","ophytrium","edta", "unspecified shampoo/mousse", "barium", "body sore", "phytosphingosine, salicylic acid", "carbomer, cetrimide, deionized water, disodium edta, sodium hydroxide, sorbitol","propylene glycol, salicylic acid","benzoyl peroxide","dorzolamide","rx diet - digestive support","oxymetazoline", "aconite, arnica, belladona, calendula, chamomile, daisy, echinacea, hepar sulphur, hypericum perforatum, mercurius solubilis, millefolium, symphytum officinale, witch hazel","algae","allopurinol","aloe vera","menthol","rx diet - hypoallergenic hydrolyzed protein","sirolimus","unspecified ear cleaner", "algae","burow's solution","corneal reapir","pentosan polysulfate","pilocarpine","polyethylene glycol","unspecified ear medication","amino acid","burow's solution, hydrocortisone, miconazole nitrate","cedarwood oil, rosemary oil, sesame","staphylococcus aureus phage lysate", "plasma-derived immunoglobulin",  "platelet-rich plasma (prp) injections", "growth factor supplement", "microcurrent therapy", "laser therapy","clinical trial - cancer prevention vaccine", "unspecified vaccine", "Aluminium hydroxide, magnesium hydroxide","Fenofibrate", "Phytosphingosine", "Pramoxine","Viscoadaptive hyaluronan","Mibolerone", "Dimethyl sulfoxide",
+  "transcranial magnetic stimulation (tms)","Chitosan", "Homeopathic vaccine spray","methazolamide","attapulgite, bismuth subcarbonate, kanamycin a",
+  "dilute bleach solution",
+  "stasis breaker",
+  "unspecified astringent","rattlesnake antivenin",
+  "homeopathic vaccine spray","unspecified",
+  "unspecified otic ointment",
+  "unspecified otic flush",
+  "external wind",
+  "unspecified eye dilation drops",
+  "unspecified allergy medication",
+  "over-the-counter antipruritic/astrigent",
+  "over-the-counter wound dressing",
+  "unspecified vision supplement",
+  "unspecified eye medication",
+  "over-the-counter unmedicated shampoo/mousse",
+  "unspecified wipes",
+  "unspecified wipes",
+  "rx diet - weight management",
+  "sodium hypochlorite",
+  "unspecified eye drops",
+  "liquid bandage",
+  "ear cleaner (aloeclens)",
+  "ear cleaner (oticlean a)",
+  "unspecified antiseptic ointment","ba zheng wan", "jin gui shen qi wan", "hypericum", "ku shen si wu", "jade windscreen", 
+"liu wei di huang wan", 
+    "xiang lian san", "wind toxin",  "jing tang max's formula", 
+    "jia wei xue fu zhu yu tang", "niosomes", "viscoadaptive hyaluronan", "amforal", "rv1001", "shu jin huo luo",   "phytosphingosine", "long dan xie gan wan", 
+    "di tan tang", "prochlorperazine", "coal tar solution, menthol, salicylic acid", "unspecified chemotherapy", 
+    "hyaluronic acid", "ceramide complex, coconut oil, safflower","ear cleaner (otirinse)","bordetella bronchiseptica","hydroquinone, mometasone furoate, tretinoin","cassia bark, colloidal silicon dioxide, clove, eucalyptus, isopropyl myristrate, lanolin, mineral oil, origanum, vitamin e, white petrolatum", "manganese","magnolia bark","dental sealant","lotion or leave in conditioner","diatomaceous earth, geranium oil, lavender oil, neem oil, peppermint oil, yarrow","four marvels",  "gui pi tang" ,"fu zheng support" , "unspecified analgesic", "cedarwood oil, eucalyptus, geranium oil, rosemary oil","stem cells","corneal repair","ocular repair gel","fenofibrate","ear cleaner (oti-soothe)",           "ferrum metallicum","naphazoline, pheniramine maleate","xiao chai hu tang" , "geraniol" ,"paw protection wax" ,"aluminium hydroxide, magnesium hydroxide"  , "ear cleaner (animal pharmaceuticals)","phytosphingosine, pramoxine" ,"pramoxine, phytosphingosine","damp heat","fenugreek, lemon balm, mint, neem oil, seaweed","loranthus formula" ,"junpier","tamarix dioica","potassium gluconate" ,"unspecified atopy medication" ,"antioxidant","citronella, geranium oil, lemongrass oil, peppermint oil" , "ear cleaner (oxyfresh)","catnip, cedarwood oil, citronella, erigeron, eucalyptus, geraniol, neem oil, rosemary oil, witch hazel","papaya", "rx clay", "tranexamic acid","epsom salt","silver oxide, type i collagen","dapagliflozin" , "benzethonium chloride, lidocaine" , "qing ying tang","schisandra", "borage oil","burow's solution, miconazole nitrate" , "cinnamon, lemongrass oil, peppermint oil, thyme"    , "olive oil"  , "ear astringent (vedco)" ,"unspecified herbal wart remover" , "natural wart remover" ,"ear cleaner (protonix)" ,"unspecified rx diet","ear cleaner (epi-otic advanced), ketoconazole", "bu yang huan wu","benzocaine, resorcinol" ,"viola clear fire","grapefruit seed extract, lavender oil, noni fruit","castor oil, cinnamon, lemongrass oil, sesame","walnut oil",                 "ear cleaner (nutri-vet)" ,"ear cleaner (aurocin)" , "cedarwood oil, peppermint oil" , "ear cleaner (well and good)", "unspecified eye lubricant"  , "zoledronic acid" , "iopromide" , "mycobacterium cell wall fraction (mcwf) immunostimulant" , "cholestyramine" , "dextran, glycerin, hypromellose", "lyssin"             )
+
+
+all_med_groups <- c(anti_inflam,anti_histamine,anti_microbials,anti_parasites,anti_septics,cardio_respiratory,dietary_supplements,diuretics,enteric,fluid_metabolites,hormones_and_related,neurological,immunologicals,anti_viral,misc)
+
+#check have grouped all
+int <- setdiff(ingredients$medication_ingredients, all_med_groups)
+print(int)
+```
+
+Other groupings??
+
+### Medication dosing, frequency, duration particulars:
+
+Medication admin routes:
+
+```{r}
+med_admin <- medications_2 %>%
+  count(administration_method, name = "Count") %>%
+  arrange(desc(Count))
+med_admin
+
+
+```
+
+```{r}
+other_specify <- medications_2 %>%
+  count(administration_method_specify, name = "Count") %>%
+  arrange(desc(Count))
+other_specify
+
+#group these better so most specifc are going to be captured in admin_metho
+topical <- c("in ear", "collar","in eye", "apply to skin","transdermal")
+oral <- c("oral","in food")
+injection <-c("ia injection","continuous rate infusion","intra haematoma","intra-lesional","epidural","injection")
+```
+
+Medication dosing:
 
 ```{r}
 
 ```
 
-## Medications
+Medication duration:
+
+```{r}
+
+```
+
+### 
 
 Want to determine:
 
@@ -138,3 +426,19 @@ medications_mapped <- medications_mapped %>%
 medications_calc <- total_dose(medications_mapped, "dose","duration","mapped_values")
 
 ```
+
+## Vaccinations
+
+Want to determine:
+
+A number of vaccines in lifetime ('dosage')
+
+Vaccination within past X years
+
+What were they vaccinated with in past X years
+
+NB. new row for every vaccine (multiple rows for same study year) for each subject id
+
+## Flea-worming Tx
+
+## OTC medications
