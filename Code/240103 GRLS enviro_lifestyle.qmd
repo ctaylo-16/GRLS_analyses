@@ -428,9 +428,8 @@ Can create variables something along the lines of *exposure to each flooring typ
 
 -   analyses for this in seperate activity script
 
-```{=html}
 <!-- -->
-```
+
 -   3 files- activity_details_through_SY2.csv, activity_details_SY3_beyond.csv and activity_overview.csv
     -   all dogs have study year 1-2 records
     -   missing records for \~400 dogs in years 3+ records
