@@ -81,6 +81,101 @@ medications_miss <- medications %>%
 # no, these are totally empty
 ```
 
+### Frequency of any medication for each dog in df
+
+```{r}
+#overall freq and avg across whole study period
+freq_all_time <- medications_2 %>%
+  group_by(subject_id) %>%
+  summarise(
+    total_records = n(), # Total number of rows across all years
+    avg_records_per_year = n() / n_distinct(year_in_study), # Average per year
+    .groups = "drop"
+  )
+
+
+
+by_year <- medications_2 %>%
+  group_by(subject_id, year_in_study) %>%
+  summarise(
+    yearly_records = n(),                          # Total rows for each year per subject
+    .groups = "drop"
+  ) %>%
+  pivot_wider(                                     # Pivot to wide format
+    names_from = year_in_study, 
+    values_from = yearly_records, 
+    values_fill = 0
+  ) %>%
+  rowwise() %>%
+  mutate(
+    avg_records_per_year = mean(c_across(-subject_id)) # Average across years per dog
+  ) %>%
+  ungroup()
+
+```
+
+```{r}
+freq_all_time %>%
+  summarise(mean= mean(avg_records_per_year), 
+            median= median(avg_records_per_year),
+  IQR=IQR(avg_records_per_year),
+  range=range(avg_records_per_year),
+  min = min(avg_records_per_year),
+  max=max(avg_records_per_year))
+```
+
+Histograms of number of meds given across life for dogs:
+
+```{r}
+ggplot(freq_all_time, aes(x = total_records)) +
+  geom_histogram(binwidth = 5, fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Histogram of Total med admins across whole study period per Dog",
+    x = "Total med admins",
+    y = "Number of dogs"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(freq_all_time, aes(x = avg_records_per_year)) +
+  geom_histogram(binwidth = 5, fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Histogram of avg med admins across whole study period per dog",
+    x = "Total Records",
+    y = "Number of dogs"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Histogram for average records across years
+ggplot(by_year, aes(x = avg_records_per_year)) +
+  geom_histogram(binwidth = 1, fill = "orange", color = "black", alpha = 0.7) +
+  labs(
+    title = "Histogram of Average Records Across Years",
+    x = "Average Records per Year",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+# Gather wide-format data into long format for per-year records
+long_by_year <- by_year %>%
+  pivot_longer(cols = -c(subject_id, avg_records_per_year), names_to = "year_in_study", values_to = "yearly_records")
+
+# Histogram for all yearly records
+ggplot(long_by_year, aes(x = yearly_records)) +
+  geom_histogram(binwidth = 1, fill = "purple", color = "black", alpha = 0.7) +
+  labs(
+    title = "Histogram of Yearly Med admin counts Across All Dogs",
+    x = "Med admin",
+    y = "Number of dogs"
+  ) +
+  theme_minimal()
+
+```
+
 ### Medication name and ingredients:
 
 ```{r}
@@ -238,7 +333,7 @@ dietary_supplements<-c("probiotic","omega 3","joint supplement (chondroitin sulf
 "liu wei di huang wan", 
     "xiang lian san", "jing tang max's formula", 
     "jia wei xue fu zhu yu tang",  "long dan xie gan wan", 
-    "di tan tang",   )
+    "di tan tang"   )
 
 
 diuretics <-c("furosemide")
@@ -295,7 +390,7 @@ misc<-c("polysulfated glycosaminoglycan","phenylpropanolamine","methocarbamol", 
   "ear cleaner (oticlean a)",
   "unspecified antiseptic ointment","hypericum","wind toxin", "niosomes", "viscoadaptive hyaluronan", "amforal", "rv1001", "shu jin huo luo",   "phytosphingosine",  "prochlorperazine", "coal tar solution, menthol, salicylic acid", "unspecified chemotherapy", 
     "hyaluronic acid", "ceramide complex, coconut oil, safflower","ear cleaner (otirinse)","bordetella bronchiseptica","hydroquinone, mometasone furoate, tretinoin","cassia bark, colloidal silicon dioxide, clove, eucalyptus, isopropyl myristrate, lanolin, mineral oil, origanum, vitamin e, white petrolatum", "manganese","magnolia bark","dental sealant","lotion or leave in conditioner","diatomaceous earth, geranium oil, lavender oil, neem oil, peppermint oil, yarrow","four marvels",  "gui pi tang" ,"fu zheng support" , "unspecified analgesic", "cedarwood oil, eucalyptus, geranium oil, rosemary oil","stem cells","corneal repair","ocular repair gel","fenofibrate","ear cleaner (oti-soothe)",           "ferrum metallicum","naphazoline, pheniramine maleate","xiao chai hu tang" , "geraniol" ,"paw protection wax" ,"aluminium hydroxide, magnesium hydroxide"  , "ear cleaner (animal pharmaceuticals)","phytosphingosine, pramoxine" ,"pramoxine, phytosphingosine","damp heat","fenugreek, lemon balm, mint, neem oil, seaweed","loranthus formula" ,"junpier","tamarix dioica","potassium gluconate" ,"unspecified atopy medication" ,"antioxidant","citronella, geranium oil, lemongrass oil, peppermint oil" , "ear cleaner (oxyfresh)","catnip, cedarwood oil, citronella, erigeron, eucalyptus, geraniol, neem oil, rosemary oil, witch hazel","papaya", "rx clay", "tranexamic acid","epsom salt","silver oxide, type i collagen","dapagliflozin" , "benzethonium chloride, lidocaine" , "qing ying tang","schisandra", "borage oil","burow's solution, miconazole nitrate" , "cinnamon, lemongrass oil, peppermint oil, thyme"    , "olive oil"  , "ear astringent (vedco)" ,"unspecified herbal wart remover" , "natural wart remover" ,"ear cleaner (protonix)" ,"unspecified rx diet","ear cleaner (epi-otic advanced), ketoconazole", "bu yang huan wu","benzocaine, resorcinol" ,"viola clear fire","grapefruit seed extract, lavender oil, noni fruit","castor oil, cinnamon, lemongrass oil, sesame","walnut oil",                 "ear cleaner (nutri-vet)" ,"ear cleaner (aurocin)" , "cedarwood oil, peppermint oil" , "ear cleaner (well and good)", "unspecified eye lubricant"  , "zoledronic acid" , "iopromide" , "mycobacterium cell wall fraction (mcwf) immunostimulant" , "cholestyramine" , "dextran, glycerin, hypromellose", "lyssin"  , "juniper"  , "rx diet - renal health", "rx diet - selected protein (duck)", "rx diet - skin and food sensitivity", 
-  "rx diet - gi low fat", "rx diet - food sensitivities", "rx diet - gi low fat"         )
+  "rx diet - gi low fat", "rx diet - food sensitivities", "rx diet - gi low fat" ,"other"        )
 
 
 all_med_groups <- c(anti_inflam,anti_histamine,anti_microbials,anti_parasites,anti_septics,cardio_respiratory,dietary_supplements,diuretics,enteric,fluid_metabolites,hormones_and_related,neurological,immunologicals,anti_viral,misc)
@@ -303,13 +398,118 @@ all_med_groups <- c(anti_inflam,anti_histamine,anti_microbials,anti_parasites,an
 #check have grouped all
 int <- setdiff(ingredients$medication_ingredients, all_med_groups)
 print(int)
+
+
+
+```
+
+Group according to these in new column:
+
+```{r}
+medications_2 <- medications_2  %>%
+  mutate(
+    active_ingredient_groups = case_when(
+      medication_ingredients %in% anti_inflam ~ "anti_inflam",
+      medication_ingredients %in% anti_histamine ~ "anti_hist",
+      medication_ingredients %in% anti_microbials ~ "anti_microbials",
+      medication_ingredients %in% anti_parasites ~ "anti_parasites",
+      medication_ingredients %in% anti_septics~ "anti_septics",
+      medication_ingredients %in% cardio_respiratory ~ "cardio_respiratory",
+      medication_ingredients %in% dietary_supplements ~ "dietary_supplements",
+      medication_ingredients %in% diuretics ~ "diuretics",
+      medication_ingredients %in% enteric ~ "enteric",
+      medication_ingredients %in% fluid_metabolites ~ "fluid_metabolites",
+      medication_ingredients %in% hormones_and_related ~ "hormones_and_related",
+      medication_ingredients %in% neurological ~ "neurological",
+      medication_ingredients %in% immunologicals ~ "immunologicals",
+      medication_ingredients %in% anti_viral ~ "anti_viral",
+      medication_ingredients %in% misc ~ "misc",
+      TRUE ~ "no_freq_recorded" # For values not in any group
+    )
+  )
+```
+
+Only retain medications with \>100 recordings in df and then classify into med groups
+
+Then rest as other:
+
+```{r}
+
+low_count_ingredients <- med_ingredients_count$medication_ingredients[
+  med_ingredients_count$Count < 100
+]
+
+# Recode medications_2 based on the mapping
+medications_2$medication_ingredients_100 <- ifelse(
+  medications_2$medication_ingredients %in% low_count_ingredients, 
+  "other", 
+  medications_2$medication_ingredients
+)
+
+# now reclass into other broad categories above
+medications_2 <- medications_2  %>%
+  mutate(
+    active_ingredient_groups_100 = case_when(
+      medication_ingredients_100 %in% anti_inflam ~ "anti_inflam",
+      medication_ingredients_100 %in% anti_histamine ~ "anti_hist",
+      medication_ingredients_100 %in% anti_microbials ~ "anti_microbials",
+      medication_ingredients_100 %in% anti_parasites ~ "anti_parasites",
+      medication_ingredients_100 %in% anti_septics~ "anti_septics",
+     medication_ingredients_100 %in% cardio_respiratory ~ "cardio_respiratory",
+      medication_ingredients_100 %in% dietary_supplements ~ "dietary_supplements",
+      medication_ingredients_100 %in% diuretics ~ "diuretics",
+      medication_ingredients_100 %in% enteric ~ "enteric",
+      medication_ingredients_100 %in% fluid_metabolites ~ "fluid_metabolites",
+      medication_ingredients_100 %in% hormones_and_related ~ "hormones_and_related",
+      medication_ingredients_100 %in% neurological ~ "neurological",
+      medication_ingredients_100 %in% immunologicals ~ "immunologicals",
+      medication_ingredients_100 %in% anti_viral ~ "anti_viral",
+      medication_ingredients_100 %in% misc ~ "misc",
+      TRUE ~ "no_freq_recorded" # For values not in any group
+    )
+  )
 ```
 
 Other groupings??
 
+Plots of counts of these groupings:
+
+```{r}
+medications_100_count <- medications_2 %>%
+  count(medication_ingredients_100, name = "Count") %>%
+  arrange(desc(Count))
+
+#truncate names to 100 str
+medications_100_count<- medications_100_count %>%
+  mutate(medication_ingredients_100 = str_sub(medication_ingredients_100, 1, 100))
+
+p<-ggplot(data=medications_100_count, aes(x=reorder(medication_ingredients_100,Count), y=Count)) +
+  geom_bar(stat="identity")+
+    theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
+      labs(y="Count",x="Active Ingredients")
+p
+```
+
+```{r}
+active_ingredients_100_count_group <- medications_2 %>%
+  count(active_ingredient_groups_100, name = "Count") %>%
+  arrange(desc(Count))
+
+
+p<-ggplot(data=active_ingredients_100_count_group, aes(x=reorder(active_ingredient_groups_100,Count), y=Count)) +
+  geom_bar(stat="identity") +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
+        labs(y="Count",x="Medicine groups")
+p
+
+
+```
+
 ### Medication dosing, frequency, duration particulars:
 
-Medication admin routes:
+#### Medication admin routes:
 
 ```{r}
 med_admin <- medications_2 %>%
@@ -327,24 +527,340 @@ other_specify <- medications_2 %>%
 other_specify
 
 #group these better so most specifc are going to be captured in admin_metho
-topical <- c("in ear", "collar","in eye", "apply to skin","transdermal")
-oral <- c("oral","in food")
-injection <-c("ia injection","continuous rate infusion","intra haematoma","intra-lesional","epidural","injection")
+topical <- c("in ear", "collar","in eye", "apply to skin","transdermal","unspecified drops")
+oral <- c("oral","in food","teeth")
+injection <-c("ia injection","intra haematoma","intra-lesional","epidural","injection")
+intravenous <-c("continuous rate infusions","iv infusion","intravenously")
+inhalant <- c("aerosol","inhalant","aerosol")
+other <- c("rectally","anal gland infusion")
+
+
+  
 ```
 
-Medication dosing:
+Reclassify administration methods again
+
+```{r}
+medications_2 <-medications_2 %>%
+    mutate(
+    administration_method_specify2 = case_when(
+    administration_method_specify %in% topical ~"topical",
+    administration_method_specify %in% oral ~"oral",
+    administration_method_specify %in% injection ~ "injection other",
+    administration_method_specify %in% intravenous ~"intravenous injection",
+    administration_method_specify %in% inhalant ~"inhalant",
+    administration_method_specify %in% other ~ "other",
+    TRUE ~ administration_method_specify 
+  ))
+
+
+other_specify2 <- medications_2 %>%
+  count(administration_method_specify2, name = "Count") %>%
+  arrange(desc(Count))
+other_specify2
+```
+
+Now add the other specifies back into the administration_method column
+
+```{r}
+medications_2 <- medications_2 %>%
+  mutate(
+      administration_method = if_else(
+      administration_method == "other specify",
+      administration_method_specify2,
+      administration_method
+    )
+  )
+```
+
+#### Medication dosing:
+
+```{r}
+dose_count <- medications_2 %>%
+    count(dose, name = "Count") %>%
+  arrange(desc(Count))
+
+
+dose_count
+
+```
+
+```{r}
+dose_unit_count <- medications_2 %>%
+  count(dose_unit, name="Count") %>%
+  arrange(desc(Count))
+
+dose_unit_count
+```
 
 ```{r}
 
+dose_unit_count_other_spec <- medications_2 %>%
+  count(dose_unit_specify, name="Count") %>%
+  arrange(desc(Count))
+
+dose_unit_count_other_spec
 ```
 
-Medication duration:
+Ones that are worth tidying for calculations here:
+
+-   tablet/pill/capsule one AND 1 tablet/pill/capsule - these are all flea/worming tx - there are \~3000 of these
+
+-   'based on weight' and all the 'based on weight' + weight range ones eg. 'based on weight (50-100lbs) - there are several hundred of these
+
+-   mg/ml
+
+-   mg/kg
+
+-   gm
+
+-   mg
+
+-   ml
+
+-   specific parasiticide ones eg. 460 mg lufenuron, 23 mg milbemycin oxime
+
+Many are done mg/kg or say something based on dogs weight = add in dog weight column to dataset
+
+```{r}
+dog_pe <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical.csv")
+
+dog_pe2 <- dog_pe %>%
+  dplyr::select(c(subject_id,year_in_study,weight,weight_units))
+#convert lb columns into kg columns 
+dog_pe2 <- dog_pe2 %>%
+  mutate(
+    weight = if_else(weight_units == "lb", weight * 0.453592, weight),
+    weight_units = if_else(weight_units == "lb", "kg", weight_units)
+  )
+
+
+medications_3 <- medications_2 %>% left_join(
+  dog_pe2, by=c("subject_id","year_in_study")
+)
+```
+
+There is LOADS of nonsense weights her eg. 0.8kg to 361kg dogs
+
+-   work out what I think is an outlier for weight later (tidy data and do the calculation functions first
+
+```{r}
+dog_pe2 %>%
+  summarise(mean=mean(weight,na.rm = T),
+            range=range(weight,na.rm = T),
+            min=min(weight,na.rm = T),
+            max=max(weight,na.rm = T)
+            )
+
+
+```
+
+Ones to sort:
+
+'based on weight'
+
+```{r}
+based_on_weight <- medications_3 %>%
+  filter(grepl('based on weight', dose_unit_specify))
+
+```
+
+'tablet/pill/capsule'
+
+```{r}
+tablet_pill_capsule <- medications_3 %>%
+  filter(grepl('tablet/pill/capsule', dose_unit_specify))
+```
+
+Majority all are parasite tx OR glucosamine supplement:
+
+```{r}
+table(tablet_pill_capsule$medication_ingredients)
+```
+
+```{r}
+table(tablet_pill_capsule$active_ingredient_groups)
+```
+
+-   mostly not interested in supplements dosage (if desired could do a YN supplement variable later?)
+
+#### Medication frequency:
+
+```{r}
+freq_unit_count <- medications_3%>%
+  count(frequency, name="Count") %>%
+  arrange(desc(Count))
+
+freq_unit_count
+```
+
+```{r}
+freq_unit_specify_count <- medications_3%>%
+  count(frequency_specify, name="Count") %>%
+  arrange(desc(Count))
+
+freq_unit_specify_count
+```
+
+Most of the q(days) or q(days) specify have a specified number of days in specify_days or specify_hours = concatenate these columns and then replace q days with that value and then recode in dictionary below
 
 ```{r}
 
+
+
+# Combine both conditions into the same column
+medications_3$frequency_all <- ifelse(
+  grepl("q \\(days\\)", medications_3$frequency),   # Check if Col1 contains "q (days)"
+  paste(medications_3$frequency, medications_3$specify_days, sep = " "), # Concatenate frequency and specify_days
+  ifelse(
+    grepl("q \\(hours\\)", medications_3$frequency),   # Check if Col1 contains "q (hours)"
+    paste(medications_3$frequency, medications_3$specify_hours, sep = " "), # Concatenate frequency and specify_hours
+    medications_3$frequency                        # Keep frequency as is if no conditions are met
+  )
+)
 ```
 
-### 
+Rerun counts
+
+```{r}
+freq_unit_count2 <- medications_3%>%
+  count(frequency_all, name="Count") %>%
+  arrange(desc(Count))
+
+freq_unit_count2
+```
+
+Create frequency dictionary lists:
+
+if we assume SID or daily =1 then the rest are either \<1 values eg. EOD = 0.5 or \>1 values e.g QID = 4
+
+```{r}
+
+dosing_frequency <- list(
+  "0.003"="yearly",
+  "0.004"=c("8 months","7 to 8 months","9 months"),
+  "0.006"=c("6 months","2 times yearly","6 to 8 months","6 to 7 months","q (days) 180"),
+  "0.007"=c("5 months","5 months if bathing or swiming or every 8 months"),
+  "0.008"=c("3 to 5 months","q (days) 120"),
+  "0.01"=c("3 months","3 to 4 months","4 months","2 to 4 months","120 days","3 to 6 months","q (days) 90","q (days) 84","q (days) 96","q (days), specify 90"),
+  "0.15"=c("2 to 3 months","8 to 10 weeks"),
+  "0.02"=c("2 months","6 weeks","6 to 8 weeks","1 to 3 months","42 days","45 days","q (days) 60","q (days) 45","q (days) 42","q (days) 56","q (days) 40","q (days), specify 45","q (days) 55"),
+  "0.03" =c("q (days)30","q (days) 30","q (days), specify 30","q (days)31","monthly", "monthly (seasonal)","monthly","1 to 2 months", "1 month","30","q (days) 28","3 days every 3 months","35 days","4 to 5 weeks","sid for 2 days every 2 to 3 months","sid for 3 days every 3 months","q (days) 21","q (days), specify 28","q (days) 31","q (days) 35","q (days) 32","q (days) 39","q (days), specify 31"),
+  "0.08"=c("3 weeks","3 weeks to 1 month","3 to 10 weeks","3 to 5 weeks","q (days), specify 21","q (days) 24"),
+  "0.07"=c("2 weeks","2 weeks to 1 month","2 to 3 weeks","q (days) 14","q (days) 15","q (days), specify 18"),
+  "0.10"=c("1 to 2 weeks","10 days","q (days), specify 14","q (days) 10","q (days), specify 10","q (days) 12"),
+  "0.12"="biweekly to weekly",
+  "0.14"=c("q (days)7","weekly","weekly for 2 weeks","weekly or after bathing/swimming","q (days) 7","q (days), specify 7"),
+  "0.20"=c("q (days) 5","q (days), specify 5"),
+  "0.28"=c("biweekly","2 to 3 times weekly","biweekly for 1 month","3 days","3 to 4 days","q (days) 3","q (days) 4","q (days), specify 3","q (days), specify 4"),
+  "0.33"=c("3 times weekly","4 times weekly"),
+  "0.5" = c("eod","q (hours) 48","q (days) 2","q (days), specify 2"),
+  "0.75"="q (hours) 30",
+  "1" = c("once", "sid", "q (days), specify1","q (days), specify1","daily","sid for 3 days","q (hours) 24" ,"q (hours), specify 24","q (days) 1","q (days), specify 1"),
+  "2" = c("bid","bid - 4 hours apart","q (hours) 12","q (hours), specify 12"),
+  "2.4"=c("q (hours) 10"),
+  "3" = c("tid","q (hours) 8","q (hours), specify 8"),
+  "3.5"=c("qid to tid","q (hours) 7"),
+  "4" = c("qid","q (hours) 6","q (hours), specify 6"),
+  "6"=c("qqh","q (hours) 4"),
+  "8"=c("2 to 3 hours","q (hours) 3","q (hours), specify 3"),
+  "10"= "q (hours) 3.5",
+  "12"=c("2 hours","q (hours) 2","q (hours), specify 2"),
+  "24"=c("hourly","1.25 hours","q (hours) 1","q (hours) 1.5"),
+  "55"="26 minutes",
+  
+  #for these tapering schedules can work out a dose still but likely requires manually doing for each
+  "complex_tapering"=c("bid for 3 days, then sid for 3 days, then eod","bid for 5 days, then sid for 5 days, then eod","tid to bid","bid for 4 days, then sid for 4 days, then eod","bid for 1 week, then sid for 1 week, then eod","bid for 2 days, then sid for 2 days, then eod","bid for 2 days, then sid for 3 days, then eod","sid for 1 week, then stop for 3 weeks, then repeat","bid for 2 days, then sid for 5 days, then eod","weekly for 1 month, then monthly","1 dose, then 1 dose in 3 weeks, then 1 dose in 3 months","20 mg for 1 week, then 10 for 1 week, then eod","3 days, then repeat in 3 weeks","8 doses, then every 3 to 4 weeks","bid for 1 week, then sid for 3 weeks, then eod",
+"bid for 1 week, then sid prn",
+"bid for 1 week, then sid, then eod",
+"bid for 1 weeks, then sid for 2 weeks","bid for 10 days, then sid for 5 days, then eod",
+"bid for 15 days, then sid for 45 days",
+"bid for 2 days, then sid for 2 days",
+"bid for 2 to 4 days, then sid for 2 to 4 days, then eod",
+"bid for 2 weeks, then sid for 2 weeks, then eod",
+"bid for 3 days, then sid for 1 week",
+"bid for 3 days, then sid for 6 days, then eod",
+"bid for 3 doses, then skip a day, then sid",
+"bid for 4 days, then sid for 2 days, then eod",
+"bid for 5 days, then sid for 1 week, then eod",
+"bid for 5 days, then sid for 10 days",
+"bid for 5 days, then sid for 3 days, then eod",
+"bid for 5 days, then sid for 5 days",
+"bid for 5 days, then sid for 5 days,",
+"bid for 5 days, then sid for 5 days, then eod for 5 days, then sid every 3 days",
+"bid for 6 days, then sid for 3 days, then eod",
+"bid for 8 days, then sid for 1 week, then eod",
+"bid for 8 days, then sid for 5 days, then eod",
+"bid for 9 days, then sid for 2 weeks, then eod",
+"bid to sid for 5 to 6 days or weeks","biweekly for 1 month, then every 2 weeks for 2 months, then monthly","sid for 2 days, then bid, then repeat","sid for 2 to 3 days, then eod","sid for 3 days, then every 2 weeks"),
+  "tapering"=c("bid to sid","bid for 1 week, then sid for 1 week","bid for 2 weeks, then sid","bid, then sid, then eod","sid for 5 days, then eod","bid for 1 week, then sid","bid for 3 days, then sid for 1 week, then eod","bid for 3 days, then sid for 5 days, then eod","bid for 1 month, then sid","bid for 3 days, then sid for 3 days","bid for 5 days, then sid","daily, then eod","sid for 1 week, then eod","sid for 2 days, then eod" ,"sid for 2 weeks, then eod","sid for 4 days, then eod","sid, then eod", "tid to sid","bid fo 5 days, then prn","bid for 1 day, then eod", "bid for 1 day, then sid for 10 days, then eod","bid for 1 day, then sid for 3 days, then eod","bid for 1 month, then sid for 1 week","bid for 1 week, then biweekly prn","bid for 1 week, then eod","bid for 1 wek, then sid","bid to sid, then eod",
+"bid, then eod",
+"bid, then sid",
+"bid, then sid eod","biweekly for 2 weeks, then weekly","daily for 5 days, then stop for 5 days","qid for 2 days, then bid for 3 days","sid for 10 days, then eod","sid for 21 days, then bid","sid for 6 days, then eod","tid, then sid, then eod","weekly for 1 month, then biweekly","weekly for 2 weeks, then once in 1 month","weekly for 3 weeks, then monthly","weekly, then every 2 weeks"),
+  "single_event"=c("3 doses","2 doses","qid to bid","sid to eod","bid for 2 weeks, then sid for 2 weeks","bid for 3 days, then sid","bid for 4 days, then sid for 4 days","sid to bid","bid for 10 days, then sid","bid for 4 days, then sid","sid for 2 weeks","biweekly until healed, then prn","sid for 1 week","sid for 1 week, then prn","sid for 3 weeks","tid for 1 week, then bid for 1 week","tid for 2 days, then bid for 5 days"),
+  #ones we will not be able to calculate dose from at all
+  "unspecified"=c("as directed","post-op","added to each fluid bag","chop protocol","with chemotherapy","seasonal","varied","when fed","when water is replaced"),
+  "misc"= c("4 doses","12 doses","2 tablets/pills/capsules","4","6"),
+  "dose_not_freq"=c("0.0024 mg/kg/hr","0.6 mg/kg/hr","1 mg/kg/hr","ml/hr")
+)
+
+```
+
+Apply this list to the dataframe so that they are reclassified:
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+
+medications_4 <- map_frequency_to_df(medications_3, column_to_map = "frequency_all", mapping_list = dosing_frequency, new_column_name = "mapped_frequency")
+
+```
+
+#### Medication duration:
+
+types of duration
+
+```{r}
+duration_count <- medications_4%>%
+  count(duration, name="Count") %>%
+  arrange(desc(Count))
+
+duration_count
+```
+
+duration unit:
+
+```{r}
+duration_unit_count <- medications_4%>%
+  count(duration_unit, name="Count") %>%
+  arrange(desc(Count))
+
+duration_unit_count
+```
+
+Concatenate duration columns together so can form a correct duration column
+
+```{r}
+medications_4 <- medications_4 %>%
+  mutate(duration_all =paste(medications_4$duration, medications_4$duration_unit, sep = " "))
+```
+
+```{r}
+duration_unit_count2 <- medications_4%>%
+  count(duration_all, name="Count") %>%
+  arrange(desc(Count))
+
+duration_unit_count2
+```
+
+Duration dictionary to recode:
+
+```{r}
+duration_dict <- list(
+  
+)
+```
 
 Want to determine:
 
@@ -354,22 +870,11 @@ Exposure to various different medications in past X years
 
 Dosage administered of a drug over lifetime/x time
 
-```{r}
-#medications need to change frequency to a numeric value eg. TID to 3
-#how many frequency versions are there
-med_freq<- table(medications$frequency)
-med_freq
-med_freq_inc_specify <- table(c(medications$frequency, medications$frequency_specify))
-med_freq_inc_specify
-
-
-```
-
 Specify column is very messy - a further 176 things - wait and see if tidied version is better
 
 Medications need to change frequency unit to a numeric value eg. SID = 1, BID = 2, EOD = 0.5 #q (days) has frequency in the specify_days column eg. q(days) 30 = once every 30d so will change to 0.03 in variable mapping NB. PRN = as needed
 
-```{r}
+```{r,eval=F}
 #concatenate frequency and specify days columns
 medications2 <- medications %>%
   mutate(specify_days=as.character(specify_days))%>%

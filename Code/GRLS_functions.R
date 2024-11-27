@@ -187,3 +187,29 @@ majority_location2 <- function(data, columns_to_count) {
     mutate(!!col_name := names(.data)[max.col(select(., all_of(columns_to_count)))+1])
 }
 
+
+
+
+### function for using dictionary to remap terms
+map_frequency_to_df <- function(data, column_to_map, mapping_list, new_column_name = "mapped_frequency") {
+  # Check if the specified column exists
+  if (!column_to_map %in% names(data)) {
+    stop("The specified column does not exist in the data frame.")
+  }
+  
+  # Define the mapping function
+  map_frequency <- function(frequency, mapping_list) {
+    match <- sapply(mapping_list, function(x) frequency %in% x)
+    if (any(match)) {
+      return(names(mapping_list)[which(match)])
+    } else {
+      return("unspecified")
+    }
+  }
+  
+  # Apply the mapping function to the specified column and create the new column
+  data[[new_column_name]] <- sapply(data[[column_to_map]], map_frequency, mapping_list = mapping_list)
+  
+  # Return the updated data frame
+  return(data)
+}
