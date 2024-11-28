@@ -618,7 +618,147 @@ Ones that are worth tidying for calculations here:
 
 -   ml
 
--   specific parasiticide ones eg. 460 mg lufenuron, 23 mg milbemycin oxime
+-   specific parasiticide ones eg. 460 mg lufenuron, 23 mg milbemycin oxime?
+
+```{r}
+dose <- medications_2 %>%
+  dplyr::select(c(medication_ingredients,dose,dose_unit,dose_unit_specify))
+
+
+#regex to try and ID rows that do not have a numeric dose there:
+non_numeric_dose <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
+
+# View the result
+print(non_numeric_dose)
+print(nrow(non_numeric_dose))
+
+#first regex tidying pass
+#some rules to apply to dose
+#1)if 2 numbers with NO other strings in it are split by a '-' then do avg of the 2 numbers
+#2)delete mg/kg or any "X/X" units from strings
+
+#3)strip mg,ml and tbs, tsp, g, mcg from a string if only a single number is there (no comma seperating multi drugs in dose)
+dash_pattern <- grepl("^\\d+(\\.\\d+)?-\\d+(\\.\\d+)?$", dose$dose)
+
+# Calculate the average for rows matching the pattern
+dose$dose[dash_pattern] <- sapply(dose$dose[dash_pattern], function(x) {
+  # Split the string by '-'
+  nums <- as.numeric(unlist(strsplit(x, "-")))
+  # Return the average
+  mean(nums)
+})
+
+
+#1) fixes about 1000 rows
+
+non_numeric_dose2 <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
+
+# View the result
+print(non_numeric_dose2)
+print(nrow(non_numeric_dose2))
+
+#2)
+# Define the unit pattern
+unit_pattern <- "\\b(mg|mcg)\\s*/\\s*(kg|ml|lb)\\b"
+matches <- grepl(unit_pattern, dose$dose, ignore.case = TRUE) & dose$dose_unit == "other specify"
+
+# Update the dose_unit column for matching rows
+dose$dose_unit[matches] <- regmatches(dose$dose[matches], regexpr(unit_pattern, dose$dose[matches], ignore.case = TRUE))
+
+# Remove the matched units from the dose column for the same rows
+dose$dose[matches] <- gsub(unit_pattern, "", dose$dose[matches], ignore.case = TRUE)
+
+# Trim any extra whitespace in both columns
+dose$dose <- trimws(dose$dose)
+dose$dose_unit <- trimws(dose$dose_unit)
+
+# View the updated dataset
+print(dose)
+
+#now apply same for those that done have 'other specify' for dose unit
+unit_pattern <- "\\b(mg|mcg|ug)\\s*/?\\s*(kg|ml|lb)?\\b|\\b(mg|mcg)\\b"
+# Identify rows where the `unit_pattern` is matched in `dose`
+matches <- grepl(unit_pattern, dose$dose, ignore.case = TRUE)
+
+# For rows that match the unit pattern, update `dose_unit` and clean up `dose`
+dose$dose_unit[matches] <- regmatches(dose$dose[matches], regexpr(unit_pattern, dose$dose[matches], ignore.case = TRUE))
+
+
+
+# Remove the matched units from the `dose` column for the same rows
+dose$dose[matches] <- gsub(unit_pattern, "", dose$dose[matches], ignore.case = TRUE)
+
+# Trim any extra whitespace in both columns
+dose$dose <- trimws(dose$dose)
+dose$dose_unit <- trimws(dose$dose_unit)
+
+
+
+non_numeric_dose3 <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
+
+# View the result
+print(non_numeric_dose3)
+print(nrow(non_numeric_dose3))
+
+
+
+
+
+#3) 
+
+
+# Regex to match units with optional whitespace
+unit_pattern <- "\\b(mg|ml|tbs|tsp|g|mcg|gm|tube|drop|drops|spray|sprays)\\b\\s*"
+
+# Identify rows where dose doesn't have a comma and isn't a pure number
+no_comma_non_numeric <- grepl("^[^,]*$", dose$dose) & !grepl("^\\d+(\\.\\d+)?$", dose$dose)
+
+# Strip the specific units and capture them into `dose_unit`
+dose$dose_unit[no_comma_non_numeric] <- regmatches(dose$dose[no_comma_non_numeric], regexpr(unit_pattern, dose$dose[no_comma_non_numeric], ignore.case = TRUE))
+
+# Remove the unit from the `dose` column (if it exists)
+dose$dose[no_comma_non_numeric] <- gsub(unit_pattern, "", dose$dose[no_comma_non_numeric], ignore.case = TRUE)
+
+# Trim any extra whitespace in `dose`
+dose$dose <- trimws(dose$dose)
+
+# View the updated dataset
+print(dose)
+
+
+
+non_numeric_dose4 <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
+
+# View the result
+print(non_numeric_dose4)
+print(nrow(non_numeric_dose4))
+
+
+
+
+
+#4) for dose where it is num tablet/pill/capsule string then remove the string from the num and put that in the dose_unit column
+dose <- dose %>%
+  mutate(
+    dose = ifelse(dose == "1 tablet/pill/capsule", 1, dose),
+    dose_unit = ifelse(dose == "1 tablet/pill/capsule", "tablet/pill/capsule", dose_unit)
+  )
+  
+
+
+non_numeric_dose5<- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
+
+# View the result
+print(non_numeric_dose5)
+print(nrow(non_numeric_dose5))
+
+#unfixable doses in non_numeric dose
+non_numeric_dose5 <- non_numeric_dose5 %>%
+  filter(!dose%in%c("unspecified","varies"))
+print(nrow(non_numeric_dose5))
+
+
+```
 
 Many are done mg/kg or say something based on dogs weight = add in dog weight column to dataset
 
@@ -858,9 +998,184 @@ Duration dictionary to recode:
 
 ```{r}
 duration_dict <- list(
+  "0.03" = "1 days",
+  "0.06"="2 days",
+  "0.09"="3 days",
+  "0.17"="5 days",
+  "0.2"="6 days",
+  "0.23" = c("7 days", "1 week", "1 weeks"),
+  "0.33" = c("10 days","9 days"),
+  "0.4"=c("12 days","11 days"),
+  "0.5" =c("2 weeks"),
+  "0.7"="3 weeks",
+  "1" = c("1 months", "1 month","4 weeks"),
+  "1.5"=c("5 weeks"),
+  "2"=c("2 months","8 weeks","7 weeks"),
+  "2.5"=c("10 weeks","9 weeks"),
+  "3"=c("3 months","12 weeks"),
+  "4"="4 months",
+  "5"="5 months",
+  "7"="7 months",
+  "8"="8 months",
+  "9"="9 months",
+  "10"="10 months",
+  "12"="12 months",
+  "continuous" =c("continuous unspecified","continuous months","continuous days","continuous not applicable","continuous weeks"),
+  "unspecified"=c("as needed unspecified","unspecified unspecified","as needed days",
+                  "as needed months","as needed weeks","as needed not applicable","1 not applicable","1 unspecified","unspecified days","2 not applicable","unspecified weeks","10 unspecified","7 unspecified","unspecified months","10 not applicable","3 not applicable",
+                  "4 not applicable","7 not applicable","12 unspecified","4 unspecified","5 unspecified","6 not applicable","6 unspecified")
+  
   
 )
 ```
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+
+medications_5 <- map_frequency_to_df(medications_4, column_to_map = "duration_all", mapping_list = duration_dict, new_column_name = "mapped_duration")
+```
+
+#### Explore how many dogs we have got actual values to calculate drug doses for:
+
+```{r}
+#dogs with duration values that are not unspecified and not misc supplements
+dogs_with_med_data <- medications_5 %>%
+  dplyr::filter(!mapped_frequency %in% c("single event", "unspecified", "misc", "tapering", "complex tapering"))
+
+missing_med_data <- medications_5 %>%
+  dplyr::filter(mapped_frequency %in% c("single event", "unspecified", "misc", "tapering", "complex tapering"))
+  #lost ~10k of records here
+dogs_with_med_data2 <- dogs_with_med_data %>%
+  #not using this row currently as can do something with continuous in drug calcs but not sure yet
+ dplyr::filter(!mapped_duration %in% c("unspecified"))
+
+  #dplyr::filter(!mapped_duration %in% c("continuous","unspecified"))
+
+
+
+
+#lose ~18k records with these terms removed
+print(nrow(dogs_with_med_data2)/nrow(dogs_with_med_data))
+```
+
+Left with a remaining \~18000 (out of \~50k = 36%) records to work with if we ignore the dogs with "continuous" as duration of medication
+
+However, \~82% left if continuous is retained
+
+Continuous is valid duration I just am not sure what to do with it for calculations
+
+Sense check for how many of each class are left:
+
+###### Antimicrobials:
+
+```{r}
+dogs_with_med_data_AB <- medications_5 %>%
+  dplyr::filter(active_ingredient_groups =="anti_microbials")
+
+dogs_with_med_data_AB2 <- dogs_with_med_data_AB %>%
+  dplyr::filter(!mapped_frequency %in% c("single event", "unspecified", "misc", "tapering", "complex tapering"))
+dogs_with_med_data2_AB <- dogs_with_med_data_AB2%>%
+  #not using this row currently as can do something with continuous in drug calcs but not sure yet
+dplyr::filter(!mapped_duration %in% c("unspecified"))
+
+ # dplyr::filter(!mapped_duration %in% c("continuous","unspecified"))
+
+
+print(nrow(dogs_with_med_data2_AB)/nrow(dogs_with_med_data_AB))
+```
+
+\~83% if ditch the "continuous" duration ones
+
+\~86% of antimicrobials tidied so far
+
+Where are rows being lost:
+
+###### Anti-parasiticides:
+
+```{r}
+dogs_with_med_data_parasite <- medications_5 %>%
+  dplyr::filter(active_ingredient_groups =="anti_parasites")
+
+dogs_with_med_data_parasite2 <- dogs_with_med_data_parasite %>%
+  dplyr::filter(!mapped_frequency %in% c("single event", "unspecified", "misc", "tapering", "complex tapering"))
+dogs_with_med_data2_parasite <- dogs_with_med_data_parasite2%>%
+  #not using this row currently as can do something with continuous in drug calcs but not sure yet
+   dplyr::filter(!mapped_duration %in% c("unspecified"))
+
+ # dplyr::filter(!mapped_duration %in% c("continuous","unspecified"))
+
+
+print(nrow(dogs_with_med_data2_parasite)/nrow(dogs_with_med_data_parasite))
+```
+
+\~7% if "continuous" duration is removed, this probably is not valid to remove as lots of these parasite txs will be continuous over life
+
+\~50% if retain continuous dose rows
+
+Where are rows being lost
+
+-   unspecified admin
+
+###### Immunologicals:
+
+```{r}
+dogs_with_med_data_immuno <- medications_5 %>%
+  dplyr::filter(active_ingredient_groups =="immunologicals")
+
+dogs_with_med_data_immuno2 <- dogs_with_med_data_immuno%>%
+  dplyr::filter(!mapped_frequency %in% c("single event", "unspecified", "misc", "tapering", "complex tapering"))
+dogs_with_med_data2_immuno<- dogs_with_med_data_immuno2%>%
+  #not using this row currently as can do something with continuous in drug calcs but not sure yet
+   dplyr::filter(!mapped_duration %in% c("unspecified"))
+
+  #dplyr::filter(!mapped_duration %in% c("continuous","unspecified"))
+
+
+print(nrow(dogs_with_med_data2_immuno)/nrow(dogs_with_med_data_immuno))
+```
+
+\~24%
+
+\~50% if keep dogs with "continuous" duration
+
+Where are rows being lost:
+
+###### Anti-inflam:
+
+```{r}
+dogs_with_med_data_inflam <- medications_5 %>%
+  dplyr::filter(active_ingredient_groups =="anti_inflam")
+
+dogs_with_med_data_inflam2 <- dogs_with_med_data_inflam%>%
+  dplyr::filter(!mapped_frequency %in% c("single event", "unspecified", "misc", "tapering", "complex tapering"))
+dogs_with_med_data2_inflam<- dogs_with_med_data_inflam2%>%
+  #not using this row currently as can do something with continuous in drug calcs but not sure yet
+    dplyr::filter(!mapped_duration %in% c("unspecified"))
+
+  #dplyr::filter(!mapped_duration %in% c("continuous","unspecified"))
+
+
+print(nrow(dogs_with_med_data2_inflam)/nrow(dogs_with_med_data_inflam))
+
+```
+
+\~46% if continuous duration excluded
+
+\~60% if continuous duration retained
+
+Where are rows being lost:
+
+### Medications length of time/number of times prescribed:
+
+Non use vs intermediate use vs long term use
+
+```{r}
+
+```
+
+## Medications dosage calculations
 
 Want to determine:
 
