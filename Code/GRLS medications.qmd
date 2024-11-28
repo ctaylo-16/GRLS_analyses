@@ -708,7 +708,7 @@ print(nrow(non_numeric_dose3))
 
 
 # Regex to match units with optional whitespace
-unit_pattern <- "\\b(mg|ml|tbs|tsp|g|mcg|gm|tube|drop|drops|spray|sprays)\\b\\s*"
+unit_pattern <- "\\b(mg|ml|tbs|tbsp|tsp|g|mcg|gm|tube|drop|drops|spray|sprays)\\b\\s*"
 
 # Identify rows where dose doesn't have a comma and isn't a pure number
 no_comma_non_numeric <- grepl("^[^,]*$", dose$dose) & !grepl("^\\d+(\\.\\d+)?$", dose$dose)
@@ -756,6 +756,15 @@ print(nrow(non_numeric_dose5))
 non_numeric_dose5 <- non_numeric_dose5 %>%
   filter(!dose%in%c("unspecified","varies"))
 print(nrow(non_numeric_dose5))
+
+
+```
+
+Replace rows of tidied, number-ified data back into main df:
+
+```{r}
+medications_2$dose <- dose$dose
+medications_2$dose_unit <- dose$dose_unit
 
 
 ```
