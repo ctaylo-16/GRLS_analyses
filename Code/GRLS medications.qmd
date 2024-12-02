@@ -624,6 +624,7 @@ Ones that are worth tidying for calculations here:
 dose <- medications_2 %>%
   dplyr::select(c(medication_ingredients,dose,dose_unit,dose_unit_specify))
 
+dose$dose_original <- dose$dose
 
 #regex to try and ID rows that do not have a numeric dose there:
 non_numeric_dose <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
@@ -638,7 +639,10 @@ print(nrow(non_numeric_dose))
 #2)delete mg/kg or any "X/X" units from strings
 
 #3)strip mg,ml and tbs, tsp, g, mcg from a string if only a single number is there (no comma seperating multi drugs in dose)
-dash_pattern <- grepl("^\\d+(\\.\\d+)?-\\d+(\\.\\d+)?$", dose$dose)
+
+
+###1)
+dash_pattern <- grepl("^\\d+(\\.\\d+)?\\s*-\\s*\\d+(\\.\\d+)?$", dose$dose)
 
 # Calculate the average for rows matching the pattern
 dose$dose[dash_pattern] <- sapply(dose$dose[dash_pattern], function(x) {
@@ -656,6 +660,22 @@ non_numeric_dose2 <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
 # View the result
 print(non_numeric_dose2)
 print(nrow(non_numeric_dose2))
+
+
+
+#deal with oncology chemo doses of mg/m2 seperate to other patterns
+  # Regular expression to find rows with 'mg/m2'
+unit_pattern <- "mg/m2"
+
+# Identify rows with 'mg/m2' in the dose column
+rows_with_mg_m2 <- grepl(unit_pattern, dose$dose)
+
+# Update dose_unit to 'mg/m2' for these rows
+dose$dose_unit[rows_with_mg_m2] <- "mg/m2"
+
+# Remove 'mg/m2' from the dose column for these rows
+dose$dose[rows_with_mg_m2] <- gsub(unit_pattern, "", dose$dose[rows_with_mg_m2])
+
 
 #2)
 # Define the unit pattern
@@ -704,26 +724,36 @@ print(nrow(non_numeric_dose3))
 
 
 
-#3) 
+#3) # Regex to match units with optional whitespace
+#####
+unit_pattern <- "\\b(mg|ml| ml|tbs|tbsp|tsp|g|mcg|gm|tube|drop|drops|spray|sprays|pump|pumps)\\b\\s*"
 
-
-# Regex to match units with optional whitespace
-unit_pattern <- "\\b(mg|ml|tbs|tbsp|tsp|g|mcg|gm|tube|drop|drops|spray|sprays)\\b\\s*"
-
-# Identify rows where dose doesn't have a comma and isn't a pure number
+# Identify rows where `dose` is not purely numeric and doesn't contain a comma
 no_comma_non_numeric <- grepl("^[^,]*$", dose$dose) & !grepl("^\\d+(\\.\\d+)?$", dose$dose)
 
-# Strip the specific units and capture them into `dose_unit`
-dose$dose_unit[no_comma_non_numeric] <- regmatches(dose$dose[no_comma_non_numeric], regexpr(unit_pattern, dose$dose[no_comma_non_numeric], ignore.case = TRUE))
+# Extract matches using the unit pattern
+matches <- regmatches(
+  dose$dose[no_comma_non_numeric],
+  regexpr(unit_pattern, dose$dose[no_comma_non_numeric], ignore.case = TRUE)
+)
 
-# Remove the unit from the `dose` column (if it exists)
-dose$dose[no_comma_non_numeric] <- gsub(unit_pattern, "", dose$dose[no_comma_non_numeric], ignore.case = TRUE)
+# Ensure `matches` has the same length as `no_comma_non_numeric`
+matches_full <- rep(NA, nrow(dose)) # Create a vector of NAs the same length as `dose`
+matches_full[no_comma_non_numeric] <- matches
 
-# Trim any extra whitespace in `dose`
-dose$dose <- trimws(dose$dose)
+# Update `dose_unit` for matched rows
+dose$dose_unit[no_comma_non_numeric] <- ifelse(
+  is.na(dose$dose_unit[no_comma_non_numeric]) | dose$dose_unit[no_comma_non_numeric] == "other specify",
+  matches_full[no_comma_non_numeric],
+  dose$dose_unit[no_comma_non_numeric]
+)
 
-# View the updated dataset
-print(dose)
+# Replace the numeric part in `dose` for rows with matches
+dose$dose[no_comma_non_numeric] <- ifelse(
+  matches_full[no_comma_non_numeric] != "",
+  trimws(sub(unit_pattern, "", dose$dose[no_comma_non_numeric], ignore.case = TRUE)),
+  dose$dose[no_comma_non_numeric]
+)
 
 
 
@@ -752,11 +782,101 @@ non_numeric_dose5<- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
 print(non_numeric_dose5)
 print(nrow(non_numeric_dose5))
 
-#unfixable doses in non_numeric dose
-non_numeric_dose5 <- non_numeric_dose5 %>%
-  filter(!dose%in%c("unspecified","varies"))
-print(nrow(non_numeric_dose5))
+# futher tweaks sprays -> spray, drops -> drop, tbs -> tbsp
 
+dose <- dose %>%
+  mutate(
+    dose = as.character(dose),  # Convert to character if it's not already
+    
+    # Update dose_unit column based on the presence of specific units
+    dose_unit = case_when(
+      grepl("\\bsprays\\b", dose, ignore.case = TRUE) ~ "spray",
+      grepl("\\bdrops\\b", dose, ignore.case = TRUE) ~ "drop",
+      grepl("\\btbs\\b", dose, ignore.case = TRUE) ~ "tbsp",
+      TRUE ~ dose_unit  # Keep the original value if no match is found
+    ),
+    
+    # Remove unit words from the dose column
+    dose = gsub("\\bsprays\\b", "", dose),
+    dose = gsub("\\bdrops\\b", "", dose),
+    dose = gsub("\\btbs\\b", "", dose)
+  )
+#rerun again 1)
+dash_pattern <- grepl("^\\d+(\\.\\d+)?\\s*-\\s*\\d+(\\.\\d+)?$", dose$dose)
+
+# Calculate the average for rows matching the pattern
+dose$dose[dash_pattern] <- sapply(dose$dose[dash_pattern], function(x) {
+  # Split the string by '-'
+  nums <- as.numeric(unlist(strsplit(x, "-")))
+  # Return the average
+  mean(nums)
+})
+
+
+###5) deal with rows where there is a dose in dose unit just in unusable format eg. 1.5 tablet/capsule/pill-136 which is 1.5 x 136mg tablet
+# Example input data
+
+# Regex to match the pattern NUM STRING NUM with a dash (e.g., 1.5 tablets/pills/capsules - 136)
+unit_pattern <- "(\\d+(\\.\\d+)?)\\s+[a-zA-Z/]+\\s*-\\s*(\\d+(\\.\\d+)?)"
+
+# Identify rows matching the pattern NUM STRING NUM with a dash
+matches <- grep(unit_pattern, dose$dose, value = TRUE)
+
+# Extract numbers, multiply, and replace in `dose` column
+dose$dose[grep(unit_pattern, dose$dose)] <- sapply(
+  dose$dose[grep(unit_pattern, dose$dose)],
+  function(x) {
+    # Extract numbers using regex
+    nums <- regmatches(x, regexec(unit_pattern, x))
+    
+    # Get the first and second number (convert to numeric)
+    num1 <- as.numeric(nums[[1]][2])  # First number
+    num2 <- as.numeric(nums[[1]][4])  # Second number
+    
+    # Perform multiplication
+    result <- num1 * num2
+    
+    # Replace original value with result
+    return(as.character(result))
+  }
+)
+
+# Output the updated data frame
+print(dose)
+
+
+
+non_numeric_dose6<- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
+
+###
+
+#unfixable doses in non_numeric dose
+non_numeric_dose6 <- non_numeric_dose6 %>%
+  filter(!dose%in%c("unspecified","varies"))
+print(nrow(non_numeric_dose6))
+
+
+```
+
+Approx 8000 rows are not able to be tidied with code above.
+
+Of these, some could be tidied further just not sure how to yet and some cannot be worked with:
+
+\~4000 are parasite tx and the dose is written in format 'based on weight(weight in brackets)
+
+\~2.5k look unusable
+
+```{r}
+#unfixable doses in non_numeric dose
+unfixable<- non_numeric_dose6 %>%
+  filter(dose%in%c("unspecified","varies","","moderate amount","small amount","as directed","powder"))
+print(nrow(unfixable))
+
+
+#parasite tx that might be fixable
+parasite <- non_numeric_dose6 %>%
+  dplyr::filter(grepl("based on", dose, ignore.case = TRUE))
+print(nrow(parasite))
 
 ```
 
