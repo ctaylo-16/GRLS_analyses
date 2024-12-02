@@ -625,7 +625,7 @@ dose <- medications_2 %>%
   dplyr::select(c(medication_ingredients,dose,dose_unit,dose_unit_specify))
 
 dose$dose_original <- dose$dose
-
+dose$dose_unit_original <-dose$dose_unit
 #regex to try and ID rows that do not have a numeric dose there:
 non_numeric_dose <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
 
@@ -633,6 +633,22 @@ non_numeric_dose <- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
 print(non_numeric_dose)
 print(nrow(non_numeric_dose))
 
+
+
+
+##deal with 'other specify' in dose_unit column
+dose <- dose %>%
+  mutate(dose_unit = ifelse(dose_unit == "other specify", dose_unit_specify, dose_unit))
+#and 'drop' in dose_unit
+dose <- dose %>%
+  mutate(dose_unit = ifelse(dose_unit == "drop", dose_unit_specify, dose_unit))
+
+
+#deal with unspecified in the dose column
+dose <- dose %>%
+  mutate(
+    dose = ifelse(dose == "unspecified" & !is.na(dose_unit), dose_unit, dose)
+  )
 #first regex tidying pass
 #some rules to apply to dose
 #1)if 2 numbers with NO other strings in it are split by a '-' then do avg of the 2 numbers
@@ -782,6 +798,9 @@ non_numeric_dose5<- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
 print(non_numeric_dose5)
 print(nrow(non_numeric_dose5))
 
+
+
+
 # futher tweaks sprays -> spray, drops -> drop, tbs -> tbsp
 
 dose <- dose %>%
@@ -800,6 +819,24 @@ dose <- dose %>%
     dose = gsub("\\bsprays\\b", "", dose),
     dose = gsub("\\bdrops\\b", "", dose),
     dose = gsub("\\btbs\\b", "", dose)
+  )
+
+dose <-dose %>%
+  mutate(
+    dose_unit = ifelse(dose_unit == "sprays", "spray", dose_unit)
+  )
+
+dose <-dose %>%
+  mutate(
+    dose_unit = ifelse(dose_unit == "pumps", "pump", dose_unit)
+  )
+dose <-dose %>%
+  mutate(
+    dose_unit = ifelse(dose_unit == "tbs", "tbsp", dose_unit)
+  )
+dose <-dose %>%
+  mutate(
+    dose_unit = ifelse(dose_unit == "drops", "drop", dose_unit)
   )
 #rerun again 1)
 dash_pattern <- grepl("^\\d+(\\.\\d+)?\\s*-\\s*\\d+(\\.\\d+)?$", dose$dose)
@@ -845,10 +882,104 @@ dose$dose[grep(unit_pattern, dose$dose)] <- sapply(
 print(dose)
 
 
+##strip the weight bit of string from based on weight rows
+
+# Define the pattern for "based on weight (...)"
+pattern <- "based on weight \\((>?<?\\d+(?:[+-]\\d+)?|\\d+[+-])[ ]?lbs\\)"
+
+# Process the data in dose column
+dose <- dose %>%
+  mutate(
+    # Extract the weight part into the new column
+    based_on_weight_weight = ifelse(
+      grepl(pattern, dose),
+      sub(pattern, "\\1", dose),
+      NA
+    ),
+    # Replace the matching part with "based on weight"
+    dose = ifelse(
+      grepl(pattern, dose),
+      sub(pattern, "based on weight", dose),
+      dose
+    )
+  
+  )
+
+
+# Enhanced regex to capture weights with +, -, <, >, and optional spaces
+
+#pattern <- "based on weight \\((?:[<>]?\\d+(?:\\.\\d+)?(?:[+-]\\d+(?:\\.\\d+)?)?|\\d+(?:\\.\\d+)?[+-]?)\\s?lbs\\)"
+
+# Define the pattern for extracting the weight from the dose_unit column
+pattern <- "based on weight \\(([^)]+)\\s?lbs\\)"
+
+dose <- dose %>%
+  mutate(
+    # Extract the weight part into the new column based_on_weight_weight from dose_unit
+    based_on_weight_weight = ifelse(
+      grepl(pattern, dose_unit), 
+      sub(pattern, "\\1", dose_unit),  # Extract weight inside the parentheses
+      NA
+    ),
+    # Replace the matching part with "based on weight" in dose_unit (without the weight)
+    dose_unit = ifelse(
+      grepl(pattern, dose_unit), 
+      sub(pattern, "based on weight", dose_unit),  # Remove weight part, leave only "based on weight"
+      dose_unit
+    )
+  )
+dose <- dose %>%
+  mutate(
+    # Extract the weight part into the new column based_on_weight_weight from dose
+    based_on_weight_weight = ifelse(
+      grepl(pattern, dose), 
+      sub(pattern, "\\1", dose),  # Extract weight inside the parentheses
+      based_on_weight_weight  # Keep existing value if already populated
+    ),
+    # Replace the matching part with "based on weight" in dose (without the weight)
+    dose = ifelse(
+      grepl(pattern, dose), 
+      sub(pattern, "based on weight", dose),  # Remove weight part, leave only "based on weight"
+      dose
+    )
+  )
+
+
+####take number from dose_unit variables eg. 0.5 tablet pill capsule and put into dose column and leave as tablet/pill/capsule
+# Define the regex pattern to match "NUM STRING"
+pattern <- "^\\s*(\\d+(\\.\\d+)?)(\\s+.+)$"
+
+# Process the data
+dose <- dose %>%
+  mutate(
+    # Extract NUM into the dose column if the pattern matches
+    dose = ifelse(
+      grepl(pattern, dose_unit),
+      paste0(ifelse(is.na(dose), "", " "), sub(pattern, "\\1", dose_unit)),
+      dose
+    ),
+    # Remove NUM from dose_unit if the pattern matches
+    dose_unit = ifelse(
+      grepl(pattern, dose_unit),
+      sub(pattern, "\\3", dose_unit),
+      dose_unit
+    )
+  )
+
+# Trim whitespace in both columns
+dose <- dose %>%
+  mutate(
+    dose = trimws(dose),
+    dose_unit = trimws(dose_unit)
+  )
+
+
+
+
 
 non_numeric_dose6<- dose[!grepl("^\\d+(\\.\\d+)?$", dose$dose), ]
 
-###
+
 
 #unfixable doses in non_numeric dose
 non_numeric_dose6 <- non_numeric_dose6 %>%
@@ -856,15 +987,66 @@ non_numeric_dose6 <- non_numeric_dose6 %>%
 print(nrow(non_numeric_dose6))
 
 
+#remove any white space
+dose$dose <- sub("^\\s+|\\s+$", "", dose$dose)
+dose$dose_unit <- sub("^\\s+|\\s+$", "", dose$dose_unit)
+
+
+
+
+
+
+# Define the list of strings to move
+remove_unit <- c(
+  "tablet/pill/capsule", "tablets/pills/capsules", "inch strip", 
+  "pack/package", "iu", "bottles/vials", "bottle/vial", "scoops", 
+  "cups", "cup", "pellet", "wipe/pad", "collar"
+)
+
+# Create a regex pattern from the list
+remove_unit_pattern <- paste0("\\b(", paste(remove_unit, collapse = "|"), ")\\b")
+
+# Process the data
+dose <- dose %>%
+  mutate(
+    # Identify rows where dose matches NUM STRING with STRING in remove_unit
+    dose_unit = ifelse(
+      grepl(remove_unit_pattern, dose),
+      sub("^\\s*\\d+(\\.\\d+)?\\s*", "", dose),  # Extract the STRING part
+      dose_unit
+    ),
+    dose = ifelse(
+      grepl(remove_unit_pattern, dose),
+      sub(remove_unit_pattern, "", dose),  # Keep only the NUM part
+      dose
+    )
+  )
+
+
+
+
 ```
 
-Approx 8000 rows are not able to be tidied with code above.
+Need to tidy whitespace issue in dose_unit column:
 
-Of these, some could be tidied further just not sure how to yet and some cannot be worked with:
+```{r}
+###need to tidy dose_unit as issue with white space eg "ml" and "ml " 
+dose_unit_count3 <- dose %>%
+  count(dose_unit, name="Count") %>%
+  arrange(desc(Count))
 
-\~4000 are parasite tx and the dose is written in format 'based on weight(weight in brackets)
+dose_unit_count3
+```
 
-\~2.5k look unusable
+-   Approx 8000 rows are not able to be tidied with code above.
+
+-   Of these, some could be tidied further just not sure how to yet and some cannot be worked with:
+
+-   \~4000 are parasite tx and the dose is written in format 'based on weight(weight in brackets)
+
+    -   could consider instead of any dosage calcs just \# of times prescribed flea/wormer tx rather than the dose of various active ingredients
+
+\~2.5k look unusable (see, unfixable below)
 
 ```{r}
 #unfixable doses in non_numeric dose
@@ -1086,6 +1268,14 @@ medications_4 <- map_frequency_to_df(medications_3, column_to_map = "frequency_a
 
 ```
 
+```{r}
+freq_unit_count3 <- medications_4%>%
+  count(mapped_frequency, name="Count") %>%
+  arrange(desc(Count))
+
+freq_unit_count3
+```
+
 #### Medication duration:
 
 types of duration
@@ -1295,6 +1485,30 @@ print(nrow(dogs_with_med_data2_inflam)/nrow(dogs_with_med_data_inflam))
 \~60% if continuous duration retained
 
 Where are rows being lost:
+
+##### Determine number of records with complete rows across dose, dose unit, duration and frequency
+
+This is an approximation
+
+```{r}
+# remove dogs missing a usable dose
+medications_complete <- medications_5 %>%
+  filter(!dose%in%c("unspecified","varies","","moderate amount","small amount","as directed","powder","as directed"))
+#dose units that are definitely not usable dogs
+medications_complete <-medications_complete %>%
+  filter(!dose_unit %in% c("unspecified","as directed","as needed","monthly","liquid","tapering dose","daily","injection"))
+
+#frequency units that are defintely not usable
+medications_complete <-medications_complete %>%
+  filter(!mapped_frequency %in% c("unspecified"))
+#duration units that are definitely not usable
+medications_complete <- medications_complete %>%
+  filter(!mapped_duration %in% c("unspecified"))
+
+
+
+
+```
 
 ### Medications length of time/number of times prescribed:
 
