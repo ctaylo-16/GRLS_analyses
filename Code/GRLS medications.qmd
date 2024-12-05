@@ -1512,9 +1512,11 @@ medications_complete <- medications_complete %>%
 
 ### Medications length of time/number of times prescribed:
 
-Non use vs intermediate use vs long term use
+Non use vs intermediate use vs long term use:
 
 ```{r}
+
+
 
 ```
 

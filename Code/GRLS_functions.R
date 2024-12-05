@@ -129,6 +129,35 @@ check_exposure <- function(data, columns_to_check, diagnosis_year, exposure_year
                   .names = "{.col}_{exposure_years}y"))
 }
 
+
+#variant on check_exposure to apply it to different subsets of years to just get a Y N exposed eg. was dog exposed to aerosols in SY 0-2
+check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
+  suffix <- paste(study_years, collapse = "_")
+  data %>%
+    group_by(subject_id) %>%
+    mutate(across(
+      all_of(columns_to_check),
+      ~ if_else(
+        any(. == 1 & !!sym(year_column) %in% study_years),
+        paste0("Within ", paste(study_years, collapse = ","), " years"),
+        paste0("Not within ", paste(study_years, collapse = ","), " years")
+      ),
+      .names = "{.col}_study_years_{suffix}"
+    )) %>%
+    # Calculate the count of 1s within the study years for each column = sum of exposure
+    mutate(across(
+      all_of(columns_to_check),
+      ~ sum(. == 1 & !!sym(year_column) %in% study_years, na.rm = TRUE),
+      .names = "{.col}_sum_{suffix}"
+    )) %>%
+    ungroup()
+}
+
+
+
+
+
+
 # Example usage:
 #columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
 #                     "use_moth_balls", "use_incense_or_candles", "smoke_exposure",

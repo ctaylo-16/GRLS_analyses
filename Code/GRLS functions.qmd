@@ -225,6 +225,36 @@ check_exposure <- function(data, columns_to_check, diagnosis_year, exposure_year
 #result_df <- check_exposure(merged_df, columns_to_check, diagnosis_year, exposure_years)
 ```
 
+### Exposed in specified study years
+
+Variant on above - using year_in_study column rather than time between diagnosis date and a set exposure number
+
+```{r}
+#variant on check_exposure to apply it to different subsets of years to just get a Y N exposed eg. was dog exposed to aerosols in SY 0-2
+check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
+  suffix <- paste(study_years, collapse = "_")
+  data %>%
+    group_by(subject_id) %>%
+    mutate(across(
+      all_of(columns_to_check),
+      ~ if_else(
+        any(. == 1 & !!sym(year_column) %in% study_years),
+        paste0("Within ", paste(study_years, collapse = ","), " years"),
+        paste0("Not within ", paste(study_years, collapse = ","), " years")
+      ),
+      .names = "{.col}_study_years_{suffix}"
+    )) %>%
+    # Calculate the count of 1s within the study years for each column = sum of exposure
+    mutate(across(
+      all_of(columns_to_check),
+      ~ sum(. == 1 & !!sym(year_column) %in% study_years, na.rm = TRUE),
+      .names = "{.col}_count_{suffix}"
+    )) %>%
+    ungroup()
+}
+
+```
+
 ## Hours/amount of exposure prior to a date
 
 A function to calculate the 'dosage' of an exposure event prior to a certain date
