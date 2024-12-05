@@ -1033,7 +1033,7 @@ sleep_smoking_enviro_all_final_date<- sleep_smoking_enviro_all_final_date%>%
   distinct(subject_id, .keep_all = TRUE)
 
 #NB change to final file name when file done
-write.csv(sleep_smoking_enviro_all_final_date,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/endpoints_sleep_smoking_enviro_lifestyle_enviro.csv")
+write.csv(sleep_smoking_enviro_all_final_date,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_sleep_smoking_enviro_lifestyle_enviro.csv")
 
 ```
 
@@ -1056,7 +1056,7 @@ Keeping all rows:
 
 
 #NB change to final file name when file done
-write.csv(sleep_smoking_enviro_all_no_endpoints,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/allrows_sleep_smoking_enviro_lifestyle_enviro.csv")
+write.csv(sleep_smoking_enviro_all_no_endpoints,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/allrows_sleep_smoking_enviro_lifestyle_enviro.csv")
 
 ```
 
@@ -1070,5 +1070,5 @@ sleep_smoking_enviro_all_no_endpoints2 <- sleep_smoking_enviro_all_no_endpoints 
 sleep_smoking_enviro_all_no_endpoints2 <- sleep_smoking_enviro_all_no_endpoints2 %>%
   distinct(subject_id, .keep_all = TRUE)
 
-write.csv(sleep_smoking_enviro_all_no_endpoints2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv")
+write.csv(sleep_smoking_enviro_all_no_endpoints2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv")
 ```

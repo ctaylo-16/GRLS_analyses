@@ -219,9 +219,9 @@ majority_location <- function(data,columns_to_count) {
     #count the number of 1s for each dog for each column seperately
     summarise(across(all_of(columns_to_count), ~sum(. == 1, na.rm = TRUE))) %>%
     #majority location is the column with biggest count in the previous step, a +1 is added for the indexing between relative df created in summarise vs actual df the fucntion is applied to
-    mutate(majority_location = names(.)[max.col(select(., all_of(columns_to_count)))+1]) 
+    mutate(majority_location = names(.)[max.col(select(., all_of(columns_to_count)))+1]) %>%
+    ungroup()
 }
-
 #same function but dynamic column labelling - cant make this work currently
 majority_location2 <- function(data, columns_to_count) {
   col_name <- paste0(columns_to_count, "_lifetime_exposure")
