@@ -252,17 +252,19 @@ end_points_neoplasia <- end_points %>%
 end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
 
 
-
-
+#lymphoma specific
+end_lymphoma <- end_points_neoplasia %>% filter(grepl('lymphoma',tracked_condition),ignore.case=TRUE)
 ```
 
-Join HSA cancer and repro data:
+Join cancer and repro data:
 
 ```{r}
 #rename a joining column
 neut_age_M3 <- neut_age_M3 %>% 
   rename_at('year_in_study.x',~'year_in_study')
 end_HSA_join <- left_join(end_HSA,neut_age_M3, by=c("subject_id","year_in_study"))
+
+end_lymphoma_join <- left_join(end_lymphoma,neut_age_M3,by=c("subject_id","year_in_study"))
 ```
 
 NB: 3 patients have duplicated records in the end_HSA dataset:
@@ -285,6 +287,8 @@ end_join <- left_join(end_points,neut_age_M3, by=c("subject_id","year_in_study")
 
 Time between neutering and cancer diagnosis:
 
+HSA
+
 ```{r}
 event1_name <- "neutering"
 event2_name <- "HSA"
@@ -299,6 +303,23 @@ end_HSA_join <- end_HSA_join %>% mutate(timespan_neuter_cancer_days = as.numeric
 end_HSA_join <- end_HSA_join %>% mutate(timespan_neuter_cancer_years = timespan_neuter_cancer_days/365)
 
 
+
+```
+
+Lymphoma
+
+```{r}
+event1_name <- "neutering"
+event2_name <- "lymphoma"
+end_lymphoma_join <- end_lymphoma_join %>% mutate(diagnosis_year_month_date1 =as.POSIXct(diagnosis_date,format="%Y-%m-%d"))
+end_lymphoma_join <- end_lymphoma_join %>% mutate(neutered_on_date1 =as.POSIXct(neutered_on_date,format="%Y-%m-%d"))
+end_lymphoma_join <- end_lymphoma_join %>% mutate(neutered_on_date1 =as.POSIXct(neutered_on_date,format="%Y-%m-%d"))
+
+
+#cannot make this function work so have done manually for now with difftime below
+
+end_lymphoma_join <- end_lymphoma_join %>% mutate(timespan_neuter_cancer_days = as.numeric(difftime(as.POSIXct(end_lymphoma_join$diagnosis_date), as.POSIXct(end_lymphoma_join$neutered_on_date, tz="UTC"), units="days"))) 
+end_lymphoma_join <- end_lymphoma_join %>% mutate(timespan_neuter_cancer_years = timespan_neuter_cancer_days/365)
 
 ```
 
@@ -351,4 +372,8 @@ write.csv(end_HSA_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_case_
 
 ## all endpoints and repro
 write.csv(end_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_repro.csv")
+
+
+#lymphoma and repro
+write.csv(end_lymphoma_join, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_case_repro.csv")
 ```
