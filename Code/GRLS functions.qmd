@@ -248,7 +248,7 @@ check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
     mutate(across(
       all_of(columns_to_check),
       ~ sum(. == 1 & !!sym(year_column) %in% study_years, na.rm = TRUE),
-      .names = "{.col}_count_{suffix}"
+      .names = "{.col}_sum_{suffix}"
     )) %>%
     ungroup()
 }
@@ -272,6 +272,22 @@ exposure_dosage <- function(data, column_of_exposure, record_date, date_of_event
     mutate(!!col_name := sum(ifelse(.data[[record_date]] < .data[[date_of_event]], .data[[column_of_exposure]], 0), na.rm = TRUE)) %>%
     ungroup()
 }
+
+```
+
+Modifications of above function to calculate dosage across specified study years eg. SY 0,1,2
+
+```{r}
+exposure_dosage2 <- function(data, column_of_exposure, study_years) {
+  # Create a dynamic column name based on exposure column and study years
+  col_name <- paste0(column_of_exposure, "_", paste(study_years, collapse = "_"), "_total_dosage")
+  
+  data %>%
+    group_by(subject_id) %>%
+    mutate(!!col_name := sum(ifelse(year_in_study %in% study_years, .data[[column_of_exposure]], 0), na.rm = TRUE)) %>%
+    ungroup()
+}
+
 
 ```
 
@@ -310,8 +326,9 @@ majority_location <- function(data,columns_to_count) {
     #count the number of 1s for each dog for each column seperately
     summarise(across(all_of(columns_to_count), ~sum(. == 1, na.rm = TRUE))) %>%
     #majority location is the column with biggest count in the previous step, a +1 is added for the indexing between relative df created in summarise vs actual df the fucntion is applied to
-    mutate(majority_location = names(.)[max.col(select(., all_of(columns_to_count)))+1]) 
-    }
+    mutate(majority_location = names(.)[max.col(select(., all_of(columns_to_count)))+1]) %>%
+    ungroup()
+}
 
 #same function but dynamic column labelling - cant make this work currently
 majority_location2 <- function(data, columns_to_count) {

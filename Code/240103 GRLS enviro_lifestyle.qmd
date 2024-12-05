@@ -227,17 +227,94 @@ result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposur
 
 ```{r}
 
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+
+
+result_df<- check_exposure2(result_df, columns_to_check, study_years,year_column)
+    
+
 ```
 
 ### Exposure in mid-later years (SY3+)
 
 ```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
 
+enviro_early <- environment_exposures_2 %>%
+  filter(year_in_study ==3 |year_in_study ==4 |year_in_study ==5|year_in_study ==6|year_in_study ==7|year_in_study ==8|year_in_study ==9|year_in_study ==10)
+
+
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+result_df <- check_exposure2(result_df, columns_to_check, study_years,year_column)
+    
+#count how many years exposed for (sum up the 1s)
 ```
 
 ### Exposure over whole life
 
 ```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+result_df <- check_exposure2(result_df, columns_to_check, study_years,year_column)
+```
+
+Tidy column outputs from these functions:
+
+Want to recode study years 0,1,2,3,4,5,6,7,8,9,10 = whole study period, 0,1,2 = early life, 3,4,5,6,7,8,9,10 = rest of life
+
+```{r}
+print(colnames(result_df))
+
+result_df3 <- result_df %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+result_df3 <- result_df3 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+result_df3 <- result_df3 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(result_df3))
 
 ```
 
@@ -248,7 +325,7 @@ result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposur
 ```{r}
 
 #remove rows that say see detail rows as these are meaningless - this may have been done in an earlier tidying step
-smoking_df <- result_df%>%
+smoking_df <- result_df3%>%
   filter(!grepl("see detail rows", hours_of_smoke))
 #convert column to numeric now
 smoking_df <- smoking_df %>% 
@@ -266,7 +343,7 @@ smoking_df2 <- exposure_dosage(smoking_df,"hours_of_smoke","record_year","diagno
 
 
 #check if any records lost
-not_in_2 <- setdiff(exposure$subject_id,smoking_df2$subject_id)
+#not_in_2 <- setdiff(exposure$subject_id,smoking_df2$subject_id)
 
 ```
 
@@ -274,9 +351,52 @@ Could also create a further function to calculate dosage 1,3,5y before diagnosis
 
 ### Hours of smoke exposure SY1-2
 
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(0,1,2)
+smoking_df2 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
+
+
+```
+
 ### Hours of smoke exposure SY3
 
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(3,4,5,6,7,8,9,10)
+smoking_df2 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
+
+```
+
 ### Lifetime hours of smoke exposure
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+smoking_df2 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
+
+```
+
+```{r}
+print(colnames(smoking_df2))
+```
+
+Tidy column names
+
+```{r}
+smoking_df2 <- smoking_df2 %>%
+  rename("hours_of_smoke_early_life_total_dosage"= "hours_of_smoke_0_1_2_total_dosage") %>%
+  rename("hours_of_smoke_rest_of_life_total_dosage" = "hours_of_smoke_3_4_5_6_7_8_9_10_total_dosage") %>%
+  rename("hours_of_smoke_whole_life_total_dosage"= "hours_of_smoke_0_1_2_3_4_5_6_7_8_9_10_total_dosage")
+
+print(colnames(smoking_df2))
+```
 
 ## Sleep location
 
@@ -321,6 +441,7 @@ sleep_smoking_enviro <- left_join(smoking_df2,sleep2,by=c("subject_id","year_in_
 #again check all remain 
 not_in_2 <- setdiff(sleep_smoking_enviro$subject_id,end_points2$subject_id)
 
+
 # remove the .x suffix
 sleep_smoking_enviro <- sleep_smoking_enviro %>%
   rename_at('exposure_year.x',~'exposure_year')
@@ -330,19 +451,107 @@ columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
 
 exposure_years <- 5
 
-result_df <- check_exposure(sleep_smoking_enviro, columns_to_check, diagnosis_year, exposure_years)
+result_df4 <- check_exposure(sleep_smoking_enviro, columns_to_check, diagnosis_year, exposure_years)
 #3y
 columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
 
 exposure_years <- 3
 
-result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposure_years)
+result_df4 <- check_exposure(result_df4, columns_to_check, diagnosis_year, exposure_years)
 #1
 columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
 
 exposure_years <- 1
 
-result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposure_years)
+result_df4 <- check_exposure(result_df4, columns_to_check, diagnosis_year, exposure_years)
+```
+
+Calculate early life, rest of life and later life exposure
+
+```{r}
+
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+
+
+result_df4<- check_exposure2(result_df4, columns_to_check, study_years,year_column)
+    
+
+```
+
+### Exposure in mid-later years (SY3+)
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+enviro_early <- environment_exposures_2 %>%
+  filter(year_in_study ==3 |year_in_study ==4 |year_in_study ==5|year_in_study ==6|year_in_study ==7|year_in_study ==8|year_in_study ==9|year_in_study ==10)
+
+
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+result_df4 <- check_exposure2(result_df4, columns_to_check, study_years,year_column)
+    
+```
+
+### Exposure over whole life
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+result_df4 <- check_exposure2(result_df4, columns_to_check, study_years,year_column)
+```
+
+Tidy column outputs from these functions:
+
+Want to recode study years 0,1,2,3,4,5,6,7,8,9,10 = whole study period, 0,1,2 = early life, 3,4,5,6,7,8,9,10 = rest of life
+
+```{r}
+print(colnames(result_df4))
+
+result_df5 <- result_df4 %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+result_df5 <- result_df5 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+result_df5 <- result_df5 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(result_df5))
+
 ```
 
 ### Majority sleep location
@@ -359,7 +568,7 @@ Still to do:
 
 ```{r}
 #initially checking that there is variation in locaiton for the dogs sleep location
-multi_location_count <- result_df %>%
+multi_location_count <- result_df5 %>%
   group_by(subject_id,sleep_location) %>%
    summarise(count = n())
 print(multi_location_count)
@@ -378,20 +587,20 @@ columns_to_count <- c("in the garage_YN","in the house_YN","outside_YN")
 
 
 
-result_df2 <- majority_location(result_df,columns_to_count)
+result_df6 <- majority_location(result_df5,columns_to_count)
 ```
 
 ```{r}
 #re add majority location information back to main df once have kept the relevant columns
-result_df2 <- result_df2%>%
+result_df6 <- result_df6%>%
   select(c(subject_id,majority_location))
 
 # renaming majority sleep column whilst cant work dynamic col naming aspect of majority location function
-result_df2 <- result_df2 %>%
+result_df6 <- result_df6 %>%
   rename_at('majority_location',~'majority_sleep_location_lifetime')
 
 
-sleep_smoking_enviro_all <- merge(result_df,result_df2,by="subject_id")
+sleep_smoking_enviro_all <- merge(result_df5,result_df6,by="subject_id")
 
 
 
@@ -427,9 +636,6 @@ Can create variables something along the lines of *exposure to each flooring typ
 ## Activity details
 
 -   analyses for this in seperate activity script
-
-<!-- -->
-
 -   3 files- activity_details_through_SY2.csv, activity_details_SY3_beyond.csv and activity_overview.csv
     -   all dogs have study year 1-2 records
     -   missing records for \~400 dogs in years 3+ records
@@ -483,11 +689,7 @@ print(colnames(activity_overview))
 Check number of records average for each dataset:
 
 -   sy1_2 median is 3 = quite complete records
-
-<!-- -->
-
 -   sy3 median 7 = also quite complete
-
 -   overview median 9 = also quite com\[plete - this one seems to cover whole study period ?
 
 ```{r}
@@ -608,7 +810,7 @@ unique_lifestyles_with_null <- lifestyle %>%
   select(-row)    
 
 companion_pet <- unique_lifestyles_with_null %>%
-  filter(`Companion/Pet` == "Companion/Pet") 
+  filter(`companion/pet` == "companion/pet") 
 
 ```
 
@@ -632,9 +834,8 @@ How to group lifestyles?
 
 Grouping:
 
-```{r}
-
-# groupings
+```{r,eval=FALSE}
+#not currently in camel case but in case is:
 companion <- c("Companion/Pet")
 
 therapy <-c("Therapy dog","Greeter","Service dog","Blood Donor","Ambassador","Service dog, Therapy dog")
@@ -644,7 +845,34 @@ competitive <-c("Dog Athlete","Show","Agility","Field Trials", "Rally","Field Tr
 working <- c("Tracking","Search and Rescue", "Hunting","Fishing Dog", "Scent Work, Tracking")
 no_lifestyle_misc <- c("None",NA,"Other","Receiving medical treatment", "Retired from AKC Activities")
 all_groups <- c(companion, therapy, breeding, competitive, working,no_lifestyle_misc)
+```
 
+```{r}
+
+# groupings
+
+
+companion <- c("companion/pet")
+
+therapy <- c("therapy dog", "greeter", "service dog", "blood donor", "ambassador", "service dog, therapy dog")
+
+breeding <- c("breeder", "retired breeder")
+
+competitive <- c("dog athlete", "show", "agility", "field trials", "rally", 
+                 "field trials, obedience", "barn hunt, rally, scent work", 
+                 "agility, companion/pet, rally, tracking", "agility, scent work", 
+                 "agility, hunt test, obedience, scent work", 
+                 "hunt test, obedience, scent work", "agility, companion/pet, hunt test", 
+                 "obedience", "hunt test", "actor/model", "dock diving", 
+                 "dock diving, scent work", "barn hunt", "scent work", 
+                 "dock diving, scent work", "barn hunt, scent work", 
+                 "hunt test, scent work", "scent work, therapy dog")
+
+working <- c("tracking", "search and rescue", "hunting", "fishing dog", "scent work, tracking")
+
+no_lifestyle_misc <- c("none", NA, "other", "receiving medical treatment", "retired from akc activities")
+
+all_groups <- c(companion, therapy, breeding, competitive, working, no_lifestyle_misc)
 
 # JL paper - seperate show group vs other competitive (possibly also down to level of companion vs working )
 # Do iteratively to check for those that are not in any group
@@ -677,11 +905,11 @@ main_lifestyle <- main_lifestyle %>%
 -   with these 12 categories can then group further into working, competitive categories etc
 
 ```{r}
-competitive <-c("Agility","Dog Athlete", "Field Trials","Obedience")
-working <-c("Hunting","Search and Rescue","Service dog")
-breed_showing <- c("Breeder","Show")
-misc <- c("Other","Therapy dog")
-companion <- "Companion/Pet"
+competitive <-c("agility","dog athlete", "field trials","obedience","hunt test","demonstration dog","tracking")
+working <-c("hunting","search and rescue","service dog")
+breed_showing <- c("breeder","show")
+misc <- c("other","therapy dog")
+companion <- "companion/pet"
 
 
 all_groups <- c(competitive, working,breed_showing,misc,companion)
@@ -732,12 +960,12 @@ lifestyle2 <- lifestyle2 %>%
   
 lifestyle3 <- lifestyle2 %>%
   mutate(main_lifestyle_category = case_when(
-    str_detect(main_lifestyle, paste(competitive, collapse = "|")) ~ "Competitive",
-    str_detect(main_lifestyle, paste(working, collapse = "|")) ~ "Working",
-    str_detect(main_lifestyle, paste(breed_showing, collapse = "|")) ~ "Breed/Showing",
-    str_detect(main_lifestyle, paste(misc, collapse = "|")) ~ "Miscellaneous",
-    main_lifestyle == companion ~ "Companion/Pet",
-    TRUE ~ "Other"  # For any lifestyle not matching the above categories
+    str_detect(main_lifestyle, paste(competitive, collapse = "|")) ~ "competitive",
+    str_detect(main_lifestyle, paste(working, collapse = "|")) ~ "working",
+    str_detect(main_lifestyle, paste(breed_showing, collapse = "|")) ~ "breed/showing",
+    str_detect(main_lifestyle, paste(misc, collapse = "|")) ~ "miscellaneous",
+    main_lifestyle == companion ~ "companion/pet",
+    TRUE ~ "other"  # For any lifestyle not matching the above categories
   ))
 
 # View the updated dataframe
@@ -764,6 +992,32 @@ sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_all %>%
   left_join(lifestyle_by_dog,by="subject_id")
 ```
 
+#### Tidying up of some category names before export:
+
+```{r}
+#replace all not withins
+sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 3,4,5,6,7,8,9,10 years", "Not within rest of life")))
+
+sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2 years", "Not within early life")))
+
+sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2,3,4,5,6,7,8,9,10 years", "Not within whole life")))
+
+#all withins
+sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 3,4,5,6,7,8,9,10 years", "Within rest of life")))
+
+sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2 years", "Within early life")))
+
+sleep_smoking_enviro_lifestyle_all <- sleep_smoking_enviro_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2,3,4,5,6,7,8,9,10 years", "Within whole life")))
+
+
+```
+
 #### Export datasets
 
 -   Data for final endpoint date for dogs in endpoint dataset (\~1k dogs):
@@ -781,4 +1035,40 @@ sleep_smoking_enviro_all_final_date<- sleep_smoking_enviro_all_final_date%>%
 #NB change to final file name when file done
 write.csv(sleep_smoking_enviro_all_final_date,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/endpoints_sleep_smoking_enviro_lifestyle_enviro.csv")
 
+```
+
+Environmental data for all dogs without endpoint data:
+
+-   remove all endpoint assoc rows and instead just keep those calcs from early life, rest, end
+
+-   create one df that is every single row and one with just single row for each subject_id
+
+```{r}
+print(colnames(sleep_smoking_enviro_lifestyle_all))
+sleep_smoking_enviro_all_no_endpoints <- sleep_smoking_enviro_lifestyle_all %>%
+  dplyr::select(c(1:18,46:99,103:105,107,108,111:113,123:141,143:146))
+
+```
+
+Keeping all rows:
+
+```{r}
+
+
+#NB change to final file name when file done
+write.csv(sleep_smoking_enviro_all_no_endpoints,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/allrows_sleep_smoking_enviro_lifestyle_enviro.csv")
+
+```
+
+Keeping only single row per dog and removing record date, year in study cols
+
+```{r}
+print(colnames(sleep_smoking_enviro_all_no_endpoints))
+sleep_smoking_enviro_all_no_endpoints2 <- sleep_smoking_enviro_all_no_endpoints %>%
+  dplyr::select(-c(year_in_study.x,record_date.x,record_date))
+
+sleep_smoking_enviro_all_no_endpoints2 <- sleep_smoking_enviro_all_no_endpoints2 %>%
+  distinct(subject_id, .keep_all = TRUE)
+
+write.csv(sleep_smoking_enviro_all_no_endpoints2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv")
 ```

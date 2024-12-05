@@ -181,6 +181,22 @@ exposure_dosage <- function(data, column_of_exposure, record_date, date_of_event
 }
 
 
+
+###modification of exposure_dosage function to calculate amount of exposure using year_in_study rather than time between 2 dates as above
+exposure_dosage2 <- function(data, column_of_exposure, study_years) {
+  # Create a dynamic column name based on exposure column and study years
+  col_name <- paste0(column_of_exposure, "_", paste(study_years, collapse = "_"), "_total_dosage")
+  
+  data %>%
+    group_by(subject_id) %>%
+    mutate(!!col_name := sum(ifelse(year_in_study %in% study_years, .data[[column_of_exposure]], 0), na.rm = TRUE)) %>%
+    ungroup()
+}
+
+
+
+
+
 #main location -do they ever sleep at X location
 #3 inputs
 split_column <- function(data, original_column, outcomes) {
