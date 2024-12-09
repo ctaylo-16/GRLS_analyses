@@ -1,0 +1,21 @@
+---
+title: "Environmental home dataset"
+format: html
+editor: visual
+---
+
+## Environmental home dataset tidying and exploration
+
+Load in packages and datasets:
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+
+enviro <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+
+location <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv")
+```
+
+NB. house details is UTD from Feb 2024 so could get a rerun of this more recently if needed for future years in study
