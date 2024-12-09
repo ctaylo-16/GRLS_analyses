@@ -13,9 +13,295 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 
-enviro <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
-
+house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+house<- house %>%
+  mutate(across(where(is.character), tolower))
 location <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv")
+location <- location %>%
+  mutate(across(where(is.character), tolower))
+end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points <- end_points %>%
+  mutate(across(where(is.character), tolower))
+
 ```
 
 NB. house details is UTD from Feb 2024 so could get a rerun of this more recently if needed for future years in study
+
+Location file is mostly about region of US, zip code
+
+Set up study in similar format to other enviro data:
+
+-   early year life factors SY 0-2, rest of life SY3+, whole life SY0-end
+
+-   exposure 1,3,5y prior to diagnosis/endpoint
+
+-   Also could consider a 'majority' class category eg. area type suburban/urban/rural and which class is most common across all study years
+
+## House details
+
+```{r}
+print(colnames(house))
+
+```
+
+```{r}
+print(head(house))
+```
+
+```{r}
+house_char <- house %>%
+  mutate(across(c(4:53), as.character))
+
+
+summary_table <- house_char %>%
+  dplyr::select(c(4:53)) %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value") %>%
+  count(Variable, Value, name = "Count")
+
+print(summary_table)
+  
+```
+
+-   Need tidying/reclassifying:
+
+    -   Cooking fuel (primary and secondary) and heating fuel other
+
+    -   Pipes other
+
+    -   water source
+
+    -   For primary and secondary homes for all of above
+
+### Heating fuel tidying/reclassifying
+
+Primary heating
+
+table(house\$heating_fuel_primary)
+
+```{r}
+print(colnames(house))
+relevant_cols_heating <- c("heating_fuel_primary","heating_fuel_primary_other","heating_fuel_secondary","heating_fuel_secondary_other","sec_heating_fuel_primary","sec_heating_fuel_primary_other","sec_heating_fuel_secondary","sec_heating_fuel_secondary_other"
+)
+
+##PRIMARY HEATING
+#existing categories in heating fuel column
+table(house$heating_fuel_primary)
+#electric, natural gas, oil, other, propane, wood, unknown
+#values in the heating_fuel_primary_other column
+heating_unique<-unique(house$heating_fuel_primary_other)
+#class all the others into the main categories
+electric <- c("electric", "geothermal electric", "electric but geothermal", "elec gerothermal", "Electric Heat Pump","electric fire place","electric/induction (magnetic)","induction cooktop","microwave","electric/microwave","microwave (electric)","george forman grill","microwave?","microwave and electric oven", "microwave oven")
+natural_gas <- c("natural gas boiler", "gas hydronic heat system", "gas forced air", "gas-heated hot water", "gas heated hot water","hot water heated by natural gas","in floor hot water heating from gas","in floor hot water heating with natural gas","	
+hot water heated floors  water heated by natural gas","infloor hot water heating  water heated w/gas","inflor heating with hot water heated by a gas furnace","infloor heating with natural gas no forced air furnace","	boiler system fueled by propane","hydronic heat fueled by propane h2o heaters","hydronic in floor heating fueled by propane", "radiant floor heat powered by propane boiler","in floor heating with natural gas","radiant water via natural gas","boiler system fueled by propane","natural gas fireplace little use","occassionally gas fireplace","propane until 1 year ago-switched to natural gas","natural gas for water heater, dryer and fireplace (turned off),; i often 'smell gas,' but gas co. has not found leaks","water/propane (boiler unit)","natural gas and electric","outdoor gas grill","natural gass grill")
+oil <- c("oil", "oil fired hot water","kerosene","kerosine","kerosens","kerosene for emergencies","small oil radiator","free satnding plug in oil heater","electric oil units","kerosene heaters/hardly ever used")
+propane <- c("propane", "hydronic heat fueled by propane", "radiant floor heat powered by propane boiler","outdoor grill propane")
+wood <- c("wood", "wood pellets","wood pellet", "wood pellet stove", "hot water from outside wood furnace", "outside wood furnace","pellets","hot water heated by outside wood furnace","outside wood stove","outside woodstove", "hot water from outside wood furnace", "pellet stove","occasional wood stove", "fireplace wood", "pellets and wood stoves","charcoal","grill(charcoal)","smoker","barbecue","charcoal / wood grill","smoker grill", "charcol","bbq - pellets","bbq - wood pellets","charcoal grill", "wood - outdoor grill", "charcoal barbecue", "charcoal and wood chips", "charcoal grill outside", "charcoal/wood","charcoal with propane starter", "wood pellt bbq", "charcoal grille", "bbq wood pellets","grilling,charcoal", "grilol charcol", "wood chips","w00d")
+renewables <- c("solar","passive solar", "geothermal","radiant/geo thermal","	geo-thermal","geo thermal","geothermal heat pumps","geo heat pump","gio thurmo","gio thurmal","gio thurmal","giothurmal","ground source heat pump","inground heat pump","inground heat pump source","in ground heat pump","geothermal/electric heat exchanger","geothermal heat exchange","geothermal heat pump", "geo thermal heat pump","heat exchanger with geothermal", "	gero thermal - electric","geo-thermal",
+                "geothermal heat pumps","sun", "geo heat pump","geothermal heating","gerothermal","solar hot water","geo thurmo","geo-thermal","giothurmal","gero thermal - electric","passive solar")
+
+  
+house <- house %>%
+  mutate(heating_fuel_primary = case_when(
+    heating_fuel_primary_other %in% electric ~ "electric",
+    heating_fuel_primary_other %in% natural_gas ~ "natural_gas",
+    heating_fuel_primary_other %in% oil ~ "oil",
+    heating_fuel_primary_other %in% propane ~ "propane",
+    heating_fuel_primary_other %in% wood ~ "wood",
+    heating_fuel_primary_other %in% renewables ~ "renewable",
+    TRUE ~ heating_fuel_primary
+  ))
+  
+
+
+```
+
+```{r}
+table(house$heating_fuel_primary)
+```
+
+Has resolved \~300 of the 500 'others'
+
+Secondary heating
+
+```{r}
+#existing categories in heating fuel column
+table(house$heating_fuel_secondary)
+#electric, natural gas, oil, other, propane, wood, unknown
+#values in the heating_fuel_primary_other column
+heating_unique_2<-unique(house$heating_fuel_secondary_other)
+
+##apply list from above
+  
+house <- house %>%
+  mutate(heating_fuel_secondary = case_when(
+    heating_fuel_secondary_other %in% electric ~ "electric",
+    heating_fuel_secondary_other %in% natural_gas ~ "natural_gas",
+    heating_fuel_secondary_other %in% oil ~ "oil",
+    heating_fuel_secondary_other %in% propane ~ "propane",
+    heating_fuel_secondary_other %in% wood ~ "wood",
+    heating_fuel_secondary_other %in% renewables ~ "renewable",
+    TRUE ~ heating_fuel_primary
+  ))
+  
+```
+
+```{r}
+table(house$heating_fuel_secondary)
+```
+
+### Cooking fuel tidying/reclassifying
+
+-   there are only 18 others in primary fuel
+
+-   64 in secondary
+
+-   added onto list above to classify in same method
+
+```{r}
+#existing categories in heating fuel column
+table(house$cooking_fuel_primary)
+#electric, natural gas, oil, other, propane, wood, unknown
+#values in the heating_fuel_primary_other column
+cooking_unique<-unique(house$cooking_fuel_primary_other)
+
+
+house <- house %>%
+  mutate(cooking_fuel_primary = case_when(
+    cooking_fuel_primary_other %in% electric ~ "electric",
+    cooking_fuel_primary_other %in% natural_gas ~ "natural_gas",
+    cooking_fuel_primary_other %in% oil ~ "oil",
+    cooking_fuel_primary_other %in% propane ~ "propane",
+    cooking_fuel_primary_other %in% wood ~ "wood",
+    cooking_fuel_primary_other %in% renewables ~ "renewable",
+    TRUE ~ cooking_fuel_primary
+  ))
+  
+
+
+#existing categories in heating fuel column
+table(house$cooking_fuel_secondary)
+#electric, natural gas, oil, other, propane, wood, unknown
+#values in the heating_fuel_primary_other column
+cooking_unique2<-unique(house$cooking_fuel_secondary_other)
+```
+
+### Pipes tidying/reclassifying
+
+There are several pipe columns:
+
+-   pipes copper metal
+
+-   pipes pvc plastic
+
+-   pipes other
+
+-   pipes unknown
+
+-   pipes other specify
+
+```{r}
+table(house$pipes_other_specify)
+unique_pipes <- unique(house$pipes_other_specify)
+unique_pipes2 <- unique(house$sec_pipes_other_specify)
+```
+
+It appears that the 0 vs 1 for the int columns of pipes are either metal or plastic so if a record has an other it might be because there is metal and plastic pipes = remake these columns so will have a 1 in both columns if there is metal and plastic
+
+```{r}
+metal <-c("mix of copper and pvc","mixed copper and pvc","galvinazed iron","salvanized",
+          "some copper, some pvc","both copper & plastic","metal and pvc","iron","iron and copper","lead probably", "lead","galvanized steel","copper and plastic", "some copper/some pvc", "mixture of all above","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc", "galvanized","cast iron","copper/metal/pvc","cast","pex and copper","pex, cu",
+          "pex, with copper manifolds", "galvenized steel","galvinized", "copper and pvc","copper/metal and pvc/plastic", "both copper and pvc","maybe copper/metal also" , "some copper", "copper, cpvc","both metal and plastic","probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc", "galvenized" , "copper, pvc and metal","copper/pvc", "pvc & copper" , "copper and pvc" , "copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" , "copper & pvc", "steel"  )
+plastic <-c("mix of copper and pvc","mixed copper and pvc","pex","pec", "some copper, some pvc",
+            "both copper & plastic","metal and pvc", "copper and plastic", "some copper/some pvc", "mixture of all above", "k-peck","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc","copper/metal/pvc","pex and copper", "pe","pex, cu","pex, with copper manifolds","pecs","poly", "copper and pvc", "pvc","cvc", "copper/metal and pvc/plastic", "both copper and pvc", "cpvc", "pvex", "pvc and copper", "copper, cpvc", "cpcv","both metal and plastic", "probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc" , "polybutylene", "copper, pvc and metal", "copper/pvc" , "pvc & copper", "copper and pvc" , "plex","pic system","pec system","plastic","copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" ,"copper & pvc", "peg", "pec plastic", "pex tubing")
+
+house <- house %>%
+  mutate(pipes_metal_any = case_when(
+    pipes_other_specify %in% metal ~ 1,
+    sec_pipes_other_specify %in% metal ~1,
+    pipes_copper_metal == 1 ~ 1,
+    sec_pipes_copper_metal == 1 ~1,
+    TRUE ~ 0
+  ))
+
+house <- house %>%
+  mutate(pipes_plastic_any = case_when(
+    pipes_other_specify %in% plastic ~ 1,
+    sec_pipes_other_specify %in% plastic ~1,
+    pipes_pvc_plastic == 1 ~ 1,
+    sec_pipes_pvc_plastic == 1 ~ 1, 
+    TRUE ~ 0
+  ))
+```
+
+### Water source tidying/reclassifying
+
+-   In the United States, "municipal water" refers to the public water supply system that provides drinking water to homes, businesses, and other facilities within a city or town. It is managed by local government or utility companies and is typically sourced from rivers, lakes, reservoirs, or groundwater. Municipal water is treated to meet safety standards set by the Environmental Protection Agency (EPA) to ensure it is safe for consumption and use. The term "municipal" indicates that the water is supplied and regulated by a local government authority rather than being privately sourced or managed.
+
+-   Choose to group:
+
+    -   municipal, groundwater, spring and surface, bottled, rainwater and cistern
+
+```{r}
+#existing categories in heating fuel column
+table(house$water_source)
+#electric, natural gas, oil, other, propane, wood, unknown
+#values in the heating_fuel_primary_other column
+water_unique<-unique(house$water_source_other)
+
+municipal <-c("municipal","municipal at home, well at work with me daily","municipal well","filtered municipal","municipal from lake","municipal filtered via reverse osmosis","municiapl wells with home filtration system","municipal with town well water","highly filtered municipal","private through municipal","municipal and well","both municipal and well","municipal and private well","municipal filtered","municipal with a reverse osmosis filtration unit","municipal but reverse osmosis filtered","filtered muni water","municipal but reverse osmosis water system")
+groundwater <-c("well","ground","underground aquifers","underground aquifer","community owned wells","town well water","town well","community well w/chlorine","community well chlorine filter","subdivision well","community well for subdivision  has chloroine  we filter all chlorine out and have a filtration system","well water with chlorine filter","comunity well with a clorine station  we have a filter in our home to filter out the chlorine","well and municipal","both well and municipal","well 50%, municipal 50%", "fox river and well","1/2 well 1/2 municipal","reverse osmosis from well","aquifer","town wells"," community well, treated & filtered", "wel and municipal","well and spring","well water goes to municipal","community well water","well/bottle/city","aquafer")
+spring_surface <-c("berkeley springs spring water","spring","hicknley springs","spring water","lake water via city","neighborhood water tanks from lake tahoe water","lake tahoe","lake michigan","natural spring","spring on property", "lake filtered/treated","lake filtered system")
+bottled<-c("bottled","bottled spring water","bottled water","bottled water/municipal",".bottle","bottled spring","dogs drink bottled","bottled and municipal")
+rainwater_cistern<-c("cistern", "rain fed cistern","rain fed cistern filtered and uv sanitized","uv and filtered rain filled cistern","rain water","rain","rain water tanks","rainwater","rain water ")
+
+```
+
+```{r}
+
+house <- house %>%
+  mutate(water_source_2 = case_when(
+    water_source_other %in% municipal ~ "municipal",
+    water_source_other %in% groundwater ~ "groundwater",
+    water_source_other %in% spring_surface ~ "spring_surface",
+    water_source_other %in% bottled ~ "bottled",
+    water_source_other %in% rainwater_cistern ~ "rainwater_cistern",
+    TRUE ~ water_source
+  ))
+  
+table(house$water_source_2)
+```
+
+Now only 89 not classified
+
+## Early life/rest of life/whole life exposure
+
+? not sure if much point in this?
+
+Code to try and figure out if these exposure variables change much across study years for a dog:
+
+Dep on variables 9-55% change over study time - perhaps worth calculating these exposures and then combine later
+
+```{r}
+cols_interest <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary")
+
+differences <- house %>%
+  group_by(subject_id) %>%
+  summarize(
+    across(
+      all_of(cols_interest),
+      ~ n_distinct(.) > 1, # Check if there are multiple unique values
+      .names = "{.col}_different" # Name output columns dynamically
+    ),
+    .groups = "drop"
+  )
+
+proportions <- differences %>%
+  summarize(
+    across(
+      ends_with("_different"), # Select columns ending with "_different"
+      ~ sum(.) / n(),          # Calculate proportion of TRUE values
+      .names = "{.col}_proportion" # Name output columns dynamically
+    )
+  )
+
+```
