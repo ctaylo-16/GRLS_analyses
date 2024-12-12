@@ -140,7 +140,7 @@ house <- house %>%
     heating_fuel_secondary_other %in% propane ~ "propane",
     heating_fuel_secondary_other %in% wood ~ "wood",
     heating_fuel_secondary_other %in% renewables ~ "renewable",
-    TRUE ~ heating_fuel_primary
+    TRUE ~ heating_fuel_secondary
   ))
   
 ```
@@ -303,5 +303,226 @@ proportions <- differences %>%
       .names = "{.col}_proportion" # Name output columns dynamically
     )
   )
+
+```
+
+Mode value of exposure:
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#early life
+columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+
+
+#rest of life
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+
+#late life
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+```
+
+Assess column names in house to see if need tidying post calculation.
+
+Tidy column outputs from these functions:
+
+Want to recode study years 0,1,2,3,4,5,6,7,8,9,10 = whole study period, 0,1,2 = early life, 3,4,5,6,7,8,9,10 = rest of life
+
+```{r}
+print(colnames(house))
+
+
+
+
+result_df2 <- house %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+result_df2 <- result_df2 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+result_df2 <- result_df2 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(result_df2))
+```
+
+### House age:
+
+```{r}
+result_df2<- result_df2 %>%
+  group_by(subject_id)%>%
+  mutate(avg_house_age = mean(house_age, na.rm = TRUE))
+```
+
+## Location
+
+```{r}
+print(head(location))
+```
+
+Of interest, state and region and zip code
+
+( dont think work, travel, mode of travel etc likely relevant)
+
+Check how much variation across whole study there is for these:
+
+```{r}
+cols_interest <- c("region_name","state","zip")
+
+differences <-location %>%
+  group_by(subject_id) %>%
+  summarize(
+    across(
+      all_of(cols_interest),
+      ~ n_distinct(.) > 1, # Check if there are multiple unique values
+      .names = "{.col}_different" # Name output columns dynamically
+    ),
+    .groups = "drop"
+  )
+
+proportions <- differences %>%
+  summarize(
+    across(
+      ends_with("_different"), # Select columns ending with "_different"
+      ~ sum(.) / n(),          # Calculate proportion of TRUE values
+      .names = "{.col}_proportion" # Name output columns dynamically
+    )
+  )
+
+```
+
+Across whole study period (10+y) this changes for approx 50% of dogs
+
+Determine mode state and region for dogs:
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#early life
+columns_to_check <- c("region_name","state","zip")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+
+
+#rest of life
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+
+#late life
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+```
+
+Tidy:
+
+```{r}
+
+result_df3 <- location %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+result_df3 <- result_df3 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+result_df3 <- result_df3 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(result_df3))
+```
+
+Combine files:
+
+```{r}
+#keep unique rows of result_df2 = house file
+result_df2_unique <- result_df2 %>%
+  dplyr::select(-c(year_in_study,record_date))%>%
+  distinct(subject_id, .keep_all = TRUE)
+#keep unique rows of result_df3 = location file
+result_df3_unique <- result_df3 %>%
+  dplyr::select(-c(year_in_study,record_date))%>%
+  distinct(subject_id, .keep_all = TRUE)
+
+result_combined <- result_df2_unique %>%
+  left_join(result_df3_unique,by="subject_id")
+```
+
+```{r}
+write.csv(result_combined,"house_location_all.csv")
+```
+
+Add in endpoints data:
+
+```{r}
+
+# use the end_points dataset for now 
+end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+# sort dates
+#get neoplasia diagnosis year month column into date format
+end_points$diagnosis_year_month_date <- as.POSIXct(end_points$diagnosis_date)
+end_points$diagnosis_year_month_date <- as.POSIXct(floor_date(end_points$diagnosis_year_month_date,unit="month"))
+
+
+# HSA specific extraction
+end_points_neoplasia <- end_points %>% 
+  mutate(across(where(is.character), tolower))
+end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
+end_HSA <- end_HSA %>%
+  mutate(has_HSA = 1)
+
+#lymphoma specific
+end_lymphoma <- end_points_neoplasia %>% filter(grepl('lymphoma',tracked_condition),ignore.case=TRUE)
+end_lymphoma <- end_lymphoma %>%
+  mutate(has_lymphoma = 1)
+```
+
+```{r}
+#combine with endpoints all 
+end_points_all <- end_points %>%
+  left_join(result_combined, by="subject_id")
+write.csv(end_points_all,"endpoints_house_location.csv")
+
+#end points lymphoma
+end_points_lymphoma_join <- end_lymphoma %>%
+  left_join(result_combined,by="subject_id")
+write.csv(end_points_lymphoma_join,"endpoints_lyphoma_house_location.csv")
+#end points HSA
+end_points_HSA_join <- end_HSA %>%
+  left_join(result_combined,by="subject_id")
+write.csv(end_points_HSA_join,"endpoints_HSA_house_location.csv")
 
 ```
