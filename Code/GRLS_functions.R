@@ -157,7 +157,6 @@ check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
 
 
 
-
 # Example usage:
 #columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
 #                     "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
@@ -166,6 +165,50 @@ check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
 #exposure_years <- 3
 
 #result_df <- check_exposure(merged_df, columns_to_check, diagnosis_year, exposure_years)
+
+
+#3rd variant on check exposure function to check if exposed in X years. for categorical variables - what was the mode class in X years
+
+check_exposure_mode <- function(data, columns_to_check, study_years, year_column) {
+  suffix <- paste(study_years, collapse = "_")
+  
+  data %>%
+    group_by(subject_id) %>%
+    mutate(
+      # Determine exposure status for the study years
+      across(
+        all_of(columns_to_check),
+        ~ if_else(
+          any(. == 1 & !!sym(year_column) %in% study_years),
+          paste0("Within ", paste(study_years, collapse = ","), " years"),
+          paste0("Not within ", paste(study_years, collapse = ","), " years")
+        ),
+        .names = "{.col}_study_years_{suffix}"
+      ),
+      
+      # Calculate the count of 1s within the study years for each column
+      across(
+        all_of(columns_to_check),
+        ~ sum(. == 1 & !!sym(year_column) %in% study_years, na.rm = TRUE),
+        .names = "{.col}_sum_{suffix}"
+      ),
+      
+      # Determine the mode string within the study years
+      across(
+        all_of(columns_to_check),
+        ~ {
+          values <- .[!!sym(year_column) %in% study_years]
+          if (length(values) == 0) return(NA_character_)
+          mode_val <- names(which.max(table(values)))
+          mode_val
+        },
+        .names = "{.col}_mode_{suffix}"
+      )
+    ) %>%
+    ungroup()
+}
+
+
 
 
 #function to calculate dosage/amount exposed to
