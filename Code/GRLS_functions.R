@@ -301,3 +301,5 @@ map_frequency_to_df <- function(data, column_to_map, mapping_list, new_column_na
   # Return the updated data frame
   return(data)
 }
+
+

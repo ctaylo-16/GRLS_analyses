@@ -1,0 +1,33 @@
+---
+title: "GRLS comorbidities"
+format: html
+editor: visual
+---
+
+## GRLS comorbidities dataset
+
+Load packages and datasets
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+#read in all csvs that start with the string "conditions_
+folder_path <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data"
+
+# Get a list of all CSV files that start with "conditions_with"
+csv_files <- list.files(path = folder_path, pattern = "^conditions_.*\\.csv$", full.names = TRUE)
+
+for (file in csv_files) {
+  # Extract the file name (without the path and extension) for the data frame name
+  dataframe_name <- tools::file_path_sans_ext(basename(file))
+  
+  # Dynamically assign each file to a data frame with the extracted name
+  assign(dataframe_name, read.csv(file))
+}
+
+
+
+```
+
+Look for potentially relevant comorbidities -

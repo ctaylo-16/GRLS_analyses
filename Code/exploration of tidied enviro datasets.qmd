@@ -4,11 +4,12 @@ format: html
 editor: visual
 ---
 
-## Checking tidied environmental datasets
+# Checking tidied environmental datasets
 
 ```{r}
 library(tidyverse)
 library(ggplot2)
+library(lubridate)
 ```
 
 Environmental dataset that doesnt use endpoint data (just study years for exposure calculations)
@@ -67,7 +68,10 @@ filter(grepl("lymphoma", tracked_condition, ignore.case = TRUE))
 write.csv(lymphoma_dogs,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_endpoints.csv")
 
 dead_dogs <- dead_dogs %>%
-  mutate(had_lymphoma = ifelse(grepl("lymphoma", tracked_condition, ignore.case = TRUE), "had_lymphoma", "no_lymphoma"))
+  mutate(had_lymphoma = ifelse(grepl("lymphoma", tracked_condition, ignore.case = TRUE), "had_lymphoma", "no_lymphoma")) %>%
+#only keeping unique IDs 
+  distinct(subject_id, .keep_all = T) %>%
+  ungroup()
 table(dead_dogs$had_lymphoma)
 
 dead_subject_ids <- unique(dead_dogs$subject_id)
@@ -78,17 +82,16 @@ enviro_tidy_dead_only <- enviro_tidy_abr %>%
   filter(subject_id %in% dead_subject_ids)
 
 lymphoma_abr <- dead_dogs %>%
-  dplyr::select(c(subject_id,had_lymphoma))
+  dplyr::select(c(subject_id,had_lymphoma,diagnosis_date))
 enviro_tidy_dead_only <- enviro_tidy_dead_only %>%
   left_join(lymphoma_abr,by="subject_id")
 ```
 
+
+
 Now rerun all the plots above but with overlay for lymphoma vs no lymphoma also
 
 ```{r,eval=FALSE}
-
-
-
 for (col in names(enviro_tidy_dead_only)[-1]) {
   p <- ggplot(enviro_tidy_dead_only, aes_string(x = col, fill = "had_lymphoma")) +
     geom_bar(position = "dodge") +  # 'dodge' to place bars side by side
@@ -126,8 +129,152 @@ for (col in cols) {
 
 (For the non-RP2 project explore differences in time before exposure variables and the early/rest/total life variables created)
 
+## House location data
+
+```{r}
+endpoints_house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_all_house_location.csv")
+print(colnames(endpoints_house))
+endpoints_house_abr <- endpoints_house%>%
+  dplyr::select(c(subject_id,house_type,area_type,68:149,152,162:189))
+house_dead_only <- endpoints_house_abr %>%
+  filter(subject_id %in% dead_subject_ids)
+
+
+house_dead_only <- house_dead_only %>%
+  left_join(lymphoma_abr,by="subject_id")
+```
+
+
+
+Calculate proportions for case:control categories to determine which to take forward?
+
+```{r}
+cols <- colnames(house_dead_only %>%
+  dplyr::select(c(-1,-115)))
+for (col in cols) {
+  df_plot <- house_dead_only %>%
+    group_by(.data[[col]], had_lymphoma) %>%  # group by the current column and 'had_lymphoma'
+    count() %>%
+    group_by(had_lymphoma) %>%  # group by 'had_lymphoma' to calculate proportions within each category
+    mutate(proportion = n / sum(n) * 100)
+  
+  # Create the plot
+  p <- ggplot(df_plot, aes_string(x = col, y = "proportion", fill = "had_lymphoma")) +
+    geom_bar(stat = "identity", position = "dodge") +  # 'dodge' to place bars side by side
+    labs(title = paste("Percentage of", col, "by had_lymphoma"), x = col, y = "Percentage") +
+    theme_minimal()
+  print(p)  # Explicitly print each plot
+}
+```
+
+
+
+
+
+## Reproduction data
+
+```{r}
+endpoints_repro <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_repro.csv")
+
+print(colnames(endpoints_repro))
+endpoints_repro_abr <- endpoints_repro%>%
+  dplyr::select(c(subject_id,sex,neuter,19:35))
+repro_dead_only <- endpoints_repro_abr %>%
+  filter(subject_id %in% dead_subject_ids)
+
+
+repro_dead_only <- repro_dead_only %>%
+  left_join(lymphoma_abr,by="subject_id")
+```
+
+Plot proportions of endpoint dogs for each variable:
+```{r}
+cols <- colnames(repro_dead_only %>%
+  dplyr::select(c(-1,-21)))
+for (col in cols) {
+  df_plot <- repro_dead_only %>%
+    group_by(.data[[col]], had_lymphoma) %>%  # group by the current column and 'had_lymphoma'
+    count() %>%
+    group_by(had_lymphoma) %>%  # group by 'had_lymphoma' to calculate proportions within each category
+    mutate(proportion = n / sum(n) * 100)
+  
+  # Create the plot
+  p <- ggplot(df_plot, aes_string(x = col, y = "proportion", fill = "had_lymphoma")) +
+    geom_bar(stat = "identity", position = "dodge") +  # 'dodge' to place bars side by side
+    labs(title = paste("Percentage of", col, "by had_lymphoma"), x = col, y = "Percentage") +
+    theme_minimal()
+  print(p)  # Explicitly print each plot
+}
+```
+
+
+
+
 ### Choose reduced number of variables for the RP2 lymphoma projects:
+Combine all 3 datasets
+
+```{r}
+enviro_repro <- enviro_tidy_dead_only %>%
+  left_join(repro_dead_only,by="subject_id")
+
+enviro_repro_house <- enviro_repro %>%
+  left_join(house_dead_only,by="subject_id")
+```
+
+
+```{r}
+#what to do for age for these dogs???
+
+  dog_profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+  
+  dog_profile <- dog_profile %>%
+    dplyr::select(c(subject_id,birth_date,death_date))
+  
+  enviro_repro_house_profile <- enviro_repro_house %>%
+    left_join(dog_profile, by="subject_id")
+
+#age at death
+enviro_repro_house_profile  <- enviro_repro_house_profile  %>% 
+  mutate(birth_date1 =as.POSIXct(birth_date,format="%Y-%m-%d"))
+enviro_repro_house_profile  <- enviro_repro_house_profile  %>%
+  mutate(death_date1 =as.POSIXct(death_date,format="%Y-%m-%d"))
+enviro_repro_house_profile <- enviro_repro_house_profile %>%
+  mutate(age_at_death=as.numeric(difftime(as.POSIXct(enviro_repro_house_profile$death_date1), as.POSIXct(enviro_repro_house_profile$birth_date1, tz="UTC"), units="weeks"))) %>%
+  #convert weeks to years
+  mutate(age_at_death = age_at_death/52)
+#age at endpoint diagnosis
+#age at death
+enviro_repro_house_profile  <- enviro_repro_house_profile  %>% 
+  mutate(diagnosis_date1 =as.POSIXct(diagnosis_date,format="%Y-%m-%d"))
+enviro_repro_house_profile <- enviro_repro_house_profile %>%
+  mutate(age_at_endpoint_diagnosis = as.numeric(difftime(as.POSIXct(enviro_repro_house_profile$diagnosis_date1), as.POSIXct(enviro_repro_house_profile$birth_date1, tz="UTC"), units="weeks")))%>%
+  mutate(age_at_endpoint_diagnosis=age_at_endpoint_diagnosis/52)
+```
+
+
 
 Set criteria for variable inclusion eg. X% in each variable category?
 
-Ideally get this down to \~ 30 variables
+Ideally get this down to \~ 30 variables for each student
+
+Create 3 datasets:
+
+Dataset 1 = demographic variables = age at diagnosis, sex, neuter status, other repro, geographic location, dog job (called lifestyle in dataset)
+
+```{r}
+demographics <- enviro_repro_house_profile %>%
+  dplyr::select(c(subject_id,had_lymphoma,main_lifestyle_category,sex,neuter,age_at_neuter_years,age_at_endpoint_diagnosis, age_at_death,heats_before_neutering,num_bred_before_neutering,neutered_reason,region_name_mode_whole_life,))
+
+
+write.csv(demographics,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
+```
+
+
+Dataset 2= early years environmental/lifestyle dataset
+```{r}
+early_years <- enviro_repro_house_profile %>%
+  dplyr::select(c(subject_id,had_lymphoma,))
+```
+
+
+Dataset 3 = rest of life environmental/lifestyle
