@@ -465,7 +465,7 @@ result_df3 <- result_df3 %>%
 print(colnames(result_df3))
 ```
 
-Combine files:
+#### Combine files:
 
 ```{r}
 #keep unique rows of result_df2 = house file
@@ -485,7 +485,7 @@ result_combined <- result_df2_unique %>%
 write.csv(result_combined,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/house_location_all_rows.csv")
 ```
 
-Add in endpoints data:
+#### Add in endpoints data:
 
 ```{r}
 

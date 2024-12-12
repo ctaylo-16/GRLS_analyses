@@ -524,7 +524,7 @@ Data to numeric
 
 ```{r}
 activity_sy1_2 <- activity_sy1_2 %>%
-  mutate(across(22:24, as.numeric))
+  mutate(across(24:26, as.numeric))
 
 
 
@@ -689,15 +689,17 @@ activity_sy3_beyond <- activity_sy3_beyond %>%
 
 Recode duration to numbers:
 
-```{r}
-activity_sy3_beyond <- activity_sy3_beyond %>%
-  mutate(duration_num = case_when(
-    duration == "Less than 10 minutes" ~ 25,
-    duration == "10-30 minutes" ~ 50,
-    duration == "31-60 minutes" ~ 75,
-    duration == "Greater than 60 minutes" ~ 100,
-    duration == "" ~ 0  # empty cells replace with 0 for calculation purposes
-  ))
+There is no duration in SY3_beyond
+
+```{r,eval=FALSE}
+#activity_sy3_beyond <- activity_sy3_beyond %>%
+ # mutate(duration_num = case_when(
+  #  duration == "Less than 10 minutes" ~ 25,
+   # duration == "10-30 minutes" ~ 50,
+    #duration == "31-60 minutes" ~ 75,
+    #duration == "Greater than 60 minutes" ~ 100,
+    #duration == "" ~ 0  # empty cells replace with 0 for calculation purposes
+  #))
 ```
 
 Recode frequency to numbers:
@@ -724,8 +726,8 @@ activity_sy3_beyond <- activity_sy3_beyond %>%
 totals_y3 <- activity_sy3_beyond %>%
   group_by(subject_id) %>%
   summarise(
-    avg_activity_duration = (mean(duration_num, na.rm = TRUE)/
-                              (n() * 100)) * 100,
+   # avg_activity_duration = (mean(duration_num, na.rm = TRUE)/
+    #                          (n() * 100)) * 100,
     avg_activity_intensity = (mean(pace_num, na.rm = TRUE)/
                               (n() * 100)) * 100,
     avg_activity_freq=(mean(frequency_num,na.rm=TRUE)/
@@ -740,21 +742,21 @@ activity_sy3_beyond <- activity_sy3_beyond %>%
   left_join(totals_y3, by = "subject_id")
 ```
 
-#### Duration into categories (USDA, KC etc)
+#### Duration into categories (USDA, KC etc) - cannot
 
 ```{r}
 
 #create column for USDA activity <30min or >30 min
-activity_sy3_beyond <- activity_sy3_beyond %>%
-  mutate(USDA_30min = case_when (
-    duration %in% c("Less than 10 minutes", "10-30 minutes") ~ "below_USDA",  duration %in% c("31-60 minutes", "Greater than 60 minutes") ~ "more_than_USDA", 
-                                 TRUE ~ NA ))
+#activity_sy3_beyond <- activity_sy3_beyond %>%
+ # mutate(USDA_30min = case_when (
+  #  duration %in% c("Less than 10 minutes", "10-30 minutes") ~ "below_USDA",  duration %in% c("31-60 minutes", "Greater than 60 minutes") ~ "more_than_USDA", 
+#                                 TRUE ~ NA ))
 
 #create column for UKKC recommendaiton <2h but cannot do this one so >1h
-activity_sy3_beyond <- activity_sy3_beyond %>%
-  mutate(activity_1h_min = case_when (
-duration %in% c("Less than 10 minutes", "10-30 minutes", "31-60 minutes") ~ "below_1h",  duration  %in% c("Greater than 60 minutes") ~ "more_than_1h", 
-                                 TRUE ~ NA ))
+#activity_sy3_beyond <- activity_sy3_beyond %>%
+ # mutate(activity_1h_min = case_when (
+#duration %in% c("Less than 10 minutes", "10-30 minutes", "31-60 minutes") ~ "below_1h",  duration  %in% c("Greater than 60 minutes") ~ "more_than_1h", 
+ #                                TRUE ~ NA ))
 
 ```
 
@@ -815,7 +817,7 @@ activity_sy1_2_abr_3 <- activity_sy1_2 %>%
 activity_sy3_beyond_abr_3 <- activity_sy3_beyond %>%
   dplyr::select(c(subject_id,year_in_study,
                   #frequency,pace,duration,frequency_num,pace_num,duration_num,<- not keeping as multi rows same year
-                  avg_activity_duration,avg_activity_freq,avg_activity_intensity, USDA_30min, activity_1h_min))
+                  avg_activity_freq,avg_activity_intensity))
 
 activity_overview_abr_3 <- activity_overview %>%
   dplyr::select(c(subject_id,year_in_study,mean_activity_level))
@@ -830,7 +832,7 @@ activity_sy1_2_abr_3 <- activity_sy1_2_abr_3 %>%
 activity_sy3_beyond_abr_3 <- activity_sy3_beyond_abr_3 %>%
   distinct(subject_id,  .keep_all = TRUE)  %>%
   #  mutate(study_year = "y3_on")%>%
-  rename_with(~ paste0(., "_sy3"), .cols = 3:7)%>%
+  rename_with(~ paste0(., "_sy3"), .cols = 3:4)%>%
   dplyr::select(-c(year_in_study))
   
 #overview
@@ -851,6 +853,18 @@ activity_all_3_3 <- activity_all_3 %>%
 
 
 write.csv(activity_all_3_3, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_one_row_per_dog_outof100.csv")
+```
+
+Create endpoints dogs
+
+```{r}
+#endpoints to join up conditions dataset
+endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+
+endpoints_activity_all_3_3 <- endpoints %>%
+  left_join(activity_all_3_3, by="subject_id")
+
+write.csv(endpoints_activity_all_3_3,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_endpoints_outof100.csv")
 ```
 
 what does each column mean?
