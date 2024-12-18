@@ -26,8 +26,326 @@ for (file in csv_files) {
   assign(dataframe_name, read.csv(file))
 }
 
+#remove not relevant ones
+rm(conditions_dictionary)
+
+
+#combine the comorbidities datasets
+comorbs_all <- cbind(conditions_cardio,conditions_dental,conditions_ear_nose_throat,conditions_endocrine,conditions_eye,conditions_gastrointestinal,conditions_hematologic,conditions_infectious,conditions_musculoskeletal)
+
+#remove duplicate subjectid columns
+comorbs_unique <- comorbs_all %>%
+  select(unique(names(.)))
+
+
+
+# View the combined dataframe
+head(comorbs_unique)
+#endpoints to join up conditions dataset
+endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+
 
 
 ```
 
-Look for potentially relevant comorbidities -
+## Look for potentially relevant comorbidities:
+
+#### All comorbidities
+
+```{r}
+print(colnames(comorbs_unique))
+
+comorbs_list <- colnames(comorbs_unique)
+```
+
+#### Potential chronic inflam conditions e.g diabetes, rheumatoid arthritis, IBD
+
+```{r}
+comorbs_to_find <-c("congestive_heart_failure",
+  "cardiomyopathy",
+  "hypertension",
+  "heartworm_infection",
+  "lower_airway_disease",
+  "dental_tarter_calculus",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "keratoconjunctivitis_sicca",
+  "pigmentary_uveitis",
+  "uveitis",
+  "chronic_colitis",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "pancreatitis",
+  "anaplasma",
+  "babesia",
+  "canine_herpesvirus",
+  "coccidia",
+  "cryptosporidium",
+  "ear_mites",
+  "ehrlichia",
+  "eimeria",
+  "fleas",
+  "fungal_infection",
+  "giardia",
+  "granuloma",
+  "hookworms",
+  "influenza",
+  "isospora",
+  "leptospirosis",
+  "lyme_disease",
+  "other_ectoparasite",
+  "parvovirus",
+  "rocky_mountain_spotted_fever",
+  "roundworms",
+  "tapeworms",
+  "ticks",
+  "tracheobronchitis",
+  "unspecified_gastrointestinal_parasite",
+  "valley_fever",
+  "whipworms",
+  "immune_related_musculoskeletal_disorder",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "laryngeal_paralysis",
+  "meningitis",
+  "meningoencephalitis",
+  "myasthenia_gravis",
+  "erythema_multiforme",
+  "flea_allergy_dermatitis",
+  "food_allergy_dermatitis",
+  "r_o_atopy")
+
+
+
+```
+
+### Comorbidities ever in all years of study:
+
+Looking in only all the columns in 'comorbs_to_find' columns, identify if there is record of these conditions and for \>1 year of records and if so record in new columns: "chronic_inflam_comorb_present" (YN), "number of chronic_inflam_comorbs_present" (count), "which comorbs_to_find present?" (each comorb name separated by comma) :
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
+
+comorbs_unique_2 <- comorbs_unique %>%
+  #get rid of the to_date row for each dog
+  filter(to_date !=1) %>%
+  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))%>%
+# replacing NA values with 0 across comorbidity columns
+  mutate_at(vars(5:200), ~replace_na(., 0))
+
+# This method doesnt make sure condition has been there for >1 year of records, which I think should be for chronic inflam really
+
+
+  
+
+df_result <- comorbs_unique_2 %>%
+  group_by(subject_id) %>%
+  mutate(
+    ## ANY chronic inflam present
+    chronic_inflam_present = if_else(rowSums(across(all_of(conditions_in_df_and_list))) > 0, 1, 0),
+    ### NUMBER OF chronic inflam conditions present
+    number_comorbs_present = rowSums(across(all_of(conditions_in_df_and_list))) # 
+  ) %>%
+  ungroup()  
+
+
+
+```
+
+#### Chronic comorbdities ever in all years of study
+
+This bit of code to check that a condition has been recorded for \>1 year to be 'chronic' (ensures things like infectious agents are not just a one-off acute)
+
+```{r}
+
+df_result2 <- comorbs_unique_2 %>%
+  group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present = if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present = if_else(
+      chronic_inflam_present == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities = if_else(
+      chronic_inflam_present == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+
+
+```
+
+### Comorbidities before end point diagnosis/diagnoses:
+
+```{r}
+#keeping record_date for linking up to cancer diagnosis but remove to_date column
+comorbs_unique_3 <- comorbs_unique %>%
+  mutate_at(vars(5:200), ~replace_na(., 0)) %>%
+  filter(to_date !=1) %>%
+  dplyr::select(-c(relationship_category,to_date)) %>%
+  rename(year_in_study_comorb = year_in_study)
+
+
+#run all functions above onto this dataset
+df_result3 <- comorbs_unique_3 %>%
+  group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present = if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present = if_else(
+      chronic_inflam_present == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities = if_else(
+      chronic_inflam_present == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+
+
+#keeping less columns 
+df_result4<- df_result3 %>%
+  dplyr::select(c(subject_id,year_in_study_comorb,record_date,199:201))
+
+#year first chronic inflam comorb present
+df_result4 <- df_result4 %>%
+  group_by(subject_id) %>%
+  mutate(study_year_first_chronic_inflam =  if_else(
+      any(chronic_inflam_present == 1),
+      min(year_in_study_comorb[chronic_inflam_present == 1], na.rm = TRUE),
+      as.numeric(NA)
+    )
+  ) %>%
+  ungroup()
+# what was the first chronic inflam comorb
+df_result5 <- df_result4 %>%
+  group_by(subject_id) %>%
+  mutate(
+    first_chronic_inflam_condition = if_else(
+      chronic_inflam_present == 1 & year_in_study_comorb == study_year_first_chronic_inflam,
+      comorbidities,
+      NA_character_
+    )
+  ) %>%
+  # Fill the first condition for all rows within each subject_id
+  mutate(first_chronic_inflam_condition = first(na.omit(first_chronic_inflam_condition))) %>%
+  ungroup()
+
+#number of lifetime chronic inflam conditions
+df_result6<-df_result5 %>%
+  group_by(subject_id) %>%
+  mutate(
+    num_lifetime_chronic_inflam = n_distinct(comorbidities[chronic_inflam_present == 1])
+  ) %>%
+  ungroup()
+#what were the chronic lifetime inflam conditions
+df_result7 <- df_result6 %>%
+  group_by(subject_id) %>%
+  mutate(
+    all_comorbidities_ever = paste(unique(comorbidities[chronic_inflam_present == 1]), collapse = "_")
+  ) %>%
+  ungroup()
+
+
+
+```
+
+Shortening this endpoints df to only keep specific rows for each dog
+
+```{r}
+end_df_result7 <- df_result7 %>%
+  filter(chronic_inflam_present ==1)
+##keeping only certain columns to join to endpoints data
+end_df_result7 <- end_df_result7 %>%
+  dplyr::select(c(subject_id,chronic_inflam_present,study_year_first_chronic_inflam,first_chronic_inflam_condition,num_lifetime_chronic_inflam,all_comorbidities_ever))
+
+#keep only distinct rows
+end_df_result7_distinct <- end_df_result7 %>%
+  distinct(subject_id, .keep_all = TRUE)
+```
+
+Adding endpoints data to chronic inflam dogs
+
+```{r}
+
+
+
+endpoints_abr <- endpoints %>%
+  dplyr::select(-c(public_id,location,phenotype,status, tier_of_confidence,is_cause_of_death,is_recurrence,is_adjudicated)) %>%
+  rename(year_in_study_diagnosis=year_in_study)
+
+#join to endpoints dogs 
+endpoints_comorbs <- endpoints_abr %>%
+  left_join(end_df_result7_distinct, by="subject_id")
+
+#chronic_inflam column edit so those without chronic inflam is 0 not NA
+endpoints_comorbs <- endpoints_comorbs %>%
+   mutate(chronic_inflam_present = replace_na(chronic_inflam_present, 0))
+
+#code to check if study year in diagnosis endpoint is > than comorbs study year and if so how many years
+endpoints_comorbs_2 <- endpoints_comorbs%>%
+  group_by(subject_id) %>%
+  mutate(diagnosis_after_comorb = 
+      if_else(year_in_study_diagnosis > study_year_first_chronic_inflam, 1, 0
+    ),
+    time_between = if_else(
+      diagnosis_after_comorb == 1,
+      year_in_study_diagnosis - study_year_first_chronic_inflam,
+      as.numeric(NA))
+    )%>%
+  ungroup()
+
+endpoints_comorbs_2 
+
+
+```
+
+Create csv of single row for endpoint dogs with (\~1900 rows):
+
+-   did they have chronic inflam comorbidities present at all? how many? which?
+
+-   were they present before endpoint diagnoses and if so how long before?
+
+```{r}
+write.csv(endpoints_comorbs_2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoint_dogs_comorbidities.csv")
+```
+
+Create csv of all dog records with (\~30k rows):
+
+-   did they have chronic inflam comorbidities present at all? how many? which?
+
+-   were they present before endpoint diagnoses and if so how long before? (NB. only 1800 dogs have end points so there will be lots of NA rows)
+
+```{r}
+write.csv(result_df7,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_records_comorbidities.csv")
+```
