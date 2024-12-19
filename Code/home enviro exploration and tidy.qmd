@@ -465,7 +465,7 @@ result_df3 <- result_df3 %>%
 print(colnames(result_df3))
 ```
 
-Combine files:
+#### Combine files:
 
 ```{r}
 #keep unique rows of result_df2 = house file
@@ -482,10 +482,10 @@ result_combined <- result_df2_unique %>%
 ```
 
 ```{r}
-write.csv(result_combined,"house_location_all.csv")
+write.csv(result_combined,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/house_location_all_rows.csv")
 ```
 
-Add in endpoints data:
+#### Add in endpoints data:
 
 ```{r}
 
@@ -502,27 +502,30 @@ end_points_neoplasia <- end_points %>%
   mutate(across(where(is.character), tolower))
 end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
 end_HSA <- end_HSA %>%
-  mutate(has_HSA = 1)
+  mutate(had_HSA = 1)
 
 #lymphoma specific
 end_lymphoma <- end_points_neoplasia %>% filter(grepl('lymphoma',tracked_condition),ignore.case=TRUE)
 end_lymphoma <- end_lymphoma %>%
-  mutate(has_lymphoma = 1)
+  mutate(had_lymphoma = 1)
 ```
 
 ```{r}
 #combine with endpoints all 
 end_points_all <- end_points %>%
-  left_join(result_combined, by="subject_id")
-write.csv(end_points_all,"endpoints_house_location.csv")
+  left_join(result_combined, by="subject_id") %>%
+  distinct(subject_id,.keep_all=TRUE)
+write.csv(end_points_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_all_house_location.csv")
 
 #end points lymphoma
 end_points_lymphoma_join <- end_lymphoma %>%
-  left_join(result_combined,by="subject_id")
-write.csv(end_points_lymphoma_join,"endpoints_lyphoma_house_location.csv")
+  left_join(result_combined,by="subject_id") %>%
+  distinct(subject_id,.keep_all=TRUE)
+write.csv(end_points_lymphoma_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_lymphoma_house_location.csv")
 #end points HSA
 end_points_HSA_join <- end_HSA %>%
-  left_join(result_combined,by="subject_id")
-write.csv(end_points_HSA_join,"endpoints_HSA_house_location.csv")
+  left_join(result_combined,by="subject_id") %>%
+  distinct(subject_id,.keep_all=TRUE)
+write.csv(end_points_HSA_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_HSA_house_location.csv")
 
 ```

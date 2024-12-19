@@ -255,7 +255,7 @@ check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
 
 ```
 
-### Exposed in specific study years for categorical variables 
+### Exposed in specific study years for categorical variables
 
 For categorical variables calculates mode variable in X years rather than were they exposed within years (as these categorical variables e.g. area type are not split into indiv columns eg. urban Y N)
 

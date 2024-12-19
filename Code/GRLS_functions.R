@@ -174,41 +174,24 @@ check_exposure_mode <- function(data, columns_to_check, study_years, year_column
   
   data %>%
     group_by(subject_id) %>%
-    mutate(
-      # Determine exposure status for the study years
-      across(
-        all_of(columns_to_check),
-        ~ if_else(
-          any(. == 1 & !!sym(year_column) %in% study_years),
-          paste0("Within ", paste(study_years, collapse = ","), " years"),
-          paste0("Not within ", paste(study_years, collapse = ","), " years")
-        ),
-        .names = "{.col}_study_years_{suffix}"
-      ),
-      
-      # Calculate the count of 1s within the study years for each column
-      across(
-        all_of(columns_to_check),
-        ~ sum(. == 1 & !!sym(year_column) %in% study_years, na.rm = TRUE),
-        .names = "{.col}_sum_{suffix}"
-      ),
-      
-      # Determine the mode string within the study years
-      across(
-        all_of(columns_to_check),
-        ~ {
-          values <- .[!!sym(year_column) %in% study_years]
-          if (length(values) == 0) return(NA_character_)
+    mutate(across(
+      all_of(columns_to_check),
+      ~ {
+        # Filter values within the study years
+        values <- .[!!sym(year_column) %in% study_years]
+        
+        # Calculate mode (most frequent value)
+        if (length(values) == 0) {
+          NA_character_
+        } else {
           mode_val <- names(which.max(table(values)))
           mode_val
-        },
-        .names = "{.col}_mode_{suffix}"
-      )
-    ) %>%
+        }
+      },
+      .names = "{.col}_mode_{suffix}" # Name new columns dynamically
+    )) %>%
     ungroup()
 }
-
-
 
 
 #function to calculate dosage/amount exposed to
@@ -301,3 +284,4 @@ map_frequency_to_df <- function(data, column_to_map, mapping_list, new_column_na
   # Return the updated data frame
   return(data)
 }
+

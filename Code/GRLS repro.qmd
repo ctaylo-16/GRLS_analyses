@@ -278,7 +278,7 @@ NB: 3 patients have duplicated records in the end_HSA dataset:
 Join endpoint data and repro data
 
 ```{r}
-end_join <- left_join(end_points,neut_age_M3, by=c("subject_id","year_in_study"))
+end_join <- left_join(end_points,neut_age_M3_abr, by=c("subject_id"))
 
 #
 ```
