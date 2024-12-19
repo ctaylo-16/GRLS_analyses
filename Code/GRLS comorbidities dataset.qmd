@@ -337,7 +337,7 @@ Create csv of single row for endpoint dogs with (\~1900 rows):
 -   were they present before endpoint diagnoses and if so how long before?
 
 ```{r}
-write.csv(endpoints_comorbs_2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoint_dogs_comorbidities.csv")
+write.csv(endpoints_comorbs_2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoint_comorbidities.csv")
 ```
 
 Create csv of all dog records with (\~30k rows):
@@ -347,5 +347,5 @@ Create csv of all dog records with (\~30k rows):
 -   were they present before endpoint diagnoses and if so how long before? (NB. only 1800 dogs have end points so there will be lots of NA rows)
 
 ```{r}
-write.csv(result_df7,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_records_comorbidities.csv")
+write.csv(df_result7,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_records_comorbidities.csv")
 ```

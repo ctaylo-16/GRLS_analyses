@@ -87,8 +87,6 @@ enviro_tidy_dead_only <- enviro_tidy_dead_only %>%
   left_join(lymphoma_abr,by="subject_id")
 ```
 
-
-
 Now rerun all the plots above but with overlay for lymphoma vs no lymphoma also
 
 ```{r,eval=FALSE}
@@ -135,7 +133,7 @@ for (col in cols) {
 endpoints_house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_all_house_location.csv")
 print(colnames(endpoints_house))
 endpoints_house_abr <- endpoints_house%>%
-  dplyr::select(c(subject_id,house_type,area_type,68:149,152,162:189))
+  dplyr::select(c(subject_id,house_type,area_type,asbestos_exposure, radon_exposure,68:149,152,162:171))
 house_dead_only <- endpoints_house_abr %>%
   filter(subject_id %in% dead_subject_ids)
 
@@ -144,13 +142,11 @@ house_dead_only <- house_dead_only %>%
   left_join(lymphoma_abr,by="subject_id")
 ```
 
-
-
 Calculate proportions for case:control categories to determine which to take forward?
 
 ```{r}
 cols <- colnames(house_dead_only %>%
-  dplyr::select(c(-1,-115)))
+  dplyr::select(c(-1,-99,-100)))
 for (col in cols) {
   df_plot <- house_dead_only %>%
     group_by(.data[[col]], had_lymphoma) %>%  # group by the current column and 'had_lymphoma'
@@ -167,9 +163,7 @@ for (col in cols) {
 }
 ```
 
-
-
-
+NB. many of the sum ones are nonsense as they are of a categorical, non-ordinal, non-numeric variable e.g. cooking fuel primary sum whole life
 
 ## Reproduction data
 
@@ -188,9 +182,10 @@ repro_dead_only <- repro_dead_only %>%
 ```
 
 Plot proportions of endpoint dogs for each variable:
+
 ```{r}
 cols <- colnames(repro_dead_only %>%
-  dplyr::select(c(-1,-21)))
+  dplyr::select(c(-1,-21,-22)))
 for (col in cols) {
   df_plot <- repro_dead_only %>%
     group_by(.data[[col]], had_lymphoma) %>%  # group by the current column and 'had_lymphoma'
@@ -207,74 +202,234 @@ for (col in cols) {
 }
 ```
 
+## Comorbidities dataset
+
+```{r}
+endpoints_comorb<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoint_comorbidities.csv")
 
 
+# Need to tidy up the NAs in certain columns to be an informative string
+endpoints_comorb <- endpoints_comorb %>%
+  mutate(study_year_first_chronic_inflam = as.character(study_year_first_chronic_inflam)) %>%
+ mutate(study_year_first_chronic_inflam = replace_na(study_year_first_chronic_inflam, "no_chronic_inflam_recorded"))
+ 
+endpoints_comorb <- endpoints_comorb %>%
+  mutate(first_chronic_inflam_condition = as.character(first_chronic_inflam_condition)) %>%
+ mutate(first_chronic_inflam_condition = replace_na(first_chronic_inflam_condition, "no_chronic_inflam_recorded")) 
+ 
+ endpoints_comorb <- endpoints_comorb %>%
+ mutate(num_lifetime_chronic_inflam = replace_na(num_lifetime_chronic_inflam, 0)) 
+ 
+ endpoints_comorb <- endpoints_comorb %>%
+   mutate(all_comorbidities_ever= as.character(all_comorbidities_ever)) %>%
+ mutate(all_comorbidities_ever = replace_na(all_comorbidities_ever, "no_chronic_inflam_recorded")) 
+ #remove irrel columns
+ endpoints_comorb <-endpoints_comorb %>%
+   dplyr::select(-X,-year_in_study_diagnosis,study_year_first_chronic_inflam)
+```
 
-### Choose reduced number of variables for the RP2 lymphoma projects:
-Combine all 3 datasets
+### Combining all tidied datasets for endpoint dogs
+
+Combine all 4 datasets
 
 ```{r}
 enviro_repro <- enviro_tidy_dead_only %>%
   left_join(repro_dead_only,by="subject_id")
-
+#rm diagnosis date column
+enviro_repro <- enviro_repro %>%
+  dplyr::select(-diagnosis_date.x,-diagnosis_date.y)
 enviro_repro_house <- enviro_repro %>%
   left_join(house_dead_only,by="subject_id")
+enviro_repro_house <- enviro_repro_house %>%
+  dplyr::select(-diagnosis_date, - had_lymphoma.x,-had_lymphoma.y)
+enviro_repro_house_comorb <- enviro_repro_house %>%
+  left_join(endpoints_comorb, by="subject_id") %>%
+  #keep only distinct rows in the join 
+  distinct()
+
 ```
 
+### Deduping dataset to only have single row per patient
+
+-   Multiple rows for same patient as multiple endpoints
+
+-   Prioritise lymphoma any and then create a second tracked endpoint condition column and second tracked endpoint condition diagnosis date etc.
 
 ```{r}
-#what to do for age for these dogs???
+#how many records per patient:
+num_sid <- enviro_repro_house_comorb %>%
+group_by(subject_id) %>%
+  summarise(row_count = n())
+#268 dogs with >1 row
 
-  dog_profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+condition_df <- enviro_repro_house_comorb %>%
+  group_by(subject_id) %>%
+  mutate(condition_number = row_number()) %>%
+  ungroup()
+
+
+# Reshape data to wide format
+enviro_repro_house_comorb_single_subjectid_wide <-condition_df %>%
+  pivot_wider(
+    id_cols = subject_id,
+    names_from = condition_number,
+    values_from = c(tracked_condition, diagnosis_date),
+    names_sep = "_"
+  )
   
-  dog_profile <- dog_profile %>%
-    dplyr::select(c(subject_id,birth_date,death_date))
+#keep only single row for prev df where multi rows per subject id and remove diagnosis columns before merging this on
+enviro_repro_house_comorb_dist <- enviro_repro_house_comorb %>%
+  distinct(subject_id,.keep_all = TRUE)
+
+enviro_repro_house_comorb_dist_condition_cols <- enviro_repro_house_comorb_dist %>%
+  left_join(enviro_repro_house_comorb_single_subjectid_wide,by="subject_id") %>%
+  #remove this col as now have a col for each conditions diagnosis date
+  dplyr::select(-diagnosis_date)
   
-  enviro_repro_house_profile <- enviro_repro_house %>%
+```
+
+### Age at various endpoints/diagnoses etc.
+
+```{r}
+#what to do for age for these dogs?
+dog_profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+  
+dog_profile <- dog_profile %>%
+    dplyr::select(c(subject_id,enrolled_date,birth_date,death_date))
+
+
+  
+enviro_repro_house_comorb_profile <- enviro_repro_house_comorb_dist_condition_cols %>%
     left_join(dog_profile, by="subject_id")
 
 #age at death
-enviro_repro_house_profile  <- enviro_repro_house_profile  %>% 
+enviro_repro_house_comorb_profile  <- enviro_repro_house_comorb_profile  %>% 
   mutate(birth_date1 =as.POSIXct(birth_date,format="%Y-%m-%d"))
-enviro_repro_house_profile  <- enviro_repro_house_profile  %>%
+enviro_repro_house_comorb_profile  <- enviro_repro_house_comorb_profile  %>%
   mutate(death_date1 =as.POSIXct(death_date,format="%Y-%m-%d"))
-enviro_repro_house_profile <- enviro_repro_house_profile %>%
-  mutate(age_at_death=as.numeric(difftime(as.POSIXct(enviro_repro_house_profile$death_date1), as.POSIXct(enviro_repro_house_profile$birth_date1, tz="UTC"), units="weeks"))) %>%
+enviro_repro_house_comorb_profile  <- enviro_repro_house_comorb_profile  %>% 
+  mutate(enrolled_date1 =as.POSIXct(enrolled_date,format="%Y-%m-%d"))
+#age at death
+enviro_repro_house_comorb_profile <- enviro_repro_house_comorb_profile %>%
+  mutate(age_at_death=as.numeric(difftime(as.POSIXct(enviro_repro_house_comorb_profile$death_date1), as.POSIXct(enviro_repro_house_comorb_profile$birth_date1, tz="UTC"), units="weeks"))) %>%
   #convert weeks to years
   mutate(age_at_death = age_at_death/52)
 #age at endpoint diagnosis
-#age at death
-enviro_repro_house_profile  <- enviro_repro_house_profile  %>% 
-  mutate(diagnosis_date1 =as.POSIXct(diagnosis_date,format="%Y-%m-%d"))
-enviro_repro_house_profile <- enviro_repro_house_profile %>%
-  mutate(age_at_endpoint_diagnosis = as.numeric(difftime(as.POSIXct(enviro_repro_house_profile$diagnosis_date1), as.POSIXct(enviro_repro_house_profile$birth_date1, tz="UTC"), units="weeks")))%>%
+enviro_repro_house_comorb_profile  <- enviro_repro_house_comorb_profile  %>% 
+  mutate(diagnosis_date1 =as.POSIXct(diagnosis_date_1,format="%Y-%m-%d"))
+enviro_repro_house_comorb_profile <- enviro_repro_house_comorb_profile %>%
+  mutate(age_at_endpoint_diagnosis = as.numeric(difftime(as.POSIXct(enviro_repro_house_comorb_profile$diagnosis_date1), as.POSIXct(enviro_repro_house_comorb_profile$birth_date1, tz="UTC"), units="weeks")))%>%
   mutate(age_at_endpoint_diagnosis=age_at_endpoint_diagnosis/52)
+
+#time enrolled in study
+enviro_repro_house_comorb_profile <- enviro_repro_house_comorb_profile %>%
+  mutate(time_enrolled = as.numeric(difftime(as.POSIXct(enviro_repro_house_comorb_profile$death_date1), as.POSIXct(enviro_repro_house_comorb_profile$enrolled_date1, tz="UTC"), units="weeks")))%>%
+  mutate(time_enrolled=time_enrolled/52)
 ```
 
+-   Death date missing for \~190 dogs in dataset
+
+```{r}
+missing_death <- enviro_repro_house_comorb_profile %>%
+  dplyr::select(c(subject_id,birth_date,death_date,age_at_endpoint_diagnosis,had_lymphoma,tracked_condition_1)) %>%
+  filter(death_date =="")
+```
+
+### Comorbidity of another cancer
+
+Did the dog have another cancer in endpoints diagnosis sheet?
+
+```{r}
+enviro_repro_house_comorb_profile$multi_cancers_present <- 0  # Start with 0
+
+# Specify the columns to check
+columns_to_check <- c("tracked_condition_1","tracked_condition_2","tracked_condition_3","tracked_condition_4","tracked_condition_5","tracked_condition_6")
+
+# Function to check if any cell in specified columns contains 'oma'
+check_oma <- function(row) {
+  any(sapply(columns_to_check, function(col) {
+    grepl('oma', row[col], ignore.case = TRUE)
+  }))
+}
+
+# Apply the function to each row
+enviro_repro_house_comorb_profile$multi_cancers_present <- apply(enviro_repro_house_comorb_profile, 1, check_oma)
+
+#recode T and F
+enviro_repro_house_comorb_profile$multi_cancers_present <- ifelse(enviro_repro_house_comorb_profile$multi_cancers_present == TRUE, 1, 0)
 
 
-Set criteria for variable inclusion eg. X% in each variable category?
+```
 
-Ideally get this down to \~ 30 variables for each student
+## Activity dataset
 
-Create 3 datasets:
+```{r}
+activity <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_endpoints_outof100.csv")
+
+activity <- activity %>% dplyr::select(-c(X,public_id,tracked_condition,diagnosis_date,location,phenotype,status,tier_of_confidence,is_cause_of_death,is_recurrence,is_adjudicated)) %>%
+  distinct(subject_id,.keep_all = TRUE)
+```
+
+Join to data
+
+```{r}
+enviro_repro_house_comorb_profile_activity <- enviro_repro_house_comorb_profile %>%
+  left_join(activity,by="subject_id")
+```
+
+Save all cols of whole dataset
+
+```{r}
+write.csv(enviro_repro_house_comorb_profile_activity,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_demog_lifestyle_enviro_comorb.csv")
+```
+
+-   Set criteria for variable inclusion eg. X% in each variable category?
+
+-   Ideally get this down to \~ 10-20 variables for each student
+
+-   Check enough variability in data that it's worth including
+
+```{r}
+# Specify the column indices
+column_indices <- c(2:87,89:97,101:194,223:228,229:243)
+
+# Create a table for each specified column
+tables <- lapply(enviro_repro_house_comorb_profile_activity[, column_indices, drop = FALSE], table)
+```
+
+-   Create 3 datasets:
 
 Dataset 1 = demographic variables = age at diagnosis, sex, neuter status, other repro, geographic location, dog job (called lifestyle in dataset)
 
 ```{r}
-demographics <- enviro_repro_house_profile %>%
-  dplyr::select(c(subject_id,had_lymphoma,main_lifestyle_category,sex,neuter,age_at_neuter_years,age_at_endpoint_diagnosis, age_at_death,heats_before_neutering,num_bred_before_neutering,neutered_reason,region_name_mode_whole_life,))
+demographics <- enviro_repro_house_comorb_profile_activity %>%
+  dplyr::select(c(subject_id,had_lymphoma,main_lifestyle_category,sex,neuter,age_at_neuter_years,age_at_endpoint_diagnosis, age_at_death,time_enrolled,heats_before_neutering,num_bred_before_neutering,neutered_reason,region_name_mode_whole_life,area_type))
 
 
 write.csv(demographics,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
 ```
 
-
 Dataset 2= early years environmental/lifestyle dataset
+
 ```{r}
-early_years <- enviro_repro_house_profile %>%
-  dplyr::select(c(subject_id,had_lymphoma,))
+early_years <- enviro_repro_house_comorb_profile_activity %>%
+  dplyr::select(c(subject_id,had_lymphoma,use_aerosol_study_years_early_life,use_air_cleaner_study_years_early_life,use_hepa_filter_study_years_early_life,use_moth_balls_study_years_early_life,use_incense_or_candles_study_years_early_life,smoke_exposure_study_years_early_life,any_treated_insects_study_years_early_life,hours_of_smoke_early_life_total_dosage,house_type_mode_early_life,area_type_mode_early_life,water_source_mode_early_life,pipes_metal_any_mode_early_life,pipes_plastic_any_mode_early_life,cooking_fuel_primary_mode_early_life,heating_fuel_primary_mode_early_life,state_mode_early_life,region_name_mode_early_life,avg_activity_duration_sy1_2,avg_activity_freq_sy1_2,avg_activity_intensity_sy1_2 ))
+write.csv(early_years,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset2_lymphoma_earlyyears_enviro_lifestyle.csv")
 ```
 
-
 Dataset 3 = rest of life environmental/lifestyle
+
+```{r}
+rest_years <- enviro_repro_house_comorb_profile_activity %>%
+  dplyr::select(c(subject_id,had_lymphoma,use_aerosol_study_years_rest_of_life,use_air_cleaner_study_years_rest_of_life,use_hepa_filter_study_years_rest_of_life,use_moth_balls_study_years_rest_of_life,use_incense_or_candles_study_years_rest_of_life,smoke_exposure_study_years_rest_of_life,any_treated_insects_study_years_rest_of_life,hours_of_smoke_rest_of_life_total_dosage,house_type_mode_rest_of_life,area_type_mode_rest_of_life,water_source_mode_rest_of_life,pipes_metal_any_mode_rest_of_life,pipes_plastic_any_mode_rest_of_life,cooking_fuel_primary_mode_rest_of_life,heating_fuel_primary_mode_rest_of_life,state_mode_rest_of_life,region_name_mode_rest_of_life,avg_activity_freq_sy3,avg_activity_intensity_sy3 ))
+
+write.csv(rest_years,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset3_lymphoma_restyears_enviro_lifestyle.csv")
+```
+
+Dataset 4 = comorbidities, other cancers etc
+
+```{r}
+other <- enviro_repro_house_comorb_profile_activity %>% 
+  dplyr::select(c(subject_id,had_lymphoma,multi_cancers_present,chronic_inflam_present,num_lifetime_chronic_inflam,first_chronic_inflam_condition, all_comorbidities_ever,diagnosis_after_comorb))
+write.csv(other,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset4_lymphoma_comorbidities.csv")
+```
