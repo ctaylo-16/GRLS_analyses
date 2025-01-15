@@ -406,7 +406,18 @@ demographics <- enviro_repro_house_comorb_profile_activity %>%
   dplyr::select(c(subject_id,had_lymphoma,main_lifestyle_category,sex,neuter,age_at_neuter_years,age_at_endpoint_diagnosis, age_at_death,time_enrolled,heats_before_neutering,num_bred_before_neutering,neutered_reason,region_name_mode_whole_life,area_type))
 
 
-write.csv(demographics,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
+#write.csv(demographics,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
+```
+
+Adding in MDI data here to demographics dataset:
+
+```{r}
+MDI_dogs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+MDI_dogs <- MDI_dogs %>%
+  dplyr::select(c(subject_id,MDI_quintile,MDI.rate))
+demographics_MDI <- demographics %>% left_join (MDI_dogs, by="subject_id")
+
+write.csv(demographics_MDI,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
 ```
 
 Dataset 2= early years environmental/lifestyle dataset

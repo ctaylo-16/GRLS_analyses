@@ -1494,6 +1494,9 @@ This is an approximation
 # remove dogs missing a usable dose
 medications_complete <- medications_5 %>%
   filter(!dose%in%c("unspecified","varies","","moderate amount","small amount","as directed","powder","as directed"))
+
+#write all rows as a csv
+write.csv(medications_5,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv" )
 #dose units that are definitely not usable dogs
 medications_complete <-medications_complete %>%
   filter(!dose_unit %in% c("unspecified","as directed","as needed","monthly","liquid","tapering dose","daily","injection"))
@@ -1507,12 +1510,17 @@ medications_complete <- medications_complete %>%
 
 
 
-
 ```
 
 ### Medications length of time/number of times prescribed:
 
-Non use vs intermediate use vs long term use:
+Non use vs intermediate use vs long term use.
+
+There is a few papers defining this usage:
+
+"We classiﬁed use as non-use (0–1 prescription), in- termediate use (2–7 prescriptions), and long-term use (≥8 prescrip- tions). Eight prescriptions was chosen as a cut-off as drugs for chronic treatment are typically supplied for 3 months use for each dispensing in Denmark, whereby our deﬁnition oflong-termusewould correspond to two years' cumulative treatment." - Pottegard et al., 2016
+
+-   exclude drug usage for the year prior to diagnosis (recognised that increased prescribing in year prior to diagnosis possibly due to cancer diagnosing issues PLUS likely wont be involved in cancer diagnosis
 
 ```{r}
 
@@ -1536,7 +1544,7 @@ Medications need to change frequency unit to a numeric value eg. SID = 1, BID = 
 
 ```{r,eval=F}
 #concatenate frequency and specify days columns
-medications2 <- medications %>%
+medications2 <- medications_5 %>%
   mutate(specify_days=as.character(specify_days))%>%
    unite(frequency_specify_days, frequency, specify_days,sep = "",remove=FALSE)%>%
   mutate(frequency_specify_days=sub("NA*$", "", as.character(frequency_specify_days)))
@@ -1575,6 +1583,10 @@ medications_mapped <- medications2 %>%
 print(medications_mapped[, c("frequency_specify_days", "mapped_values")])
 
 
+#write this to csv 
+write.csv(medications_mapped,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+
+
 
 
 #medications need to change duration unit to a numeric value eg. weeks to 7 (ie. 7 days)
@@ -1588,8 +1600,12 @@ medications_calcs <- medications_mapped %>%
 medications_mapped <- medications_mapped %>%
   mutate(as.numeric(mapped_values))
 #function for this
-medications_calc <- total_dose(medications_mapped, "dose","duration","mapped_values")
 
+#medications_calc <- total_dose(medications_mapped, "dose","duration","duration_mapped_values")
+
+
+#write this to csv 
+write.csv(medications_mapped,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
 ```
 
 ## Vaccinations
@@ -1604,6 +1620,33 @@ What were they vaccinated with in past X years
 
 NB. new row for every vaccine (multiple rows for same study year) for each subject id
 
+```{r}
+vaccinations <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/vaccines.csv")
+
+#remove rows with any_vaccine = 0 as no vaccine recorded that year of questionaire
+vacc <- vaccinations %>%
+  dplyr::filter(any_vaccine==1)
+
+unique_type <- unique(vacc$type)
+
+print(unique_type)
+#36 vaccine types recorded = quite easy to tidy?
+```
+
+Split the 36 vaccine types into groupings
+
+-   YN for each infectious agent split by commas in the unqiue_type
+
+-   core vs non-core vaccines? - https://www.aaha.org/resources/2022-aaha-canine-vaccination-guidelines/recommendations-for-core-and-noncore-canine-vaccines/
+
+    ```{r}
+
+    ```
+
 ## Flea-worming Tx
 
-## OTC medications
+```{r}
+flea_tick_heartworm <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/flea_tick_heartworm.csv")
+```
+
+## OTC medications - ignore for now
