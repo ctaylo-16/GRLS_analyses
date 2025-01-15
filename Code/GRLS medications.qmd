@@ -1635,11 +1635,61 @@ print(unique_type)
 #36 vaccine types recorded = quite easy to tidy?
 ```
 
+How many times vaccines administered over life?
+
+-   this doesnt quite work as data is seperated out currently so that core DAPPi is one row, lepto 1 row, CI is one row all with same admin date
+
+```{r}
+vacc <- vacc %>%
+  group_by(subject_id) %>%
+  mutate(num_sep_vaccines_lifetime = n())
+```
+
+How many times vaccines administered over life?
+
+```{r}
+vacc <- vacc %>%
+  group_by(subject_id)%>%
+  mutate(num_distinct_vaccination_events_lifetime=n_distinct(record_date))
+
+```
+
+How many agents administered over life?
+
+```{r}
+vacc <- vacc %>%
+  group_by(subject_id)%>%
+  mutate(num_distinct_vaccine_agents_lifetime=n_distinct(type))
+
+
+```
+
+Did patient receive a vaccine in initial study year ? (safe to assume this is primary course?)
+
+-   1= yes did receive, 0 = did not
+
+```{r}
+vacc <- vacc %>%
+  group_by(subject_id) %>%
+  mutate(vacc_in_year0 = ifelse(any(year_in_study == 0), 1, 0))
+```
+
 Split the 36 vaccine types into groupings
 
 -   YN for each infectious agent split by commas in the unqiue_type
 
 -   core vs non-core vaccines? - https://www.aaha.org/resources/2022-aaha-canine-vaccination-guidelines/recommendations-for-core-and-noncore-canine-vaccines/
+
+```{r}
+
+```
+
+```{r}
+core <- c("canine distemper, adenovirus type 2, parainfluenza, parvovirus","rabies (3 year)", "leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","rabies (1 year)","canine distemper, adenovirus type 2", "canine distemper, adenovirus type 2, parvovirus","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  , "adenovirus type 2, bordetella bronchiseptica, parainfluenza", "borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)",      "canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus","canine parvovirus","canine distemper, adenovirus type 2, measles, parainfluenza","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)" ,"canine distemper"  ,"canine coronavirus, parvovirus","canine distemper, adenovirus type 2, coronavirus, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" , "leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,   "canine distemper, adenovirus type 2, coronavirus, parvovirus" ,"canine coronavirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine coronavirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,"canine distemper, adenovirus type 2, coronavirus, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  
+          )
+non_core <- c("borrelia burgdorferi","canine influenza (unspecified)","bordetella bronchiseptica, parainfluenza","bordetella bronchiseptica","rattlesnake venin" ,"canine coronavirus","melanoma vaccine","canine giardia"    )
+
+```
 
 ## Flea-worming Tx
 
