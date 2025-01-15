@@ -1,0 +1,50 @@
+---
+title: "GRLS medications usage exploration"
+format: html
+editor: visual
+---
+
+## GRLS medications usage exploration:
+
+Want to explore non-use, intermediate and chronic use of medications and their association/or not with cancer development.
+
+Need to :
+
+-   use the active ingredient groups initially, then use the WHO ATC grouping?
+
+-   calculate non-use, intermediate, chronic use of meds in the \>1y prior to diagnosis (NB. med usage is only done in annual vet questionaire not real-time so wont have exact date prescribed but just date of questionaire filling)
+
+-   get in diagnosis data (currently use end points dataset) - could use study year
+
+-   
+
+Meds data
+
+```{r}
+meds <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv" )
+
+#remove rows where there are just all NAs for drug info e.g first 2 rows of df
+
+meds_2 <- meds %>%
+  filter(medication_name != "NA" & medication_ingredients != "NA")
+  #name, ingredient, dose coiumns all empty = remove
+```
+
+Endpoints:
+
+-   NB might need to consider groupings e.g for cancer location e.g kidney cancer
+
+-   \~1200 end point cancers out of 1700 end points overall
+
+-   for each cancer, each case is a case of that cancer and the controls are those that didnt have that cancer?
+
+```{r}
+endpoints <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+
+end_points <- endpoints %>% 
+  mutate(across(where(is.character), tolower))
+uniqueIDs_anydeath <- unique(end_points$subject_id)
+# seperate out only neoplasia deaths with key words
+neoplasia_at_death <- end_points %>% filter(grepl('tumor|oma|leuk|neopla',tracked_condition),ignore.case=TRUE)
+uniqueIDs_neoplasia_at_death <- unique(neoplasia_at_death$subject_id)
+```

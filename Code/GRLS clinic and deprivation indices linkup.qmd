@@ -1,0 +1,76 @@
+---
+title: "GRLS clinic postcode deprivation linkup"
+format: html
+editor: visual
+---
+
+## GRLS clinic postcode to deprivation linkup
+
+```{r}
+library(tidyverse)
+#GRLS clinics
+clinics <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/data updates June 2024/vet_address.csv")
+
+clinics_unique <- clinics %>%
+  group_by(postal_code) %>%
+  filter(n() == 1) %>%
+  ungroup()
+#strip to only have first 5 digits of postcode as some have a second part for full zipcode
+clinics_unique <- clinics_unique %>%
+  mutate(postal_code = substr(postal_code, 1, 5))%>%
+  dplyr::select(-c(subject_id,first_name,last_name))
+
+clinics_unique$postal_code <- as.numeric(clinics_unique$postal_code)
+#FIPS database from https://simplemaps.com/data/us-zips
+FIPS <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/data updates June 2024/simplemaps_uszips_basicv1.86/uszips.csv")
+FIPS <- FIPS %>%
+  rename(postal_code = zip)
+
+#join clinics up to the FIPS data
+clinics_and_fips <- clinics_unique %>% left_join(FIPS, by = "postal_code")
+
+#delete redundant columns
+clinics_and_fips2 <- clinics_and_fips %>%
+  dplyr::select(-c(address_line2))
+
+```
+
+MDI data from https://www.census.gov/topics/income-poverty/poverty/about/related-sites/rates.html - just going to use most recent values available of 2019 MDI
+
+```{r}
+MDI_2019 <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/data updates June 2024/MDI_2019.csv")
+MDI_2019 <- MDI_2019 %>%
+  rename(county_fips=County)
+
+
+
+```
+
+Need to calculate quintiles for MDI 2019 across all counties and then apply this to our clinics
+
+```{r}
+MDI_quintiles <- quantile(MDI_2019$MDI.rate, probs = seq(0, 1, 0.2))
+
+
+MDI_2019$MDI_quintile <- cut(MDI_2019$MDI.rate, breaks = MDI_quintiles, include.lowest = TRUE, labels = 1:5)
+
+```
+
+Join MDI data to clinics
+
+```{r}
+clinics_and_fips2_mdi <- clinics_and_fips2 %>% left_join (MDI_2019,by="county_fips" )
+```
+
+Now rejoin this back to the 3000 GRLS dogs:
+
+```{r}
+GRLS_dogs <- clinics %>% left_join(clinics_and_fips2_mdi, by = "clinic_name")
+
+GRLS_dogs <- GRLS_dogs %>%
+    group_by(subject_id) %>%
+  filter(n() == 1) %>%
+  ungroup()
+
+
+```
