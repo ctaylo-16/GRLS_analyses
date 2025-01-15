@@ -1614,6 +1614,8 @@ Want to determine:
 
 A number of vaccines in lifetime ('dosage')
 
+Received early years vaccines YN
+
 Vaccination within past X years
 
 What were they vaccinated with in past X years
@@ -1638,10 +1640,6 @@ Split the 36 vaccine types into groupings
 -   YN for each infectious agent split by commas in the unqiue_type
 
 -   core vs non-core vaccines? - https://www.aaha.org/resources/2022-aaha-canine-vaccination-guidelines/recommendations-for-core-and-noncore-canine-vaccines/
-
-    ```{r}
-
-    ```
 
 ## Flea-worming Tx
 
