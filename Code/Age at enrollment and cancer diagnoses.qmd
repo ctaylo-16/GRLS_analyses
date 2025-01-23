@@ -1,0 +1,656 @@
+---
+title: "Age at enrollment etc"
+format: html
+editor: visual
+---
+
+# Ages at different aspects of study, num questionaires per dog etc.
+
+## Determining age at enrollment for dogs
+
+-   To assess how much variation there is grouping SY0-2 and SY3+ together
+
+```{r}
+library(tidyverse)
+
+dog_profile<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv") 
+
+
+```
+
+Convert enrolled_date and birth_date to date format and calculate age at enrollment from them:
+
+```{r}
+dog_profile <- dog_profile %>%
+    mutate(
+    dob = as.Date(birth_date, format = "%Y-%m-%d"),
+    enroll = as.Date(enrolled_date, format = "%Y-%m-%d"),
+    age_at_enrol = as.numeric(difftime(enroll, dob, units = "days")) / 365.25
+  )
+```
+
+Descriptives of age at enrollment:
+
+```{r}
+dog_profile_enrol <- dog_profile %>%
+  summarise(mean_age = mean(age_at_enrol, na.rm = TRUE),
+    median_age = median(age_at_enrol, na.rm = TRUE),
+    q1 = quantile(age_at_enrol, 0.25, na.rm = TRUE),
+    q3 = quantile(age_at_enrol, 0.75, na.rm = TRUE),
+    min_age = min(age_at_enrol, na.rm = TRUE),
+    max_age = max(age_at_enrol, na.rm = TRUE),
+    sd_age = sd(age_at_enrol, na.rm = TRUE),
+    count = n())
+
+dog_profile_enrol
+```
+
+## Number of questionnaires per dog
+
+Load in the house data
+
+-   median of 9 records per dog
+
+```{r}
+house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+
+
+#num of records per dog
+house_records <- house %>%
+  group_by(subject_id) %>%
+  summarise(count = n()) %>%  # Count rows per subject_id
+  summarise(
+    median_count = median(count),
+    mean_count = mean(count),
+q1 = quantile(count, 0.25, na.rm = TRUE),
+    q3 = quantile(count, 0.75, na.rm = TRUE),
+    min_records = min(count, na.rm = TRUE),
+    max_records = max(count, na.rm = TRUE),
+    sd_records = sd(count, na.rm = TRUE))
+house_records
+```
+
+Check also similar numbers per dog for activity data
+
+```{r}
+#activity data from study y 1 and 2
+activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
+#check # dogs in it
+act_1_2 <- unique(activity_sy1_2$subject_id)
+#activity data from study y 3 + 
+activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
+act_3_plus<- unique(activity_sy3_beyond$subject_id)
+#activity overview dataset
+activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+act_over<-unique(activity_overview$subject_id)
+sy1_2 <- activity_sy1_2 %>%
+  group_by(subject_id) %>%
+  summarise(count = n()) %>%  # Count rows per subject_id
+  summarise(
+    median_count = median(count),
+    mean_count = mean(count),
+    q1 = quantile(count, 0.25, na.rm = TRUE),
+    q3 = quantile(count, 0.75, na.rm = TRUE),
+    min_records = min(count, na.rm = TRUE),
+    max_records = max(count, na.rm = TRUE),
+    sd_records = sd(count, na.rm = TRUE)
+  )
+
+print(sy1_2)
+
+
+sy3 <- activity_sy3_beyond%>%
+  group_by(subject_id) %>%
+  summarise(count = n()) %>%  # Count rows per subject_id
+  summarise(
+    median_count = median(count),
+    mean_count = mean(count),
+    q1 = quantile(count, 0.25, na.rm = TRUE),
+    q3 = quantile(count, 0.75, na.rm = TRUE),
+    min_records = min(count, na.rm = TRUE),
+    max_records = max(count, na.rm = TRUE),
+    sd_records = sd(count, na.rm = TRUE)
+  )
+
+
+print(sy3)
+
+
+overview <- activity_overview%>%
+  group_by(subject_id) %>%
+  summarise(count = n()) %>%  # Count rows per subject_id
+  summarise(
+    median_count = median(count),
+    mean_count = mean(count),
+    q1 = quantile(count, 0.25, na.rm = TRUE),
+    q3 = quantile(count, 0.75, na.rm = TRUE),
+    min_records = min(count, na.rm = TRUE),
+    max_records = max(count, na.rm = TRUE),
+    sd_records = sd(count, na.rm = TRUE)
+  )
+
+
+print(overview)
+```
+
+## Age and distrubution of ages at cancer diagnoses
+
+-   summary stats and histogram plots of age at diagnosis for all cancers then specific cancers
+
+```{r}
+endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+
+all_cancer_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv")
+
+
+```
+
+Join up endpoint to age at enrollment dataset
+
+```{r}
+endpoints <- endpoints %>% left_join(dog_profile, by="subject_id")
+
+endpoints <- endpoints %>%
+  mutate(diagnosis_date = as.Date(diagnosis_date, format = "%Y-%m-%d"),
+         age_at_diagnosis = as.numeric(difftime(diagnosis_date,dob, units = "days")) / 365.25)
+
+endpoints <- endpoints %>%
+  mutate(across(where(is.character), tolower))
+```
+
+Endpoints diagnosis date descriptives:
+
+-   All causes of death
+
+```{r}
+endpoint_diagnosis <- endpoints %>%
+  summarise(mean_age = mean(age_at_diagnosis , na.rm = TRUE),
+    median_age = median(age_at_diagnosis , na.rm = TRUE),
+    q1 = quantile(age_at_diagnosis , 0.25, na.rm = TRUE),
+    q3 = quantile(age_at_diagnosis , 0.75, na.rm = TRUE),
+    min_age = min(age_at_diagnosis , na.rm = TRUE),
+    max_age = max(age_at_diagnosis , na.rm = TRUE),
+    sd_age = sd(age_at_diagnosis , na.rm = TRUE),
+    count = n())
+
+endpoint_diagnosis
+```
+
+-   Neoplastic causes of death
+
+```{r}
+endpoint_diagnosis_neoplasia <- endpoints %>%
+  filter(grepl('tumor|oma|leuk|neopla',tracked_condition),ignore.case=TRUE)%>%
+  summarise(mean_age = mean(age_at_diagnosis , na.rm = TRUE),
+    median_age = median(age_at_diagnosis , na.rm = TRUE),
+    q1 = quantile(age_at_diagnosis , 0.25, na.rm = TRUE),
+    q3 = quantile(age_at_diagnosis , 0.75, na.rm = TRUE),
+    min_age = min(age_at_diagnosis , na.rm = TRUE),
+    max_age = max(age_at_diagnosis , na.rm = TRUE),
+    sd_age = sd(age_at_diagnosis , na.rm = TRUE),
+    count = n())
+
+endpoint_diagnosis_neoplasia
+```
+
+Endpoints diagnosis histogram
+
+-   All endpoints
+
+```{r,echo=FALSE}
+ggplot(endpoints, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at Endpoint Diagnosis (all Endpoints)",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+-   All neoplasias
+
+```{r,echo=FALSE}
+endpoints_neo <- endpoints %>%
+  filter(grepl('tumor|oma|leuk|neopla',tracked_condition),ignore.case=TRUE)
+ggplot(endpoints_neo, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at Endpoint Diagnosis (Neoplasia Endpoints)",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+Filter for main cancers:
+
+```{r,echo=FALSE}
+endpoints_neo %>% group_by(tracked_condition) %>%
+  summarise(Frequency = n()
+  ) %>% arrange(desc(Frequency))
+
+
+```
+
+-   Haemangiosarcoma (all locations)
+
+```{r,echo=FALSE}
+hsa <- endpoints_neo %>% 
+  filter(grepl('hemangiosarcoma',tracked_condition),ignore.case=TRUE)
+ggplot(hsa, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at HSA Diagnosis",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+-   Mast cell tumour (all locations)
+
+```{r,echo=FALSE}
+mct <- endpoints_neo %>% 
+  filter(grepl('mast',tracked_condition),ignore.case=TRUE)
+
+ggplot(mct, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at MCT diagnosis",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+-   Lymphoma (all locations)
+
+```{r,echo=FALSE}
+lymphoma <- endpoints_neo %>% 
+  filter(grepl('lymphoma',tracked_condition),ignore.case=TRUE)
+ggplot(lymphoma, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at Lymphoma Diagnosis",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+```
+
+-   Histiocytic sarcoma
+
+```{r,echo=FALSE}
+hist_sarc <- endpoints_neo %>% 
+  filter(grepl('histiocytic',tracked_condition),ignore.case=TRUE)
+
+ggplot(hist_sarc, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at Histocytic Sarcoma Diagnosis",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+-   Soft tissue sarcoma
+
+```{r,echo=FALSE}
+soft_sarc <- endpoints_neo %>% 
+  filter(grepl('soft',tracked_condition),ignore.case=TRUE)
+
+ggplot(soft_sarc, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at Soft Tissue Sarcoma",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+-   Malignant melanoma
+
+```{r,echo=FALSE}
+melanoma <- endpoints_neo %>%
+  filter(grepl('malignant melanoma',tracked_condition),ignore.case=TRUE)
+ggplot(melanoma, aes(x = age_at_diagnosis)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Age at Malignant Melanoma Diagnosis",
+    x = "Age at Diagnosis (years)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+All cancers diagnosed
+
+```{r}
+
+all_cancer_points<- all_cancer_points %>%
+  mutate(across(where(is.character), tolower))
+
+
+#add age into this 
+all_cancer_points <- all_cancer_points %>%
+  left_join(dog_profile,by="subject_id")
+
+#only keep rows where there is at least 1( indicating a cancer) across certain rows
+cancer_only_points <- all_cancer_points %>%
+  filter(if_any(7:40, ~ . == 1))
+
+
+#only keep unique rows as well
+cancer_only_points <- cancer_only_points %>%
+  distinct()
+
+```
+
+Majority of rows are missing a record date and only have a record year so can only plot histogram based on record year:
+
+```{r,eval=FALSE}
+#this isnt working, only printing the first plot
+for (i in 7:40) {
+  col_name <- colnames(df)[i]
+  
+  # Create the histogram
+    p <- ggplot(cancer_only_points, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = col_name, x = "Record Year", y = "Frequency") +
+    theme_minimal()
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+    ggsave(filename = paste0("histogram_", col_name, ".png"), plot = p, width = 10, height = 6)
+
+}
+
+
+
+```
+
+Will do columns with biggest frequency counts:
+
+(NB. these are not individual patient ID just rows)
+
+-   mct=561
+
+-   hsa=468
+
+-   lymphoma=405
+
+-   soft tissue sarcoma = 203
+
+-   melanom=175
+
+-   eye =160
+
+```{r}
+count_ones_df <- cancer_only_points %>%
+  select(7:40) %>%
+  mutate(across(everything(), ~ sum(. == 1))) 
+
+#remove columns where there are no cancers of that type recorded
+
+count_ones_df_2 <- count_ones_df %>%
+  select_if(~ any(. != 0))
+
+
+#list of col names with only 0s
+count_ones_df_3 <- count_ones_df %>%
+  select_if(~ any(. == 0))
+#filter column names now in main df
+cancer_only_points2 <- cancer_only_points %>%
+  select(-all_of(colnames(count_ones_df_3)))
+```
+
+### Bar plots of main cancers in annual records
+
+#### NB. these are an attempt to allow for multiples of same cancer type in individual dogs however, more benign tumours just repeat for all years of study
+
+MCT
+
+```{r,echo=FALSE}
+mct_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,mast_cell_tumor))%>%
+  filter(mast_cell_tumor==1) %>%
+  distinct()
+
+p <- ggplot(mct_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Mast cell tumour diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(mct_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+HSA
+
+```{r,echo=FALSE}
+hsa_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,hemangiosarcoma))%>%
+  filter(hemangiosarcoma==1) %>%
+  distinct()
+
+p <- ggplot(hsa_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Haemangiosarcoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(hsa_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Lymphoma
+
+```{r,echo=FALSE}
+lymphoma_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,lymphoma))%>%
+  filter(lymphoma==1) %>%
+  distinct()
+
+p <- ggplot(lymphoma_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Lymphoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(lymphoma_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Soft tissue sarcoma
+
+```{r,echo=FALSE}
+st_sarc_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,soft_tissue_sarcoma))%>%
+  filter(soft_tissue_sarcoma==1) %>%
+  distinct()
+
+p <- ggplot(st_sarc_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Soft tissue sarcoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(st_sarc_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Melanoma
+
+```{r,echo=FALSE}
+melanoma_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,melanoma))%>%
+  filter(melanoma==1) %>%
+  distinct()
+
+p <- ggplot(melanoma_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Melanoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(melanoma_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Eye
+
+```{r,echo=FALSE}
+eye_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,eye_tumor))%>%
+  filter(eye_tumor==1) %>%
+  distinct()
+
+p <- ggplot(eye_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Eye tumour diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(eye_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+#### Main cancers with only single patient ID allowed
+
+MCT
+
+```{r,echo=FALSE}
+mct_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,mast_cell_tumor))%>%
+  filter(mast_cell_tumor==1) %>%
+  distinct(subject_id,.keep_all = TRUE)
+
+p <- ggplot(mct_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Mast cell tumour diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(mct_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+HSA
+
+```{r,echo=FALSE}
+hsa_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,hemangiosarcoma))%>%
+  filter(hemangiosarcoma==1) %>%
+  distinct(subject_id,.keep_all = TRUE)
+
+p <- ggplot(hsa_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Haemangiosarcoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(hsa_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Lymphoma
+
+```{r,echo=FALSE}
+lymphoma_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,lymphoma))%>%
+  filter(lymphoma==1) %>%
+    distinct(subject_id,.keep_all = TRUE)
+
+p <- ggplot(lymphoma_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Lymphoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(lymphoma_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Soft tissue sarcoma
+
+```{r,echo=FALSE}
+st_sarc_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,soft_tissue_sarcoma))%>%
+  filter(soft_tissue_sarcoma==1) %>%
+    distinct(subject_id,.keep_all = TRUE)
+
+p <- ggplot(st_sarc_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Soft tissue sarcoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(st_sarc_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Melanoma
+
+```{r,echo=FALSE}
+melanoma_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,melanoma))%>%
+  filter(melanoma==1) %>%
+    distinct(subject_id,.keep_all = TRUE)
+
+p <- ggplot(melanoma_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Melanoma diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(melanoma_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
+
+Eye
+
+```{r,echo=FALSE}
+eye_all <- cancer_only_points2 %>%
+  dplyr::select(c(subject_id,year_in_study,eye_tumor))%>%
+  filter(eye_tumor==1) %>%
+  distinct(subject_id,.keep_all = TRUE)
+
+p <- ggplot(eye_all, aes_string(x = "year_in_study", y = "..count..")) +
+    geom_bar(stat = "count", fill = "skyblue", color = "black") +
+    labs(title = "Eye tumour diagnosis by study record year", x = "Record Year", y = "Frequency") +
+    theme_minimal() +
+    scale_x_continuous(breaks = unique(eye_all$year_in_study), 
+                       labels = function(x) as.integer(x))  # This converts numbers to whole numbers
+
+  
+  # Print the plot (or save it if needed)
+  print(p)
+```
