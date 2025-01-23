@@ -1044,8 +1044,6 @@ dose_unit_count3
 
 -   \~4000 are parasite tx and the dose is written in format 'based on weight(weight in brackets)
 
-    -   could consider instead of any dosage calcs just \# of times prescribed flea/wormer tx rather than the dose of various active ingredients
-
 \~2.5k look unusable (see, unfixable below)
 
 ```{r}
@@ -1317,12 +1315,14 @@ Duration dictionary to recode:
 
 ```{r}
 duration_dict <- list(
-  "0.03" = "1 days",
+  "0.03" = c("1 days","1 not applicable"),
   "0.06"="2 days",
   "0.09"="3 days",
+  "0.12" = "4 days",
   "0.17"="5 days",
   "0.2"="6 days",
   "0.23" = c("7 days", "1 week", "1 weeks"),
+  "0.24" = "8 days",
   "0.33" = c("10 days","9 days"),
   "0.4"=c("12 days","11 days"),
   "0.5" =c("2 weeks"),
@@ -1334,6 +1334,7 @@ duration_dict <- list(
   "3"=c("3 months","12 weeks"),
   "4"="4 months",
   "5"="5 months",
+  "6" = "6 months",
   "7"="7 months",
   "8"="8 months",
   "9"="9 months",
@@ -1343,9 +1344,8 @@ duration_dict <- list(
   "unspecified"=c("as needed unspecified","unspecified unspecified","as needed days",
                   "as needed months","as needed weeks","as needed not applicable","1 not applicable","1 unspecified","unspecified days","2 not applicable","unspecified weeks","10 unspecified","7 unspecified","unspecified months","10 not applicable","3 not applicable",
                   "4 not applicable","7 not applicable","12 unspecified","4 unspecified","5 unspecified","6 not applicable","6 unspecified")
+  )
   
-  
-)
 ```
 
 ```{r}
@@ -1522,7 +1522,6 @@ There is a few papers defining this usage:
 
 -   exclude drug usage for the year prior to diagnosis (recognised that increased prescribing in year prior to diagnosis possibly due to cancer diagnosing issues PLUS likely wont be involved in cancer diagnosis
 
-
 ## Medications dosage calculations
 
 Want to determine:
@@ -1579,7 +1578,9 @@ print(medications_mapped[, c("frequency_specify_days", "mapped_values")])
 
 
 #write this to csv 
-write.csv(medications_mapped,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+medications_mapped <- as.data.frame(medications_mapped)
+
+write.csv(medications_mapped,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv",row.names = FALSE, fileEncoding = "UTF-8")
 
 
 
@@ -1675,7 +1676,6 @@ Split the 36 vaccine types into groupings
 
 -   core vs non-core vaccines? - https://www.aaha.org/resources/2022-aaha-canine-vaccination-guidelines/recommendations-for-core-and-noncore-canine-vaccines/
 
-
 ```{r}
 core_only <- c("canine distemper, adenovirus type 2, parainfluenza, parvovirus","rabies (3 year)", "leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","rabies (1 year)","canine distemper, adenovirus type 2", "canine distemper, adenovirus type 2, parvovirus","canine distemper"  ,"canine coronavirus, parvovirus","canine distemper, adenovirus type 2, coronavirus, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" , "leptospirosis 2 (canicola, icterohaemorrhagiae)") 
           
@@ -1684,7 +1684,6 @@ non_core_only <- c("borrelia burgdorferi","canine influenza (unspecified)","bord
 both_core_non_core <- c("adenovirus type 2, bordetella bronchiseptica, parainfluenza", "borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)",      "canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  , "canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus","canine parvovirus","canine distemper, adenovirus type 2, measles, parainfluenza","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)" ,,"canine distemper, adenovirus type 2, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,   "canine distemper, adenovirus type 2, coronavirus, parvovirus" ,"canine coronavirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine coronavirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,"canine distemper, adenovirus type 2, coronavirus, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"
 
 ```
-
 
 ## Flea-worming Tx
 

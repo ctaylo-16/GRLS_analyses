@@ -1,0 +1,303 @@
+---
+title: "Medication usage associated with time points and lifetime"
+format: html
+editor: visual
+---
+
+# Medication prescribing associations with time points and frequency
+
+Load in medications dataset and endpoints datasets:
+
+```{r}
+library(tidyverse)
+library(lubridate)
+medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+endpoints<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+#death date file
+dog_profile <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+#keep only date of death and subject id
+dog_profile <- dog_profile %>%
+  dplyr::select(c(subject_id,death_date))
+endpoints_profile <- endpoints %>%
+  left_join(dog_profile, by="subject_id")
+```
+
+## Frequency of prescription of a drug group in whole life:
+
+-   using active ingredients group as this is broad and can try medication ingredient itself if this shows any interesting results
+
+Group for each dog rows by active ingredient group
+
+```{r}
+number_of_prescriptions_drug_groups_whole_life <- medications %>%
+  group_by(subject_id, active_ingredient_groups) %>%  # Group by both dog and drug category
+  summarise(lifetime_total_prescriptions = n(), .groups = "drop") 
+
+
+# Pivot the table to wide format
+number_of_prescriptions_drug_groups_whole_life_wide <- number_of_prescriptions_drug_groups_whole_life %>%
+  pivot_wider(
+    names_from = active_ingredient_groups,  # Make drug groups into column names
+    values_from = lifetime_total_prescriptions,      # Fill columns with the counts
+    values_fill = 0                         # Replace NA with 0 for drug groups not prescribed
+  )
+```
+
+Group for each dog rows by medication ingredient top 100 group
+
+```{r}
+number_of_prescriptions_ingredient_100_groups_whole_life <- medications %>%
+  group_by(subject_id, medication_ingredients_100) %>%  # Group by both dog and drug category
+  summarise(lifetime_total_prescriptions = n(), .groups = "drop") 
+
+
+# Pivot the table to wide format
+number_of_prescriptions_ingredient_100_groups_whole_life_wide <- number_of_prescriptions_ingredient_100_groups_whole_life %>%
+  pivot_wider(
+    names_from = medication_ingredients_100,  # Make drug groups into column names
+    values_from = lifetime_total_prescriptions,      # Fill columns with the counts
+    values_fill = 0                         # Replace NA with 0 for drug groups not prescribed
+  )
+```
+
+## Endpoint/dead dogs only calculations
+
+## Incorporating diagnosis date into medication usage
+
+Approx 50 dogs from endpoint data do not have meds data submitted
+
+```{r}
+#combine endpoints and medications dataset, NB only the endpoints  ~1800 dogs retained rahter than the 3000
+endpoints_medications <- medications %>%
+  inner_join(endpoints_profile, by = "subject_id")
+
+#sense check same num unique IDs in data
+unique_end <- unique(endpoints$subject_id)
+unique_endmed <- unique(endpoints_medications$subject_id)
+
+#delete pointless columns
+endpoints_medications <- endpoints_medications %>%
+  dplyr::select(-c(X,public_id.x,public_id.y,status.x,status.y))
+
+```
+
+## Medications length of time/number of times prescribed:
+
+Non use vs intermediate use vs long term use.
+
+There is a few papers defining this usage:
+
+"We classiﬁed use as non-use (0–1 prescription), intermediate use (2–7 prescriptions), and long-term use (≥8 prescriptions). Eight prescriptions was chosen as a cut-off as drugs for chronic treatment are typically supplied for 3 months use for each dispensing in Denmark, whereby our deﬁnition of long-term use would correspond to two years' cumulative treatment." - Pottegard et al., 2016
+
+\- exclude drug usage for the year prior to diagnosis (recognised that increased prescribing in year prior to diagnosis possibly due to cancer diagnosing issues PLUS likely wont be involved in cancer diagnosis
+
+First steps, code to retain rows only where X number of years between prescription ('record_date') and diagnosis date('diagnosis_date')
+
+```{r}
+#make sure date columns in dateformat
+endpoints_medications <- endpoints_medications %>%
+      mutate(
+    diagnosis_date2 = as.Date(diagnosis_date, format = "%Y-%m-%d"),  # yyyy-mm-dd
+    record_date2= as.Date(record_date, format = "%Y-%m-%d")         # dd-mm-yyyy
+  )
+endpoints_medications$mapped_duration <- as.numeric(endpoints_medications$mapped_duration)
+
+#trial to retain rows ?5y before diagnosis?
+endpoints_medication_5y_filt <-  endpoints_medications %>%
+  mutate(
+    # Calculate the time difference in years between record_date and diagnosis_date
+    year_difference = as.numeric(difftime(record_date2, diagnosis_date2, units = "days")) / 365.25
+  ) %>%
+  # Filter rows where the year difference is 5 years or less
+  filter(abs(year_difference) <= 5) 
+
+
+
+
+#trial to retain rows ?3y before diagnosis?
+endpoints_medication_3y_filt <-  endpoints_medications %>%
+  mutate(
+    # Calculate the time difference in years between record_date and diagnosis_date
+    year_difference = as.numeric(difftime(record_date2, diagnosis_date2, units = "days")) / 365.25
+  ) %>%
+  # Filter rows where the year difference is 5 years or less
+  filter(abs(year_difference) <= 3) 
+
+
+```
+
+Now perform non-use, intermediate and chronic use calculations:
+
+NB. using mapped_duration column where duration has been modified so that a value of 1=4 weeks ie. 1m and all other values are multiples or fractions of that eg. 3 = 3 month course, 0.25 = 1 week course of drug. Based on this, value of 24 would constitute chronic use
+
+Using same cut-offs as humans:
+
+```{r}
+
+
+classify_drug_prescription_freq_duration_5y <- endpoints_medication_5y_filt %>%
+  group_by(subject_id, active_ingredient_groups) %>%
+  # Sum mapped_duration for each active_ingredient_group per subject_id
+  summarise(total_duration = sum(mapped_duration, na.rm = TRUE)) %>%
+  # Classify based on total_duration
+  mutate(
+    duration_category = case_when(
+      total_duration >= 24 ~ "chronic_use",   # 24 months or more
+      total_duration < 24 & total_duration >= 6 ~ "intermediate_use",  # 6 to less than 24 months
+      TRUE ~ "non_use"  # less than 6 months or no duration info
+    )
+  ) %>%  # Count the number of prescriptions grouped by active_ingredient_groups and duration_category
+  count(active_ingredient_groups, duration_category, name = "prescription_count") %>%
+  # Spread the counts into separate columns for each duration category
+  pivot_wider(names_from = duration_category, values_from = prescription_count, values_fill = 0)
+```
+
+From this human classifying, we have only got \~15 dogs with any drug prescription classified as "chronic". Probably a lower classification for chronic is required however, also \~20k of the \~36k records do not have a duration mapped so need to think on potential way to exclude duration?
+
+```{r}
+table(endpoints_medications$mapped_duration)
+
+sum(is.na(endpoints_medications$mapped_duration))
+
+missing_duration <-endpoints_medications %>%
+  filter(is.na(mapped_duration))
+
+
+table(missing_duration$duration)
+
+```
+
+Issue of what to do with "continuous" and "as needed" as this is almost all the missing ones ?
+
+-   Could reclass to give any that are "continuous months" value of 1m and "continuous days" value of 1d etc.?
+
+-   Alternatively perhaps just do number of rows for these time points and base calcs on number of times a drug prescribed rather than length of time??
+
+```{r}
+continuous <- endpoints_medications %>%
+  filter(duration=="continuous")
+```
+
+### Trialing with number of times drug prescribed rather than duration:
+
+#### 5 years prior to endpoint
+
+```{r}
+classify_drug_prescription_freq_events_5y <- endpoints_medication_5y_filt %>%
+  group_by(subject_id, active_ingredient_groups) %>%
+  summarise(total_prescriptions_5y = n(), .groups = "drop") 
+#now classify the counts
+classify_drug_prescription_freq_events_5y <- classify_drug_prescription_freq_events_5y %>%
+  mutate(total_prescriptions_5y_cat = case_when(
+    total_prescriptions_5y >= 24 ~ "chronic_use",   # 24 months or more
+      total_prescriptions_5y< 24 & total_prescriptions_5y>= 6 ~ "intermediate_use",  # 6 to less than 24 months
+      TRUE ~ "non_use"  # less than 6 months or no info
+  )
+  )
+
+# Pivot the table to wide format
+classify_drug_prescription_freq_events_5y_wide <- classify_drug_prescription_freq_events_5y %>%
+  #remove the actual counts of useage from this table
+  dplyr::select(-total_prescriptions_5y)%>%
+  pivot_wider(
+    names_from = active_ingredient_groups,  # Make drug groups into column names
+    values_from = total_prescriptions_5y_cat,      # Fill columns with the counts
+ #for those with no use put down as non_use
+ values_fill = "non_use"                        # Replace NA with 0 for drug groups not prescribed
+     )
+
+```
+
+Even with this, \~70 dogs only fit the chronic use category.
+
+#### 3 years prior to endpoint
+
+```{r}
+classify_drug_prescription_freq_events_3y <- endpoints_medication_3y_filt %>%
+  group_by(subject_id, active_ingredient_groups) %>%
+  summarise(total_prescriptions_3y = n(), .groups = "drop") 
+#now classify the counts
+classify_drug_prescription_freq_events_3y <- classify_drug_prescription_freq_events_3y %>%
+  mutate(total_prescriptions_3y_cat = case_when(
+    total_prescriptions_3y >= 24 ~ "chronic_use",   # 24 months or more
+      total_prescriptions_3y< 24 & total_prescriptions_3y>= 6 ~ "intermediate_use",  # 6 to less than 24 months
+      TRUE ~ "non_use"  # less than 6 months or no info
+  )
+  )
+
+# Pivot the table to wide format
+classify_drug_prescription_freq_events_3y_wide <- classify_drug_prescription_freq_events_3y %>%
+  #remove the actual counts of useage from this table
+  dplyr::select(-total_prescriptions_3y)%>%
+  pivot_wider(
+    names_from = active_ingredient_groups,  # Make drug groups into column names
+    values_from = total_prescriptions_3y_cat,      # Fill columns with the counts
+ #for those with no use put down as non_use
+ values_fill = "non_use"                        # Replace NA with 0 for drug groups not prescribed
+     )
+```
+
+Still to do:
+
+-   think on what counts as chronic duration and chronic frequency of prescription
+
+-   whole cohort calculations with end point dec 2024 for censoring
+
+## Whole cohort calculations
+
+-   need to get date of death for non HSA dogs that have died already to calculate 5y/3y back from
+
+-   set HSA dogs final date as date of diagnosis of HSA
+
+-   set rest of endpoints dataset final date as their date of death
+
+-   since there are dogs that died in endpoints with multiple conditions, need to then filter so that only have unique IDs kept - so one end date for each unique ID
+
+-   for those not dead yet need to give them a death date of end Dec 2024
+
+```{r}
+endpoints_profile <- endpoints_profile %>%
+  mutate(across(where(is.character), tolower))
+#create in endpoints df a column called final_date where get date of death from dog_profile for dogs that did not die with HSA
+#creat had HSA column in endpoitns_profile
+endpoints_profile <- endpoints_profile %>%
+  mutate(had_HSA = case_when(
+    grepl('hemangiosarcoma', tracked_condition, ignore.case = TRUE) ~ 1, # If 'haemangiosarcoma' is found (case insensitive)
+    TRUE ~ 0 # Otherwise, 0
+  ))
+
+#make sure those dogs that are not unique ID are removed - should have ~1400 rows left
+endpoints_profile2 <- endpoints_profile %>%
+  group_by(subject_id) %>% # Assuming 'dog_id' uniquely identifies each dog
+  arrange(desc(had_HSA), desc(is_cause_of_death)) %>% # Prioritize had_HSA == 1, then cause_of_death == 1
+  slice_head(n = 1) %>% # Keep only the first row per dog
+  ungroup()
+
+
+endpoints_profile2 <- endpoints_profile2 %>%
+  mutate(final_date = case_when(
+    had_HSA == 1 ~ diagnosis_date, # Use `diagnosis_date` if `had_HSA` is 1
+    TRUE ~ death_date              # Otherwise, use `death_date`
+  ))
+
+
+```
+
+Still approx \~150 dogs in this endpoints dataset do not have a death date, and when I examine records folders appear to not have clinical records so I assume are actually not dead
+
+Therefore, will have censor date (31/12/24) like remaining dogs in GRLS cohort
+
+```{r}
+endpoints_profile2 <- endpoints_profile2 %>%
+  mutate(final_date = case_when(
+    had_HSA == 1 ~ diagnosis_date, # Use `diagnosis_date` if `had_HSA` is 1
+    TRUE ~ death_date              # Otherwise, use `death_date`
+  ),
+  final_date = if_else(final_date == "" | is.na(final_date), as.Date("2024-12-31"), as.Date(final_date))) # Replace missing dates with "2024-12-31"
+```
+
+-   Set final_date as 31/12/24 for rest of cohort in dog profile not captured in endpoints dataset
+
+-   Set rest of cohort as had_HSA = 0
+
+-   save csv of status and then use for recalculating other variables for analyses

@@ -272,16 +272,20 @@ map_frequency_to_df <- function(data, column_to_map, mapping_list, new_column_na
   map_frequency <- function(frequency, mapping_list) {
     match <- sapply(mapping_list, function(x) frequency %in% x)
     if (any(match)) {
-      return(names(mapping_list)[which(match)])
+      return(names(mapping_list)[which(match)[1]]) # Use the first match to ensure a single value
     } else {
       return("unspecified")
     }
   }
   
   # Apply the mapping function to the specified column and create the new column
-  data[[new_column_name]] <- sapply(data[[column_to_map]], map_frequency, mapping_list = mapping_list)
+  data[[new_column_name]] <- vapply(data[[column_to_map]], map_frequency, FUN.VALUE = character(1), mapping_list = mapping_list)
   
   # Return the updated data frame
   return(data)
 }
+
+
+
+
 
