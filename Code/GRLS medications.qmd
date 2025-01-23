@@ -1683,6 +1683,12 @@ Split the 36 vaccine types into groupings
 <<<<<<< Updated upstream
 =======
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+```{r}
+
+```
+>>>>>>> Stashed changes
 =======
 ```{r}
 
@@ -1695,17 +1701,23 @@ core_only <- c("canine distemper, adenovirus type 2, parainfluenza, parvovirus",
 non_core_only <- c("borrelia burgdorferi","canine influenza (unspecified)","bordetella bronchiseptica, parainfluenza","bordetella bronchiseptica","rattlesnake venin" ,"canine coronavirus","melanoma vaccine","canine giardia")
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 both_core_non_core <- c("adenovirus type 2, bordetella bronchiseptica, parainfluenza", "borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)",      "canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  , "canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus","canine parvovirus","canine distemper, adenovirus type 2, measles, parainfluenza","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)" ,,"canine distemper, adenovirus type 2, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,   "canine distemper, adenovirus type 2, coronavirus, parvovirus" ,"canine coronavirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine coronavirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,"canine distemper, adenovirus type 2, coronavirus, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"
 
 ```
 
 
 =======
+=======
+>>>>>>> Stashed changes
 both_core_non_core <- c("adenovirus type 2, bordetella bronchiseptica, parainfluenza", "borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)",      "canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  , "canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus","canine parvovirus","canine distemper, adenovirus type 2, measles, parainfluenza","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)" ,,"canine distemper, adenovirus type 2, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,   "canine distemper, adenovirus type 2, coronavirus, parvovirus" ,"canine coronavirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine coronavirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,"canine distemper, adenovirus type 2, coronavirus, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" )
 
 ```
 
 >>>>>>> Stashed changes
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 ## Flea-worming Tx
 
