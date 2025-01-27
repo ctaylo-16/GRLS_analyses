@@ -1072,3 +1072,85 @@ sleep_smoking_enviro_all_no_endpoints2 <- sleep_smoking_enviro_all_no_endpoints2
 
 write.csv(sleep_smoking_enviro_all_no_endpoints2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv")
 ```
+
+## Add in HSA cohort time specific data
+
+```{r}
+HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+```
+
+Combine HSA data with:
+
+```{r}
+HSA_cohort_sleep_smoking_enviro_all_no_endpoints<- sleep_smoking_enviro_all_no_endpoints %>%
+  left_join(HSA_cohort, by="subject_id")
+
+```
+
+Things to calculate:
+
+-   lifestyle - mode class of dog 'job'
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+columns_to_check <- c("main_lifestyle_category","sleep_location")
+HSA_cohort_sleep_smoking_enviro_all_no_endpoints2 <- check_exposure_mode_X_prev_years(
+  data = HSA_cohort_sleep_smoking_enviro_all_no_endpoints,
+  columns_to_check = columns_to_check,
+  year_range = 5, # Number of years prior to consider
+  year_column = "year_in_study_diagnosis_or_final_record_year",
+  study_year_column = "year_in_study.x"
+)
+
+```
+
+Remaining variables its a Y/N exposure in prev 5 y calculation
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+columns_to_check <- c("use_aerosol","use_air_cleaner","use_hepa_filter","use_moth_balls","use_incense_or_candles","smoke_exposure","any_treated_weeds","any_treated_insects","any_treated_fertilizer")
+
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# Specify the columns to check
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+HSA_cohort_sleep_smoking_enviro_all_no_endpoints2 <- check_exposure_binary(
+  data = HSA_cohort_sleep_smoking_enviro_all_no_endpoints2,
+  columns_to_check = columns_to_check,
+  year_range = 5, # Number of years prior
+  year_column = "year_in_study_diagnosis_or_final_record_year",
+  study_year_column = "year_in_study.x"
+)
+
+```
+
+Calculate hours of smoke exposure in prev 5 y
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+#make smoke into numeric
+HSA_cohort_sleep_smoking_enviro_all_no_endpoints2$hours_of_smoke <- as.numeric(HSA_cohort_sleep_smoking_enviro_all_no_endpoints2$hours_of_smoke)
+result <- check_exposure_hours(
+  data = HSA_cohort_sleep_smoking_enviro_all_no_endpoints2,
+  columns_to_check = c("hours_of_smoke"),
+  year_range = 5, # Number of years prior
+  year_column = "year_in_study_diagnosis_or_final_record_year",
+  study_year_column = "year_in_study.x"
+)
+```
+
+Now keeping only single row for each patient:
+
+```{r}
+HSA_cohort_sleep_smoking_enviro_all_single_row <- result %>%
+  distinct(subject_id,.keep_all = TRUE)
+#remove irrel cols
+HSA_cohort_sleep_smoking_enviro_all_single_row2 <- HSA_cohort_sleep_smoking_enviro_all_single_row %>%
+  dplyr::select(-c(2:18))
+
+write.csv(HSA_cohort_sleep_smoking_enviro_all_single_row2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_lifestyle_exposures.csv")
+```

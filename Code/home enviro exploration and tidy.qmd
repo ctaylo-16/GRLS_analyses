@@ -529,3 +529,76 @@ end_points_HSA_join <- end_HSA %>%
 write.csv(end_points_HSA_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_HSA_house_location.csv")
 
 ```
+
+### Create haemangiosarcoma cohort with this data
+
+```{r}
+HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+```
+
+Calculations for exposure within X years of diagnosis year/final record year
+
+```{r}
+#link up the HSA cohort to each dataset that calculations are done on
+#house
+HSA_cohort_house<- house %>%
+  left_join(HSA_cohort, by = "subject_id")
+#location
+HSA_cohort_location <- location %>%
+  left_join(HSA_cohort,by="subject_id")
+
+
+```
+
+For house dataset:
+
+Determining most common exposure (mode) in the 5y prior to endpoint (year_in_study_diagnosis_or_final_record_year):
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
+HSA_cohort_house <- check_exposure_mode_X_prev_years(
+  data = HSA_cohort_house,
+  columns_to_check = columns_to_check,
+  year_range = 5, # Number of years prior to consider
+  year_column = "year_in_study_diagnosis_or_final_record_year",
+  study_year_column = "year_in_study"
+)
+
+#now keeping 1 row per dog
+HSA_cohort_house_per_dog <- HSA_cohort_house %>%
+  distinct(subject_id,.keep_all = TRUE)
+#remove cols that are irrel
+HSA_cohort_house_per_dog <- HSA_cohort_house_per_dog %>%
+  dplyr::select(-c(2:56))
+```
+
+For location dataset:
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+columns_to_check <- c("region_name","state","zip")
+HSA_cohort_location<- check_exposure_mode_X_prev_years(
+  data = HSA_cohort_location,
+  columns_to_check = columns_to_check,
+  year_range = 5, # Number of years prior to consider
+  year_column = "year_in_study_diagnosis_or_final_record_year",
+  study_year_column = "year_in_study"
+)
+
+#keeping 1 row per dog:
+HSA_cohort_location_per_dog <- HSA_cohort_location %>%
+  distinct(subject_id,.keep_all = TRUE)
+#remove cols that are irrel
+HSA_cohort_house_per_dog <- HSA_cohort_house_per_dog %>%
+  dplyr::select(-c(2:16))
+```
+
+Combine these 2 datasets together to create home enviro HSA dataset:
+
+```{r}
+HSA_cohort_location_house_per_dog <- HSA_cohort_house_per_dog %>%
+  left_join(HSA_cohort_location_per_dog, by="subject_id")
+
+write.csv(HSA_cohort_location_house_per_dog,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_house_location_enviro_exposures.csv")
+```
