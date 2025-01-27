@@ -1,0 +1,217 @@
+---
+title: "Create HSA cohort for RF diagnosis study"
+format: html
+editor: visual
+---
+
+## HSA cohort for RF diagnosis
+
+Cohort:
+
+-   All HSA cases and date of death
+
+-   Remaining non-HSA dogs in the 3000 GRLS dogs with a final study date in which they hadn't been diagnosed with HSA set as 31/12/24
+
+```{r}
+library(tidyverse)
+library(lubridate)
+endpoints<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+#death date file
+dog_profile <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+#keep only date of death and subject id
+dog_profile <- dog_profile %>%
+  dplyr::select(c(subject_id,death_date,withdrawn_date,inactive_date))
+endpoints_profile <- endpoints %>%
+  left_join(dog_profile, by="subject_id")
+```
+
+need to get date of death for non HSA dogs that have died already to calculate 5y/3y back from
+
+-   set HSA dogs final date as date of diagnosis of HSA
+
+-   set rest of endpoints dataset final date as their date of death
+
+-   since there are dogs that died in endpoints with multiple conditions, need to then filter so that only have unique IDs kept - so one end date for each unique ID
+
+-   for those not dead yet need to give them a death date of end Dec 2024
+
+```{r}
+endpoints_profile <- endpoints_profile %>%
+  mutate(across(where(is.character), tolower))
+#create in endpoints df a column called final_date where get date of death from dog_profile for dogs that did not die with HSA
+#creat had HSA column in endpoitns_profile
+endpoints_profile <- endpoints_profile %>%
+  mutate(had_HSA = case_when(
+    grepl('hemangiosarcoma', tracked_condition, ignore.case = TRUE) ~ 1, # If 'haemangiosarcoma' is found (case insensitive)
+    TRUE ~ 0 # Otherwise, 0
+  ))
+
+#make sure those dogs that are not unique ID are removed - should have ~1400 rows left
+endpoints_profile2 <- endpoints_profile %>%
+  group_by(subject_id) %>% # Assuming 'dog_id' uniquely identifies each dog
+  arrange(desc(had_HSA), desc(is_cause_of_death)) %>% # Prioritize had_HSA == 1, then cause_of_death == 1
+  slice_head(n = 1) %>% # Keep only the first row per dog
+  ungroup()
+#list of dogs with HSA
+HSA_subjectIDs<- endpoints_profile2 %>%
+  filter(had_HSA==1)
+HSA_subjectID <- HSA_subjectIDs$subject_id
+endpoints_profile2 <- endpoints_profile2 %>%
+  mutate(final_date = case_when(
+    had_HSA == 1 ~ diagnosis_date, # Use `diagnosis_date` if `had_HSA` is 1
+    TRUE ~ death_date              # Otherwise, use `death_date`
+  ))
+
+
+```
+
+Still approx \~150 dogs in this endpoints dataset do not have a death date, and when I examine records folders appear to not have clinical records so I assume are actually not dead
+
+Therefore, will have censor date (31/12/24) like remaining dogs in GRLS cohort
+
+```{r}
+endpoints_profile2 <- endpoints_profile2 %>%
+  mutate(final_date = case_when(
+    had_HSA == 1 ~ diagnosis_date, # Use `diagnosis_date` if `had_HSA` is 1
+    TRUE ~ death_date              # Otherwise, use `death_date`
+  ),
+  final_date = if_else(final_date == "" | is.na(final_date), as.Date("2024-12-31"), as.Date(final_date))) # Replace missing dates with "2024-12-31"
+```
+
+-   Set final_date as 31/12/24 for rest of cohort in dog profile not captured in endpoints dataset
+
+-   Set rest of cohort as had_HSA = 0
+
+-   save csv of status and then use for recalculating other variables for analyses
+
+```{r}
+dog_profile_not_endpoints <- dog_profile %>%
+  anti_join(endpoints_profile2,by="subject_id")
+
+dog_profile_not_endpoints <- dog_profile_not_endpoints %>%
+  mutate(
+    final_date = case_when(
+      !is.na(as.Date(death_date, format = "%Y-%m-%d")) & death_date != "" ~ as.Date(death_date, format = "%Y-%m-%d"),
+      !is.na(as.Date(withdrawn_date, format = "%Y-%m-%d")) & withdrawn_date != "" ~ as.Date(withdrawn_date, format = "%Y-%m-%d"),
+      !is.na(as.Date(inactive_date, format = "%Y-%m-%d")) & inactive_date != "" ~ as.Date(inactive_date, format = "%Y-%m-%d"),
+      TRUE ~ as.Date("2024-12-31")
+    )
+  )
+dog_profile_not_endpoints <- dog_profile_not_endpoints %>%
+  mutate(had_HSA = 0)
+
+dog_profile_not_endpoints <- dog_profile_not_endpoints %>%
+  dplyr::select(-death_date,-withdrawn_date,-inactive_date)
+
+```
+
+Now abridge endpoints dogs and join dfs together:
+
+```{r}
+endpoints_profile2_abr <- endpoints_profile2 %>%
+  dplyr::select(c(subject_id, had_HSA, final_date))
+
+endpoints_and_all_dogs <- rbind(endpoints_profile2_abr,dog_profile_not_endpoints)
+
+table(endpoints_and_all_dogs$had_HSA)
+```
+
+As of Dec 31 date = 490 HSA cases and 2554 non-cases
+
+Now incorporating in values for the final record study year for each dog for calculating exposures etc from
+
+```{r}
+owner_q <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+#keep only record year cols
+owner_q2 <- owner_q %>%
+  dplyr::select(c(subject_id,year_in_study,record_date))
+
+#now keep only max row for each dog
+owner_q2 <- owner_q2 %>%
+  group_by(subject_id) %>%
+  filter(year_in_study == max(year_in_study)) %>%
+  slice(1) %>% # In case of ties, keep the first row
+  ungroup() 
+```
+
+```{r}
+#year in study from endpoints
+endpoints_year_in_study <- endpoints %>%
+  dplyr::select(c(subject_id,year_in_study))
+
+HSA_dogs <- endpoints_and_all_dogs %>%
+  filter(had_HSA==1)
+HSA_subjectIDs <- HSA_dogs$subject_id
+non_HSAdogs <- endpoints_and_all_dogs %>%
+  filter(had_HSA==0)
+#get endpoint HSA dog for year in study
+endpoint_HSA_year_in_study <- endpoints %>%
+
+  dplyr::select(c(subject_id,year_in_study,diagnosis_date))
+  #renaming to join up better for owner Q
+endpoint_HSA_year_in_study <- endpoint_HSA_year_in_study %>%
+  rename(year_in_study_diagnosis_or_final_record_year = year_in_study)
+endpoint_HSA_year_in_study <- endpoint_HSA_year_in_study %>%
+    #renaming to join up better for owner Q
+  rename(record_date = diagnosis_date)
+#now only keep HSA dogs in this set
+endpoint_HSA_year_in_study2 <- endpoint_HSA_year_in_study%>%
+  filter(subject_id %in% HSA_subjectID)
+endpoint_HSA_year_in_study2 <- endpoint_HSA_year_in_study2 %>%
+    distinct(subject_id,.keep_all = TRUE) 
+  
+
+
+owner_q3 <- owner_q2 %>%
+  rename(year_in_study_diagnosis_or_final_record_year = year_in_study)
+
+owner_q4 <- owner_q3 %>%
+  filter(!(subject_id %in% HSA_subjectID))
+
+owner_dates_and_HSA_diagnosis <- rbind(owner_q4, endpoint_HSA_year_in_study2)
+```
+
+Now add this last study record date onto endpoints and profile joined df
+
+```{r}
+endpoints_and_all_dogs_study_record_year <- endpoints_and_all_dogs %>%
+  left_join(owner_dates_and_HSA_diagnosis, by="subject_id")
+
+#issue as some record years only are YYYY-MM format so now auto-add a 01 onto these:
+endpoints_and_all_dogs_study_record_year2 <- endpoints_and_all_dogs_study_record_year %>%
+  mutate(record_date = case_when(
+    grepl("^\\d{4}-\\d{2}$", record_date) ~ paste0(record_date, "-01"),  # Append "-01" to YYYY-MM
+    TRUE ~ record_date  # Keep as is for full YYYY-MM-DD dates
+  ))
+
+endpoints_and_all_dogs_study_record_year2$record_date <- as.Date(endpoints_and_all_dogs_study_record_year2$record_date)
+#now finally, replacing the final record date in HSA=1 dogs with diagnosis date
+endpoints_and_all_dogs_study_record_year3 <- endpoints_and_all_dogs_study_record_year2 %>%
+  mutate(record_date = case_when(
+    had_HSA == 1 ~ final_date,
+    TRUE ~ record_date  # Leave as is for all other cases
+  ))
+
+
+```
+
+Save this cohort
+
+```{r}
+write.csv(endpoints_and_all_dogs, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date.csv")
+
+write.csv(endpoints_and_all_dogs_study_record_year3, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+```
+
+What columns mean:
+
+-   had_HSA = was HSA recorded as an endpoint diagnosis if so ==1 else ==0
+
+```{=html}
+<!-- -->
+```
+-   final date = for dogs with HSA ==1 final date is the date of diagnosis of HSA and for all other dogs it is either the date of death (for dogs from endpoint data), the withdrawn or inactive date or finally a censoring date of 31/12/24
+
+-   year_in_study_diagnosis_or_final_record_year - for dogs with HSA ==1 this is the record_year in the endpoints dataset corresponding to diagnosis date and for HSA ==0 dogs this is the final /most recent record_year available for the dog
+
+-   record_date = for dogs with HSA==1 this is diagnosis date and for dogs where HSA==0 it is the date corresponding to when the final record was sent in (NB. many of these were just in YYYY-MM format so now have been modified to be automatically the first of the month for YYYY-MM-DDDD calculations)
