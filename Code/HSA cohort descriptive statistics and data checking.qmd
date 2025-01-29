@@ -1,0 +1,368 @@
+---
+title: "HSA cohort data check and descriptive statistics"
+format: html
+editor: visual
+---
+
+# HSA cohort data check and descriptive stats
+
+```{r}
+library(tidyverse)
+HSA <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
+
+HSA <- HSA %>%
+  dplyr::select(-c(X.1,X,year_in_study_diagnosis_or_final_record_year.x,year_in_study_diagnosis_or_final_record_year.y,year_in_study_diagnosis_or_final_record_year.y.y))
+
+#rename had HSA col
+HSA <- HSA %>%
+  rename(had_HSA = had_HSA.x.x)
+```
+
+Datachecks:
+
+```{r}
+table(HSA$had_HSA)
+```
+
+```{r}
+df_types <- HSA %>%
+  summarise(across(everything(), ~ class(.x)[1])) %>%
+  pivot_longer(cols = everything(), names_to = "Column", values_to = "Data_Type")
+
+print(df_types)
+
+```
+
+## Summary stats for columns:
+
+### Household:
+
+House location
+
+```{r}
+cross_table <- table(HSA$area_type_mode_5yrs_prior, HSA$had_HSA)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+
+
+```
+
+MDI
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$MDI_quintile)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+House type
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$house_type_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Water source
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$water_source_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Primary heat source
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$heating_fuel_primary_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Primary cooking fuel
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$cooking_fuel_primary_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Metal pipes
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$pipes_metal_any_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Plastic pipes
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$pipes_plastic_any_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Region
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$region_name_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+State
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$state_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+### Exposures:
+
+Aerosol
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$use_aerosol_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Air cleaner
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$use_air_cleaner_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Hepa filter
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$use_hepa_filter_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Moth balls
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$use_moth_balls_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Incense/candles
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$use_incense_or_candles_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Smoke exposure
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$smoke_exposure_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Smoke hours
+
+```{r}
+HSA %>%
+    summarize(
+    mean_smoke = mean(hours_of_smoke_exposure_hours_5yrs_prior, na.rm = TRUE),
+    median_smoke = median(hours_of_smoke_exposure_hours_5yrs_prior, na.rm = TRUE),
+    sd_smoke = sd(hours_of_smoke_exposure_hours_5yrs_prior, na.rm = TRUE),
+    min_smoke = min(hours_of_smoke_exposure_hours_5yrs_prior, na.rm = TRUE),
+    max_smoke= max(hours_of_smoke_exposure_hours_5yrs_prior, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(hours_of_smoke_exposure_hours_5yrs_prior))
+  )
+```
+
+Insects
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$any_treated_insects_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Weeds
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$any_treated_weeds_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Fertiliser
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$any_treated_fertilizer_exposed_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+### Comorbidities:
+
+NB. many dogs did not have a comorbidity, this may need removing
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_within_5_years_diagnosis_TF)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+
+```
+
+### Activity and lifestyle:
+
+Activity frequency
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$avg_frequency_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA %>%
+    summarize(
+    mean_freq = mean(avg_frequency_5y_prior_endpoint, na.rm = TRUE),
+    median_freq = median(avg_frequency_5y_prior_endpoint, na.rm = TRUE),
+    sd_freq = sd(avg_frequency_5y_prior_endpoint, na.rm = TRUE),
+    min_freq = min(avg_frequency_5y_prior_endpoint, na.rm = TRUE),
+    max_freq= max(avg_frequency_5y_prior_endpoint, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_frequency_5y_prior_endpoint))
+  )
+```
+
+Activity intensity
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$avg_intensity_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA %>%
+    summarize(
+    mean_intensity = mean(avg_intensity_5y_prior_endpoint, na.rm = TRUE),
+    median_intensity = median(avg_intensity_5y_prior_endpoint, na.rm = TRUE),
+    sd_intensity = sd(avg_intensity_5y_prior_endpoint, na.rm = TRUE),
+    min_intensity = min(avg_intensity_5y_prior_endpoint, na.rm = TRUE),
+    max_intensity= max(avg_intensity_5y_prior_endpoint, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_intensity_5y_prior_endpoint))
+  )
+```
+
+Lifestyle
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$main_lifestyle_category_mode_5yrs_prior)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+### Reproduction
+
+Neuter status
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$neuter)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Sex neuter status by final record
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$sex_status)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Sex status by final record
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$sex)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Neutering reason
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$neutered_reason)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+Age at neutering
+
+NB. need to change the missing ones that are entire dogs to "not neutered"
+
+```{r}
+HSA %>%
+    summarize(
+    mean_age_at_neuter_years = mean(age_at_neuter_years, na.rm = TRUE),
+    median_age_at_neuter_years= median(age_at_neuter_years, na.rm = TRUE),
+    sd_age_at_neuter_years = sd(age_at_neuter_years, na.rm = TRUE),
+    min_age_at_neuter_years = min(age_at_neuter_years, na.rm = TRUE),
+    max_age_at_neuter_years= max(age_at_neuter_years, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(age_at_neuter_years))
+  )
+```
+
+Ever bred from neutered:
+
+NB. need to combine this with entire dog records for "ever bred from variable" which will include neutered and entire dogs
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$neutered_ever_bred)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+
+```
