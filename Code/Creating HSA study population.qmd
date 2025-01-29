@@ -207,11 +207,60 @@ What columns mean:
 
 -   had_HSA = was HSA recorded as an endpoint diagnosis if so ==1 else ==0
 
-```{=html}
 <!-- -->
-```
+
 -   final date = for dogs with HSA ==1 final date is the date of diagnosis of HSA and for all other dogs it is either the date of death (for dogs from endpoint data), the withdrawn or inactive date or finally a censoring date of 31/12/24
 
 -   year_in_study_diagnosis_or_final_record_year - for dogs with HSA ==1 this is the record_year in the endpoints dataset corresponding to diagnosis date and for HSA ==0 dogs this is the final /most recent record_year available for the dog
 
 -   record_date = for dogs with HSA==1 this is diagnosis date and for dogs where HSA==0 it is the date corresponding to when the final record was sent in (NB. many of these were just in YYYY-MM format so now have been modified to be automatically the first of the month for YYYY-MM-DDDD calculations)
+
+## Cohort plus RF data added in
+
+-   still missing medication usage but that needs sorting later
+
+```{r}
+#MDI
+MDI_dogs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+MDI_dogs <- MDI_dogs %>%
+  dplyr::select(c(subject_id,MDI_quintile,MDI.rate))
+#enviro
+enviro<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_house_location_enviro_exposures.csv")
+enviro <- enviro %>%
+  dplyr::select(-c("X.1","year_in_study_diagnosis_or_final_record_year.x","record_date.y.x",14:28))
+#comorb
+comorb<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
+comorb <- comorb %>%
+  dplyr::select(-c("X.1","X"))
+#activity
+activity <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_activity_classification.csv")
+activity <-activity %>%
+  dplyr::select(-c("X.1","X","record_date"))
+#lifestyle
+lifestyle<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_lifestyle_exposures.csv")
+lifestyle <- lifestyle%>%
+  dplyr::select(-c("X.1","record_date.x.x","X","record_date.y","sleep_location","specific_sleep_location","in.the.garage_YN","in.the.house_YN","outside_YN"))
+#neut
+neut<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cases_all_records_repro.csv")
+neut <- neut %>%
+  dplyr::select(-c("X","birth_date2"))
+
+
+
+#combine all
+dfs <- list(MDI_dogs, enviro, comorb, activity, lifestyle, neut)
+
+# Perform full join iteratively on subject_id
+merged_HSA_data <- reduce(dfs, full_join, by = "subject_id")
+
+
+#remove messy extra cols eg. X.x
+merged_HSA_data <- merged_HSA_data %>%
+  dplyr::select(-c(had_HSA.y,had_HSA.x.x,had_HSA.y.y,
+                   final_date.y,final_date.x.x,final_date.y.y,
+                   record_date.y.y))
+
+
+#write to csv
+write.csv(merged_HSA_data,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
+```
