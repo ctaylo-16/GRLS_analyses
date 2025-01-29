@@ -207,13 +207,14 @@ What columns mean:
 
 -   had_HSA = was HSA recorded as an endpoint diagnosis if so ==1 else ==0
 
-<!-- -->
+ creating-HSA-RF-dataset
 
 -   final date = for dogs with HSA ==1 final date is the date of diagnosis of HSA and for all other dogs it is either the date of death (for dogs from endpoint data), the withdrawn or inactive date or finally a censoring date of 31/12/24
 
 -   year_in_study_diagnosis_or_final_record_year - for dogs with HSA ==1 this is the record_year in the endpoints dataset corresponding to diagnosis date and for HSA ==0 dogs this is the final /most recent record_year available for the dog
 
 -   record_date = for dogs with HSA==1 this is diagnosis date and for dogs where HSA==0 it is the date corresponding to when the final record was sent in (NB. many of these were just in YYYY-MM format so now have been modified to be automatically the first of the month for YYYY-MM-DDDD calculations)
+
 
 ## Cohort plus RF data added in
 
@@ -264,3 +265,4 @@ merged_HSA_data <- merged_HSA_data %>%
 #write to csv
 write.csv(merged_HSA_data,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
 ```
+
