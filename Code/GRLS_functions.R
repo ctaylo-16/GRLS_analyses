@@ -154,6 +154,31 @@ check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
 }
 
 
+#variation on this to use diagnosis date and X years prior 
+check_exposure_binary <- function(data, columns_to_check, year_range, year_column, study_year_column) {
+  data %>%
+    group_by(subject_id) %>%
+    mutate(across(
+      all_of(columns_to_check),
+      ~ {
+        # Calculate the range of years to check
+        diagnosis_year <- !!sym(year_column)
+        years_to_check <- (diagnosis_year - year_range):(diagnosis_year - 1)
+        
+        # Filter binary values within the calculated years_to_check
+        values <- .[!!sym(study_year_column) %in% years_to_check]
+        
+        # Check if any exposure exists (binary: 1/Yes)
+        if (any(values == 1, na.rm = TRUE)) {
+          "Yes"
+        } else {
+          "No"
+        }
+      },
+      .names = "{.col}_exposed_{year_range}yrs_prior" # Dynamic column naming
+    )) %>%
+    ungroup()
+}
 
 
 
@@ -193,6 +218,33 @@ check_exposure_mode <- function(data, columns_to_check, study_years, year_column
     ungroup()
 }
 
+##checking exposure mode based on an end date/diagnosis date and X number of years prior
+check_exposure_mode_X_prev_years <- function(data, columns_to_check, year_range, year_column, study_year_column) {
+  data %>%
+    group_by(subject_id) %>%
+    mutate(across(
+      all_of(columns_to_check),
+      ~ {
+        # Calculate the range of years to check
+        diagnosis_year <- !!sym(year_column)
+        years_to_check <- (diagnosis_year - year_range):(diagnosis_year - 1)
+        
+        # Filter values within the calculated years_to_check based on study_year_column
+        values <- .[!!sym(study_year_column) %in% years_to_check]
+        
+        # Calculate mode (most frequent value)
+        if (length(values) == 0) {
+          NA_character_
+        } else {
+          mode_val <- names(which.max(table(values)))
+          mode_val
+        }
+      },
+      .names = "{.col}_mode_{year_range}yrs_prior" # Dynamic column naming
+    )) %>%
+    ungroup()
+}
+
 
 #function to calculate dosage/amount exposed to
 
@@ -220,7 +272,29 @@ exposure_dosage2 <- function(data, column_of_exposure, study_years) {
 }
 
 
-
+#exposure dosage using diagnosis year
+check_exposure_hours <- function(data, columns_to_check, year_range, year_column, study_year_column) {
+  data %>%
+    group_by(subject_id) %>%
+    mutate(across(
+      all_of(columns_to_check),
+      ~ {
+        # Calculate the range of years to check
+        diagnosis_year <- !!sym(year_column)
+        years_to_check <- (diagnosis_year - year_range):(diagnosis_year - 1)
+        
+        # Filter exposure hours within the calculated years_to_check based on study_year_column
+        values <- .[!!sym(study_year_column) %in% years_to_check]
+        
+        # Sum exposure hours (assuming values represent hours of exposure)
+        total_exposure_hours <- sum(values, na.rm = TRUE)
+        
+        total_exposure_hours
+      },
+      .names = "{.col}_exposure_hours_{year_range}yrs_prior" # Dynamic column naming
+    )) %>%
+    ungroup()
+}
 
 
 #main location -do they ever sleep at X location

@@ -444,3 +444,11 @@ other <- enviro_repro_house_comorb_profile_activity %>%
   dplyr::select(c(subject_id,had_lymphoma,multi_cancers_present,chronic_inflam_present,num_lifetime_chronic_inflam,first_chronic_inflam_condition, all_comorbidities_ever,diagnosis_after_comorb))
 write.csv(other,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset4_lymphoma_comorbidities.csv")
 ```
+
+## Haemangiosarcoma cohort creation
+
+```{r}
+HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+
+
+```

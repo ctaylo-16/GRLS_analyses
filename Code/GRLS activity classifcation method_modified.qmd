@@ -881,3 +881,72 @@ print(colnames(activity_all_3_3))
 
 "avg_activity_duration_sy1_2" "avg_activity_intensity_sy1_2" "avg_activity_freq_sy1_2"\
 "avg_activity_duration_sy3" "avg_activity_freq_sy3" "avg_activity_intensity_sy3" \<- these are all sums/total or averages across either SY1_2 or SY3 and beyond for O reported activity frequency, intensity and duration
+
+## Activity calculations for haemangiosarcoma dataset
+
+```{r}
+HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+
+
+
+
+```
+
+Add early life, rest and late life and overview to df
+
+```{r}
+HSA_cohort_all <- HSA_cohort %>%
+  left_join(activity_all_3_3, by="subject_id")
+
+```
+
+Calculate activity 5y prior to endpoint
+
+```{r}
+#keep SY0-2 and SY3 beyond same cols only
+activity_sy1_2_same <- activity_sy1_2 %>%
+  dplyr::select(c(subject_id,year_in_study,total_activity_intensity_regroup_num,total_activity_freq_regroup_num))
+#rename cols to match SY3
+activity_sy1_2_same <- activity_sy1_2_same %>%
+  rename(pace_num = total_activity_intensity_regroup_num, frequency_num = total_activity_freq_regroup_num)
+activity_sy3_same<- activity_sy3_beyond %>%
+    dplyr::select(c(subject_id,year_in_study,pace_num,frequency_num))
+
+activity_all_y_all_rows <- rbind(activity_sy1_2_same,activity_sy3_same)
+
+#join to HSA cohort for 5y backwards calculations
+HSA_cohort_activity_all_y_all_rows <- activity_all_y_all_rows %>%
+  left_join(HSA_cohort,by="subject_id")%>%
+  dplyr::select(-c("X"))
+
+
+
+```
+
+For activity data (year_in_study) that is \<=5y prior to year_in_study_diagnosis_or_final_record_year calculate average of values for intensity and frequency
+
+```{r}
+#only singhle unique row per patient]
+HSA_cohort_activity_all_y_all_rows <- HSA_cohort_activity_all_y_all_rows[!duplicated(HSA_cohort_activity_all_y_all_rows), ]
+
+
+HSA_cohort_5y_prior <- HSA_cohort_activity_all_y_all_rows %>%
+  group_by(subject_id) %>%
+  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
+  summarise(
+    avg_intensity_5y_prior_endpoint = (mean(sum(pace_num, na.rm = TRUE))/(n() * 100)) * 100,
+    avg_frequency_5y_prior_endpoint = (mean(sum(frequency_num, na.rm = TRUE))/(n() * 100)) * 100,
+    .groups = "drop"
+  )
+
+
+```
+
+Now join this back onto cohort data
+
+```{r}
+HSA_cohort_all_calcs <- HSA_cohort_all %>%
+  left_join(HSA_cohort_5y_prior, by="subject_id")
+
+write.csv(HSA_cohort_all_calcs,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_activity_classification.csv")
+```

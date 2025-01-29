@@ -138,9 +138,11 @@ conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
 comorbs_unique_2 <- comorbs_unique %>%
   #get rid of the to_date row for each dog
   filter(to_date !=1) %>%
-  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))%>%
+  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
+
+comorbs_unique_2<- comorbs_unique_2%>%
 # replacing NA values with 0 across comorbidity columns
-  mutate_at(vars(5:200), ~replace_na(., 0))
+  mutate_at(vars(3:196), ~replace_na(., 0))
 
 # This method doesnt make sure condition has been there for >1 year of records, which I think should be for chronic inflam really
 
@@ -247,6 +249,16 @@ df_result4 <- df_result4 %>%
     )
   ) %>%
   ungroup()
+
+df_result4 <- df_result4 %>%
+  group_by(subject_id) %>%
+  mutate(study_year_latest_chronic_inflam =  if_else(
+      any(chronic_inflam_present == 1),
+      max(year_in_study_comorb[chronic_inflam_present == 1], na.rm = TRUE),
+      as.numeric(NA)
+    )
+  ) %>%
+  ungroup()
 # what was the first chronic inflam comorb
 df_result5 <- df_result4 %>%
   group_by(subject_id) %>%
@@ -287,7 +299,7 @@ end_df_result7 <- df_result7 %>%
   filter(chronic_inflam_present ==1)
 ##keeping only certain columns to join to endpoints data
 end_df_result7 <- end_df_result7 %>%
-  dplyr::select(c(subject_id,chronic_inflam_present,study_year_first_chronic_inflam,first_chronic_inflam_condition,num_lifetime_chronic_inflam,all_comorbidities_ever))
+  dplyr::select(c(subject_id,chronic_inflam_present,study_year_first_chronic_inflam,first_chronic_inflam_condition,study_year_latest_chronic_inflam,num_lifetime_chronic_inflam,all_comorbidities_ever))
 
 #keep only distinct rows
 end_df_result7_distinct <- end_df_result7 %>%
@@ -297,9 +309,6 @@ end_df_result7_distinct <- end_df_result7 %>%
 Adding endpoints data to chronic inflam dogs
 
 ```{r}
-
-
-
 endpoints_abr <- endpoints %>%
   dplyr::select(-c(public_id,location,phenotype,status, tier_of_confidence,is_cause_of_death,is_recurrence,is_adjudicated)) %>%
   rename(year_in_study_diagnosis=year_in_study)
@@ -318,15 +327,26 @@ endpoints_comorbs_2 <- endpoints_comorbs%>%
   mutate(diagnosis_after_comorb = 
       if_else(year_in_study_diagnosis > study_year_first_chronic_inflam, 1, 0
     ),
-    time_between = if_else(
+    time_between_first_chronic_inflam_endpoint_diagnosis = if_else(
       diagnosis_after_comorb == 1,
       year_in_study_diagnosis - study_year_first_chronic_inflam,
       as.numeric(NA))
     )%>%
   ungroup()
 
-endpoints_comorbs_2 
+#comorbidities present in the 5y prior to diagnosis?
+#TRUE or FALSE
+endpoints_comorbs_2 <- endpoints_comorbs_2 %>%
+  group_by(subject_id) %>%
+  mutate(comorb_within_5_years_diagnosis_TF = abs(study_year_latest_chronic_inflam - year_in_study_diagnosis) <= 5)
 
+# number of years between comorbidities and diagnosis
+endpoints_comorbs_2 <- endpoints_comorbs_2 %>%
+  group_by(subject_id) %>%
+   mutate(
+    years_between_diagnosis_and_last_chronic_inflam = study_year_latest_chronic_inflam - year_in_study_diagnosis,
+    years_between_diagnosis_and_last_chronic_inflam = ifelse(is.na(years_between_diagnosis_and_last_chronic_inflam), "no comorb present", as.character(years_between_diagnosis_and_last_chronic_inflam))
+  )
 
 ```
 
@@ -348,4 +368,66 @@ Create csv of all dog records with (\~30k rows):
 
 ```{r}
 write.csv(df_result7,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_records_comorbidities.csv")
+```
+
+Now incorporating in HSA status for cohort to calculate exposures relating to diagnosis/endpoint dates
+
+```{r}
+HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+#combine comorb records and cohort
+#join to endpoints dogs 
+HSA_comorbs <- HSA_cohort %>%
+  left_join(end_df_result7_distinct, by="subject_id")
+
+HSA_comorbs <- HSA_comorbs %>%
+   mutate(chronic_inflam_present = replace_na(chronic_inflam_present, 0))
+#determine whether chronic inflam were comorbidities present prior to final record year
+HSA_comorbs2 <- HSA_comorbs %>%
+  group_by(subject_id) %>%
+  mutate(diagnosis_after_comorb = 
+      if_else(year_in_study_diagnosis_or_final_record_year > study_year_first_chronic_inflam, 1, 0
+    ),
+    time_between_first_chronic_inflam_endpoint_diagnosis = if_else(
+      diagnosis_after_comorb == 1,
+      year_in_study_diagnosis_or_final_record_year - study_year_first_chronic_inflam,
+      as.numeric(NA))
+    )%>%
+  ungroup()
+#determine whether chronic inflam were comorbidities present <5y prior to final record year
+HSA_comorbs2 <- HSA_comorbs2 %>%
+  group_by(subject_id) %>%
+  mutate(comorb_within_5_years_diagnosis_TF = abs(study_year_latest_chronic_inflam - year_in_study_diagnosis_or_final_record_year) <= 5)
+
+HSA_comorbs2<- HSA_comorbs2 %>%
+  group_by(subject_id) %>%
+   mutate(
+    years_between_diagnosis_and_last_chronic_inflam = year_in_study_diagnosis_or_final_record_year - study_year_latest_chronic_inflam ,
+    #if negative value replace with 0 
+    years_between_diagnosis_and_last_chronic_inflam = ifelse(is.na(years_between_diagnosis_and_last_chronic_inflam ), "no comorb present", 
+                              ifelse(years_between_diagnosis_and_last_chronic_inflam  < 0, 0, as.character(years_between_diagnosis_and_last_chronic_inflam )))
+  )
+
+
+HSA_comorbs2 <- HSA_comorbs2 %>%
+  group_by(subject_id) %>%
+  mutate(
+    years_between_diagnosis_and_last_chronic_inflam = year_in_study_diagnosis_or_final_record_year - study_year_latest_chronic_inflam,
+    # Ensure consistency in data type by converting all outputs to character
+    years_between_diagnosis_and_last_chronic_inflam = ifelse(
+      is.na(years_between_diagnosis_and_last_chronic_inflam), 
+      "no comorb present",
+      ifelse(years_between_diagnosis_and_last_chronic_inflam < 0, 
+             "0", 
+             as.character(years_between_diagnosis_and_last_chronic_inflam))
+    )
+  ) %>%
+  ungroup()
+
+
+```
+
+write HSA comorbidities to csv
+
+```{r}
+write.csv(HSA_comorbs2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
 ```
