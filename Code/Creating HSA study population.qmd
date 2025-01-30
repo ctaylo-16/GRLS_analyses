@@ -245,10 +245,16 @@ neut<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cases_all_rec
 neut <- neut %>%
   dplyr::select(-c("X","birth_date2"))
 
-
+#create an ever bred from variable to incorporate entire and neutered dogs
+neut <- neut %>%
+  mutate(ever_bred_from = if_any(c(neutered_ever_bred,spayed_while_pregnant,intact_sired_litters_natural_ever,neutered_females_bred_with_count_ever,neutered_sired_litters_natural_ever,preg_pre_neuter,num_bred_before_neutering,num_breeding_before_neutering),~ . >= 1) * 1)
 
 #combine all
 dfs <- list(MDI_dogs, enviro, comorb, activity, lifestyle, neut)
+
+
+
+
 
 # Perform full join iteratively on subject_id
 merged_HSA_data <- reduce(dfs, full_join, by = "subject_id")
@@ -276,9 +282,41 @@ merged_HSA_data <- merged_HSA_data %>%
   ) %>%
   mutate(age_at_final_date = as.numeric(interval(date_of_birth, final_date2) / years(1)))
 
+###add in weight and BCS data for the dogs
+dog_weight <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical.csv")
+dog_weight <- dog_weight %>%
+  dplyr::select(c(subject_id,year_in_study,height,weight,purina_body_condition_score))
+#remerge back to HSA data 
+dog_weight_HSA <- dog_weight %>%
+  left_join(merged_HSA_data,by="subject_id")
+###for record years 5y prior to endpoint record year do an average of weight
+dog_weight_HSA2 <- dog_weight_HSA %>%
+  group_by(subject_id) %>%
+  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
+  summarise(
+    avg_weight_5y_prior_endpoint = mean(weight),
+    avg_height_5y_prior_endpoint = mean(height),
+    avg_purina_BCS_5y_prior_endpoint = mean(purina_body_condition_score),
+    .groups = "drop"
+  )
+  
+#remove extra columns before join
 
-#sex status at final point
+#rejoin back to merged HSA data
+merged_HSA_data <- merged_HSA_data %>%
+  left_join(dog_weight_HSA2,by="subject_id")
 
+##add in medication info:
+
+meds<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
+
+#add onto merged_HSA_data
+merged_HSA_data <- merged_HSA_data %>%
+  left_join(meds, by="subject_id")
+
+#for the ~200 dogs with no meds records recode their NAs
+merged_HSA_data <- merged_HSA_data %>%
+  mutate(across(c(175:204), ~ replace(., is.na(.), "medication_use_not_recorded")))
 
 #write to csv
 write.csv(merged_HSA_data,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")

@@ -11,7 +11,7 @@ library(tidyverse)
 HSA <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
 
 HSA <- HSA %>%
-  dplyr::select(-c(X.1,X,year_in_study_diagnosis_or_final_record_year.x,year_in_study_diagnosis_or_final_record_year.y,year_in_study_diagnosis_or_final_record_year.y.y))
+  dplyr::select(-c(X,X,year_in_study_diagnosis_or_final_record_year.x,year_in_study_diagnosis_or_final_record_year.y,year_in_study_diagnosis_or_final_record_year.y.y))
 
 #rename had HSA col
 HSA <- HSA %>%
@@ -37,7 +37,7 @@ print(df_types)
 
 ### Household:
 
-House location
+#### House location
 
 ```{r}
 cross_table <- table(HSA$area_type_mode_5yrs_prior, HSA$had_HSA)
@@ -48,7 +48,7 @@ print(cross_table_percent)
 
 ```
 
-MDI
+#### MDI
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$MDI_quintile)
@@ -57,7 +57,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-House type
+#### House type
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$house_type_mode_5yrs_prior)
@@ -66,7 +66,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Water source
+#### Water source
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$water_source_mode_5yrs_prior)
@@ -84,7 +84,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Primary cooking fuel
+#### Primary cooking fuel
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$cooking_fuel_primary_mode_5yrs_prior)
@@ -93,7 +93,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Metal pipes
+#### Metal pipes
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$pipes_metal_any_mode_5yrs_prior)
@@ -102,7 +102,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Plastic pipes
+#### Plastic pipes
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$pipes_plastic_any_mode_5yrs_prior)
@@ -111,7 +111,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Region
+#### Region
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$region_name_mode_5yrs_prior)
@@ -120,7 +120,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-State
+#### State
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$state_mode_5yrs_prior)
@@ -131,7 +131,7 @@ print(cross_table_percent)
 
 ### Exposures:
 
-Aerosol
+#### Aerosol
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_aerosol_exposed_5yrs_prior)
@@ -149,7 +149,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Hepa filter
+#### Hepa filter
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_hepa_filter_exposed_5yrs_prior)
@@ -158,7 +158,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Moth balls
+#### Moth balls
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_moth_balls_exposed_5yrs_prior)
@@ -167,7 +167,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Incense/candles
+#### Incense/candles
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_incense_or_candles_exposed_5yrs_prior)
@@ -176,7 +176,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Smoke exposure
+#### Smoke exposure
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$smoke_exposure_exposed_5yrs_prior)
@@ -185,7 +185,9 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Smoke hours
+#### Smoke hours
+
+-   quartiles split this
 
 ```{r}
 HSA %>%
@@ -200,7 +202,7 @@ HSA %>%
   )
 ```
 
-Insects
+#### Insecticide around house
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$any_treated_insects_exposed_5yrs_prior)
@@ -209,7 +211,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Weeds
+#### Weed killer around house
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$any_treated_weeds_exposed_5yrs_prior)
@@ -218,7 +220,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Fertiliser
+#### Fertiliser around house
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$any_treated_fertilizer_exposed_5yrs_prior)
@@ -229,7 +231,9 @@ print(cross_table_percent)
 
 ### Comorbidities:
 
-NB. many dogs did not have a comorbidity, this may need removing
+#### Did dogs have a comorbidity within 5y?
+
+NB. many dogs did not have a comorbidity, this may need removing?
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_within_5_years_diagnosis_TF)
@@ -238,20 +242,47 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-```{r}
+#### Number of comorbdities recorded in lifetime:
 
+#### Specific comorbidities
+
+```{r}
+table(HSA$all_comorbidities_ever)
+```
+
+#### Study year of first chronic inflammatory condition recorded
+
+```{r}
+HSA %>%
+    summarize(
+    mean_freq = mean(study_year_first_chronic_inflam, na.rm = TRUE),
+    median_freq = median(study_year_first_chronic_inflam, na.rm = TRUE),
+    sd_freq = sd(study_year_first_chronic_inflam, na.rm = TRUE),
+    min_freq = min(study_year_first_chronic_inflam, na.rm = TRUE),
+    max_freq= max(study_year_first_chronic_inflam, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(study_year_first_chronic_inflam))
+  )
+```
+
+#### Time between first chronic inflammatory condition and endpoint record
+
+```{r}
+HSA %>%
+    summarize(
+    mean_freq = mean(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
+    median_freq = median(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
+    sd_freq = sd(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
+    min_freq = min(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
+    max_freq= max(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(time_between_first_chronic_inflam_endpoint_diagnosis))
+  )
 ```
 
 ### Activity and lifestyle:
 
-Activity frequency
-
-```{r}
-cross_table <- table(HSA$had_HSA,HSA$avg_frequency_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
-print(cross_table)
-print(cross_table_percent)
-```
+#### Activity frequency
 
 ```{r}
 HSA %>%
@@ -266,14 +297,7 @@ HSA %>%
   )
 ```
 
-Activity intensity
-
-```{r}
-cross_table <- table(HSA$had_HSA,HSA$avg_intensity_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
-print(cross_table)
-print(cross_table_percent)
-```
+#### Activity intensity
 
 ```{r}
 HSA %>%
@@ -288,7 +312,7 @@ HSA %>%
   )
 ```
 
-Lifestyle
+#### Lifestyle
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$main_lifestyle_category_mode_5yrs_prior)
@@ -297,9 +321,127 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
+#### Weight (NB. in LB - may wish to convert kg)
+
+```{r}
+HSA %>%
+    summarize(
+    mean_weight = mean(avg_weight_5y_prior_endpoint, na.rm = TRUE),
+    median_weight = median(avg_weight_5y_prior_endpoint, na.rm = TRUE),
+    sd_weight = sd(avg_weight_5y_prior_endpoint, na.rm = TRUE),
+    min_weight = min(avg_weight_5y_prior_endpoint, na.rm = TRUE),
+    max_weight= max(avg_weight_5y_prior_endpoint, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_weight_5y_prior_endpoint))
+  )
+```
+
+Converting to kg and removing outliers
+
+```{r}
+HSA <- HSA %>%
+  mutate(avg_weight_5y_prior_endpoint_kg = avg_weight_5y_prior_endpoint * 0.453)
+
+
+#how does data look now
+HSA %>%
+    summarize(
+    mean_weight = mean(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    median_weight = median(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    sd_weight = sd(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    min_weight = min(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    max_weight= max(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_weight_5y_prior_endpoint_kg))
+  )
+#remove outliers >1.5X above IQR
+
+Q1 <- quantile(HSA$avg_weight_5y_prior_endpoint_kg, 0.25, na.rm = TRUE)
+Q3 <- quantile(HSA$avg_weight_5y_prior_endpoint_kg, 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+HSA <- HSA %>%
+  mutate(avg_weight_5y_prior_endpoint_kg_outliers_removed= ifelse(avg_weight_5y_prior_endpoint_kg < (Q1 - 1.5 * IQR) | avg_weight_5y_prior_endpoint_kg > (Q3 + 1.5 * IQR), NA, avg_weight_5y_prior_endpoint_kg))
+```
+
+```{r}
+#outlier removed dataset
+
+#how does data look now
+HSA %>%
+    summarize(
+    mean_weight = mean(avg_weight_5y_prior_endpoint_kg_outliers_removed, na.rm = TRUE),
+    median_weight = median(avg_weight_5y_prior_endpoint_kg_outliers_removed, na.rm = TRUE),
+    sd_weight = sd(avg_weight_5y_prior_endpoint_kg_outliers_removed, na.rm = TRUE),
+    min_weight = min(avg_weight_5y_prior_endpoint_kg_outliers_removed, na.rm = TRUE),
+    max_weight= max(avg_weight_5y_prior_endpoint_kg_outliers_removed, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_weight_5y_prior_endpoint_kg_outliers_removed))
+  )
+```
+
+#### Height (NB. in inches- may wish to convert to cm)
+
+```{r}
+HSA %>%
+    summarize(
+    mean_height = mean(avg_height_5y_prior_endpoint, na.rm = TRUE),
+    median_height = median(avg_height_5y_prior_endpoint, na.rm = TRUE),
+    sd_height = sd(avg_height_5y_prior_endpoint, na.rm = TRUE),
+    min_height = min(avg_height_5y_prior_endpoint, na.rm = TRUE),
+    max_height= max(avg_height_5y_prior_endpoint, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_height_5y_prior_endpoint))
+  )
+```
+
+Convert to cm and remove outliers
+
+```{r}
+HSA <- HSA %>%
+  mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
+
+
+#how does data look now
+HSA %>%
+    summarize(
+    mean_height = mean(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    median_height = median(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    sd_height = sd(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    min_height = min(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    max_height= max(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_height_5y_prior_endpoint_cm))
+  )
+#remove outliers >1.5X above IQR
+
+Q1 <- quantile(HSA$avg_height_5y_prior_endpoint_cm, 0.25, na.rm = TRUE)
+Q3 <- quantile(HSA$avg_height_5y_prior_endpoint_cm, 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+HSA <- HSA %>%
+  mutate(avg_height_5y_prior_endpoint_cm_outliers_removed= ifelse(avg_height_5y_prior_endpoint_cm < (Q1 - 1.5 * IQR) | avg_height_5y_prior_endpoint_cm > (Q3 + 1.5 * IQR), NA, avg_height_5y_prior_endpoint_cm))
+
+```
+
+#### BCS
+
+```{r}
+HSA %>%
+    summarize(
+    mean_bcs = mean(avg_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    median_bcs = median(avg_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    sd_bcs= sd(avg_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    min_bcs = min(avg_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    max_bcs= max(avg_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_purina_BCS_5y_prior_endpoint))
+  )
+```
+
 ### Reproduction
 
-Neuter status
+#### Neuter status
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$neuter)
@@ -308,7 +450,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Sex neuter status by final record
+#### Sex neuter status by final record
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$sex_status)
@@ -317,7 +459,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Sex status by final record
+#### Sex status
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$sex)
@@ -326,7 +468,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Neutering reason
+#### Neutering reason
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$neutered_reason)
@@ -335,7 +477,7 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-Age at neutering
+#### Age at neutering
 
 NB. need to change the missing ones that are entire dogs to "not neutered"
 
@@ -352,7 +494,7 @@ HSA %>%
   )
 ```
 
-Ever bred from neutered:
+#### Ever bred from neutered:
 
 NB. need to combine this with entire dog records for "ever bred from variable" which will include neutered and entire dogs
 
@@ -363,6 +505,316 @@ print(cross_table)
 print(cross_table_percent)
 ```
 
-```{r}
+#### Dogs ever bred from (neutered and entire dogs, M and F dogs)
 
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$ever_bred_from)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+### Medications:
+
+#### 5y prior to endpoint:
+
+##### Anti-inflammatories
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_inflam_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-microbials
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_microbials_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Dietary supplements
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$dietary_supplements_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Enteric medications
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$enteric_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Fluid metabolites
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$fluid_metabolites_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Hormones
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$hormones_and_related_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Immunologicals
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$immunologicals_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Neurological
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$neurological_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-parasite
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_parasites_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-septic
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_septics_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Cardio-respiratory
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$cardio_respiratory_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Diuretics
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$diuretics_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-histamines
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_hist_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-virals
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_viral_5y_prior_endpoint)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+#### Lifetime:
+
+##### Anti-inflammatories
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_inflam_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-microbials
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_microbials_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Dietary supplements
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$dietary_supplements_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Enteric medications
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$enteric_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+\*convert to had/didnt have
+
+```{r}
+HSA <- HSA %>%
+  mutate(enteric_lifetime2 = recode(enteric_lifetime, "Q1" = "drug_administered",
+                                    "Q4"="drug_administered"))
+
+table(HSA$enteric_lifetime2
+      )
+```
+
+##### Fluid metabolites
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$fluid_metabolites_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA <- HSA %>%
+  mutate(fluid_metabolites_lifetime2 = recode(fluid_metabolites_lifetime, "Q1" = "drug_administered",
+                                    "Q4"="drug_administered"))
+```
+
+##### Hormones
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$hormones_and_related_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Immunologicals
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$immunologicals_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Neurological
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$neurological_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-parasite
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_parasites_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+##### Anti-septic
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_septics_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA <- HSA %>%
+  mutate(anti_septics_lifetime2 = recode(anti_septics_lifetime, "Q1" = "drug_administered",
+                                    "Q4"="drug_administered"))
+```
+
+##### Cardio-respiratory
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$cardio_respiratory_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA <- HSA %>%
+  mutate(cardio_respiratory_lifetime2 = recode(cardio_respiratory_lifetime, "Q1" = "drug_administered","Q3"="drug_administered",
+                                    "Q4"="drug_administered"))
+```
+
+##### Diuretics
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$diuretics_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA <- HSA %>%
+  mutate(diuretics_lifetime2 = recode(diuretic_lifetime, "Q1" = "drug_administered",
+                                    "Q4"="drug_administered"))
+```
+
+##### Anti-histamines
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_hist_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA <- HSA %>%
+  mutate(anti_hist_lifetime2 = recode(anti_hist_lifetime, "Q1" = "drug_administered",
+                                    "Q4"="drug_administered"))
+```
+
+##### Anti-virals
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$anti_viral_lifetime)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+HSA <- HSA %>%
+  mutate(anti_viral_lifetime2 = recode(anti_viral_lifetime, "Q1" = "drug_administered",
+                                    "Q4"="drug_administered"))
 ```
