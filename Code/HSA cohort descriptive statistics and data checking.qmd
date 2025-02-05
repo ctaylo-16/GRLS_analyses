@@ -231,12 +231,12 @@ print(cross_table_percent)
 
 ### Comorbidities:
 
-#### Did dogs have a comorbidity within 5y?
+#### Did dogs have a chronic comorbidity within 5y?
 
 NB. many dogs did not have a comorbidity, this may need removing?
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$comorb_within_5_years_diagnosis_TF)
+cross_table <- table(HSA$had_HSA,HSA$chronic_inflam_present_5y)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -244,10 +244,168 @@ print(cross_table_percent)
 
 #### Number of comorbdities recorded in lifetime:
 
-#### Specific comorbidities
+```{r}
+
+```
+
+#### Specific chronic comorbidities
 
 ```{r}
 table(HSA$all_comorbidities_ever)
+```
+
+#### Group chronic comorbs thematically
+
+```{r}
+comorbs_unique <- unique(HSA$comorbidities_lifetime)
+comorbs_unique2 <- unique(HSA$comorbidities_no_min_year)
+intestinal_parasitism <- c("giardia","hookworms", "coccidia","tapeworms","whipworms","roundworms","eimeria","isospora")
+tick_borne_parasitism <-c("lyme_disease","anaplasma","rocky_mountain_spotted_fever","ticks","ehrlichia")
+other_parasitism <-c("fleas","fungal_infection","heartworm","ear_mites")
+infectious <- c("leptospirosis","parvovirus")
+orthopaedic <-c("osteoarthritis")
+immune_mediated <- c("uveitis","autoimmune_thyroiditis","keratoconjunctivitis_sicca","megaesophagus","diabetes_mellitus","cushings_disease","hypothyroidism","granuloma")
+cardiovascular <- c("cardiomyopathy","hypertension")
+gastrointestinal <-c("chronic_colitis","pancreatitis","malabsorptive_disorder")
+
+inflammatory_other <- c("tracheobronchitis", "hypercalcaemia","pigmentary_uveitis")
+
+#create new columns based on these lists
+# Function to check presence of any condition in a category
+check_condition <- function(condition_list, condition_column) {
+  sapply(condition_column, function(x) any(str_detect(x, paste(condition_list, collapse = "|"))))
+}
+
+# Create new columns
+HSA <- HSA %>%
+  mutate(
+    comorb_intestinal_parasitism_chronic = check_condition(intestinal_parasitism, comorbidities_5y),
+    comorb_tick_borne_parasitism_chronic = check_condition(tick_borne_parasitism, comorbidities_5y),
+    comorb_other_parasitism_chronic = check_condition(other_parasitism, comorbidities_5y),
+    comorb_infectious_chronic = check_condition(infectious, comorbidities_5y),
+    comorb_orthopaedic_chronic = check_condition(orthopaedic,comorbidities_5y),
+    comorb_immune_mediated_chronic = check_condition(immune_mediated,comorbidities_5y),
+    comorb_cardiovascular_chronic = check_condition(cardiovascular, comorbidities_5y),
+    comorb_gastrointestinal_chronic = check_condition(gastrointestinal, comorbidities_5y),
+    comorb_inflammatory_other_chronic = check_condition(inflammatory_other, comorbidities_5y)
+  )
+
+```
+
+Count for these new groupings:
+
+Parasitism
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_intestinal_parasitism_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_tick_borne_parasitism_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_other_parasitism_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_infectious_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_orthopaedic_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_immune_mediated_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_cardiovascular_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_gastrointestinal_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_inflammatory_other_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+#### Examining conditions that are considered likely chronic inflammatory once diagnosed without needing to be there for \>1y in records (but only within final 5y)
+
+```{r}
+HSA <- HSA %>%
+  mutate(
+    comorb_orthopaedic = check_condition(orthopaedic,comorbidities_no_min_year),
+    comorb_immune_mediated = check_condition(immune_mediated,comorbidities_no_min_year),
+    comorb_cardiovascular = check_condition(cardiovascular, comorbidities_no_min_year),
+    comorb_gastrointestinal = check_condition(gastrointestinal, comorbidities_no_min_year),
+    comorb_inflammatory_other = check_condition(inflammatory_other, comorbidities_no_min_year)
+  )
+
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_orthopaedic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_immune_mediated)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_cardiovascular)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_gastrointestinal_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
+```
+
+```{r}
+cross_table <- table(HSA$had_HSA,HSA$comorb_inflammatory_other_chronic)
+cross_table_percent <- prop.table(cross_table) * 100
+print(cross_table)
+print(cross_table_percent)
 ```
 
 #### Study year of first chronic inflammatory condition recorded
@@ -785,7 +943,7 @@ print(cross_table_percent)
 
 ```{r}
 HSA <- HSA %>%
-  mutate(diuretics_lifetime2 = recode(diuretic_lifetime, "Q1" = "drug_administered",
+  mutate(diuretics_lifetime2 = recode(diuretics_lifetime, "Q1" = "drug_administered",
                                     "Q4"="drug_administered"))
 ```
 

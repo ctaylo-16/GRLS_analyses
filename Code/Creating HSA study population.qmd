@@ -229,9 +229,10 @@ enviro<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_hous
 enviro <- enviro %>%
   dplyr::select(-c("X.1","year_in_study_diagnosis_or_final_record_year.x","record_date.y.x",14:28))
 #comorb
-comorb<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
+comorb<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_with_HSA_final_date_calculations.csv")
 comorb <- comorb %>%
   dplyr::select(-c("X.1","X"))
+
 #activity
 activity <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_activity_classification.csv")
 activity <-activity %>%
@@ -316,7 +317,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(c(175:204), ~ replace(., is.na(.), "medication_use_not_recorded")))
+  mutate(across(c(371:400), ~ replace(., is.na(.), "medication_use_not_recorded")))
 
 #write to csv
 write.csv(merged_HSA_data,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")

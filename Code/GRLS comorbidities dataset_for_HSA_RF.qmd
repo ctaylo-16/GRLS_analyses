@@ -44,7 +44,8 @@ head(comorbs_unique)
 #endpoints to join up conditions dataset
 endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
 
-
+#load in HSA cohort for endpoints calcs
+HSA<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
 
 ```
 
@@ -138,9 +139,10 @@ conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
 comorbs_unique_2 <- comorbs_unique %>%
   #get rid of the to_date row for each dog
   filter(to_date !=1) %>%
-  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))%>%
-# replacing NA values with 0 across comorbidity columns
-  mutate_at(vars(5:200), ~replace_na(., 0))
+  # replacing NA values with 0 across comorbidity columns
+    mutate_at(vars(5:200), ~replace_na(., 0)) %>%
+  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
+
 
 # This method doesnt make sure condition has been there for >1 year of records, which I think should be for chronic inflam really
 
@@ -348,4 +350,140 @@ Create csv of all dog records with (\~30k rows):
 
 ```{r}
 write.csv(df_result7,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_records_comorbidities.csv")
+```
+
+Rerun with HSA dog endpoints and censor date and final year of study record:\
+\
+
+```{r}
+HSA_comorbs_unique3 <- comorbs_unique_3 %>%
+  left_join(HSA, by="subject_id")
+
+
+#calc for all comorbs ever and year first present et
+  HSA_comorbs_unique3 <-HSA_comorbs_unique3 %>%
+    group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present_lifetime = if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present_lifetime = if_else(
+      chronic_inflam_present_lifetime == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities_lifetime = if_else(
+      chronic_inflam_present_lifetime == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+```
+
+HSA cohort comorbs within 5y of endpoint date
+
+```{r}
+#only keep rows that are within 5y of the endpoint for this calculation
+HSA_comorbs_unique4 <- HSA_comorbs_unique3 %>%
+    group_by(subject_id) %>%
+  filter(year_in_study_comorb >= (year_in_study_diagnosis_or_final_record_year - 5))
+#calc for all comorbs ever and year first present et
+  HSA_comorbs_unique4 <-HSA_comorbs_unique4 %>%
+    group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present_5y= if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present_5y = if_else(
+      chronic_inflam_present_5y == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities_5y = if_else(
+      chronic_inflam_present_5y == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+```
+
+Focussing more on comorbidities that are more likely to be chronic by diagnosis and removing the \>1y presence required aspect
+
+```{r}
+comorbs_to_find_v2 <-c("congestive_heart_failure",
+  "cardiomyopathy",
+  "hypertension",
+  "lower_airway_disease",
+  "dental_tarter_calculus",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "keratoconjunctivitis_sicca",
+  "pigmentary_uveitis",
+  "uveitis",
+  "chronic_colitis",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "pancreatitis",
+  "tracheobronchitis",
+  "immune_related_musculoskeletal_disorder",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "laryngeal_paralysis",
+  "meningitis",
+  "meningoencephalitis",
+  "myasthenia_gravis",
+  "erythema_multiforme",
+  "food_allergy_dermatitis",
+  "r_o_atopy")
+
+
+
+conditions_in_df_and_list2 <- intersect(colnames(comorbs_unique),comorbs_to_find_v2)
+
+HSA_comorbs_unique4 <- HSA_comorbs_unique4 %>%
+  group_by(subject_id) %>%
+  mutate(  ## You need mutate() to create new columns
+    ## ANY chronic inflam present
+    chronic_inflam_present_no_min_year = if_else(rowSums(across(all_of(conditions_in_df_and_list2))) > 0, 1, 0),
+    ## NUMBER OF chronic inflam conditions present
+    number_comorbs_present_no_min_year = rowSums(across(all_of(conditions_in_df_and_list2))),
+    ## Creating a comorbidities column
+    comorbidities_no_min_year = if_else(
+      chronic_inflam_present_no_min_year == 1,
+      apply(across(all_of(conditions_in_df_and_list2)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      ""
+    )
+  ) %>% 
+  ungroup()
+```
+
+Now retaining single row per dog
+
+```{r}
+HSA_distinct <- HSA_comorbs_unique4 %>%
+    distinct(subject_id,.keep_all = TRUE)
+
+
+write.csv(HSA_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_with_HSA_final_date_calculations.csv")
 ```
