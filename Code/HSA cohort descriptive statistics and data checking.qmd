@@ -411,6 +411,7 @@ print(cross_table_percent)
 #### Study year of first chronic inflammatory condition recorded
 
 ```{r}
+
 HSA %>%
     summarize(
     mean_freq = mean(study_year_first_chronic_inflam, na.rm = TRUE),
@@ -426,15 +427,17 @@ HSA %>%
 #### Time between first chronic inflammatory condition and endpoint record
 
 ```{r}
+
+
 HSA %>%
     summarize(
-    mean_freq = mean(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
-    median_freq = median(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
-    sd_freq = sd(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
-    min_freq = min(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
-    max_freq= max(time_between_first_chronic_inflam_endpoint_diagnosis, na.rm = TRUE),
+    mean_freq = mean(time_between_first_comorb_and_endpoint, na.rm = TRUE),
+    median_freq = median(time_between_first_comorb_and_endpoint, na.rm = TRUE),
+    sd_freq = sd(time_between_first_comorb_and_endpoint, na.rm = TRUE),
+    min_freq = min(time_between_first_comorb_and_endpoint, na.rm = TRUE),
+    max_freq= max(time_between_first_comorb_and_endpoint, na.rm = TRUE),
     n = n(),
-    n_missing = sum(is.na(time_between_first_chronic_inflam_endpoint_diagnosis))
+    n_missing = sum(is.na(time_between_first_comorb_and_endpoint))
   )
 ```
 
@@ -679,7 +682,7 @@ print(cross_table_percent)
 ##### Anti-inflammatories
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_inflam_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_inflam_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -688,7 +691,7 @@ print(cross_table_percent)
 ##### Anti-microbials
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_microbials_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_microbials_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -697,7 +700,7 @@ print(cross_table_percent)
 ##### Dietary supplements
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$dietary_supplements_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_dietary_supplements_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -706,7 +709,7 @@ print(cross_table_percent)
 ##### Enteric medications
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$enteric_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_enteric_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -715,7 +718,7 @@ print(cross_table_percent)
 ##### Fluid metabolites
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$fluid_metabolites_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_fluid_metabolites_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -724,7 +727,7 @@ print(cross_table_percent)
 ##### Hormones
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$hormones_and_related_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_hormones_and_related_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -733,7 +736,7 @@ print(cross_table_percent)
 ##### Immunologicals
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$immunologicals_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_immunologicals_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -742,7 +745,7 @@ print(cross_table_percent)
 ##### Neurological
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$neurological_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_neurological_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -751,7 +754,7 @@ print(cross_table_percent)
 ##### Anti-parasite
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_parasites_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_parasites_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -760,7 +763,7 @@ print(cross_table_percent)
 ##### Anti-septic
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_septics_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_septics_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -769,7 +772,7 @@ print(cross_table_percent)
 ##### Cardio-respiratory
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$cardio_respiratory_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_cardio_respiratory_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -778,7 +781,7 @@ print(cross_table_percent)
 ##### Diuretics
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$diuretics_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_diuretics_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -787,7 +790,7 @@ print(cross_table_percent)
 ##### Anti-histamines
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_hist_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_hist_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -796,7 +799,7 @@ print(cross_table_percent)
 ##### Anti-virals
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_viral_5y_prior_endpoint)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_viral_5y_prior_endpoint)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -807,7 +810,7 @@ print(cross_table_percent)
 ##### Anti-inflammatories
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_inflam_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_inflam_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -816,7 +819,7 @@ print(cross_table_percent)
 ##### Anti-microbials
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_microbials_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_microbials_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -825,7 +828,7 @@ print(cross_table_percent)
 ##### Dietary supplements
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$dietary_supplements_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_dietary_supplements_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -834,7 +837,7 @@ print(cross_table_percent)
 ##### Enteric medications
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$enteric_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_enteric_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -844,7 +847,7 @@ print(cross_table_percent)
 
 ```{r}
 HSA <- HSA %>%
-  mutate(enteric_lifetime2 = recode(enteric_lifetime, "Q1" = "drug_administered",
+  mutate(enteric_lifetime2 = recode(quartile_enteric_lifetime, "Q1" = "drug_administered",
                                     "Q4"="drug_administered"))
 
 table(HSA$enteric_lifetime2
@@ -854,22 +857,16 @@ table(HSA$enteric_lifetime2
 ##### Fluid metabolites
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$fluid_metabolites_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_fluid_metabolites_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
-```{r}
-HSA <- HSA %>%
-  mutate(fluid_metabolites_lifetime2 = recode(fluid_metabolites_lifetime, "Q1" = "drug_administered",
-                                    "Q4"="drug_administered"))
-```
-
 ##### Hormones
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$hormones_and_related_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_hormones_and_related_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -878,7 +875,7 @@ print(cross_table_percent)
 ##### Immunologicals
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$immunologicals_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_immunologicals_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -887,7 +884,7 @@ print(cross_table_percent)
 ##### Neurological
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$neurological_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_neurological_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -896,7 +893,7 @@ print(cross_table_percent)
 ##### Anti-parasite
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_parasites_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_parasites_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
@@ -905,74 +902,44 @@ print(cross_table_percent)
 ##### Anti-septic
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_septics_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_septics_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
-```
-
-```{r}
-HSA <- HSA %>%
-  mutate(anti_septics_lifetime2 = recode(anti_septics_lifetime, "Q1" = "drug_administered",
-                                    "Q4"="drug_administered"))
 ```
 
 ##### Cardio-respiratory
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$cardio_respiratory_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_cardio_respiratory_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
-```
-
-```{r}
-HSA <- HSA %>%
-  mutate(cardio_respiratory_lifetime2 = recode(cardio_respiratory_lifetime, "Q1" = "drug_administered","Q3"="drug_administered",
-                                    "Q4"="drug_administered"))
 ```
 
 ##### Diuretics
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$diuretics_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_diuretics_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
-```
-
-```{r}
-HSA <- HSA %>%
-  mutate(diuretics_lifetime2 = recode(diuretics_lifetime, "Q1" = "drug_administered",
-                                    "Q4"="drug_administered"))
 ```
 
 ##### Anti-histamines
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_hist_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_hist_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
-```
-
-```{r}
-HSA <- HSA %>%
-  mutate(anti_hist_lifetime2 = recode(anti_hist_lifetime, "Q1" = "drug_administered",
-                                    "Q4"="drug_administered"))
 ```
 
 ##### Anti-virals
 
 ```{r}
-cross_table <- table(HSA$had_HSA,HSA$anti_viral_lifetime)
+cross_table <- table(HSA$had_HSA,HSA$quartile_anti_viral_lifetime)
 cross_table_percent <- prop.table(cross_table) * 100
 print(cross_table)
 print(cross_table_percent)
-```
-
-```{r}
-HSA <- HSA %>%
-  mutate(anti_viral_lifetime2 = recode(anti_viral_lifetime, "Q1" = "drug_administered",
-                                    "Q4"="drug_administered"))
 ```

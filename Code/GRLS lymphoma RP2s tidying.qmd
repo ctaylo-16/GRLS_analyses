@@ -1,0 +1,757 @@
+---
+title: "Creating GRLS lymphoma denominator"
+format: html
+editor: visual
+---
+
+# Tidying lymphoma GRLS clinical records coding
+
+Loading in data
+
+```{r}
+library(tidyverse)
+library(lubridate)
+GRLS_lymphoma <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/GRLS lymphoma RP2 projects/clinical_records_coding_compiled.csv")
+```
+
+Remove duplicate patient IDs = 181 records left
+
+```{r}
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  distinct(PatientID, .keep_all = TRUE)
+```
+
+Ditch rows unrelated to RP2s next steps:
+
+```{r}
+colnames(GRLS_lymphoma)
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  dplyr::select(-c("Documents.present","Documents.missing","X"))
+```
+
+## Calculating dates and ages at events
+
+Calculate age at first presentation
+
+```{r}
+#sorting all the date columns into date rather than char format
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(dob = as.Date(Birthdate..UK.date.format., format="%d/%m/%Y"),
+         first_pres_date=as.Date(First.presentation..for.suspected.lymphoma.diagnosis.date..UK.date.format.,format="%d/%m/%Y"),
+         defin_date = as.Date(Definitive.diagnosis.date..necropsy.report.date, format="%d/%m/%Y"),
+         neut_date = as.Date(Date.of.neuter,format="%d/%m/%Y"),
+         OR_signs_date = as.Date(OR.symptoms.started.date.,format="%d/%m/%Y"),
+         final_chemo_date = as.Date(Date.last.chemo.administered,format="%d/%m/%Y")
+         )
+  
+  
+#combine date of death and date of last record col
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(final_record_date_any = case_when(
+    Date.of.death.recorded == "NA" ~ Date.of.last.record.if.no.death.recorded,
+    TRUE ~ Date.of.death.recorded
+  )
+  )
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(final_record_date_any = as.Date(final_record_date_any,format="%d/%m/%Y")
+         )
+```
+
+Calculate age at definitive diagnosis date
+
+Calculate age at first presentation
+
+Calculate age at neuter
+
+Calculate age at death/final record
+
+```{r}
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(age_defin_diagnosis_y = as.numeric(difftime(defin_date, dob, units = "days")) / 365.25,
+         age_first_pres_y = as.numeric(difftime(first_pres_date, dob, units = "days")) / 365.25,
+         age_at_neuter_y = as.numeric(difftime(neut_date, dob, units = "days")) / 365.25,
+         age_final_record_y = as.numeric(difftime(final_record_date_any, dob, units = "days")) / 365.25,
+         age_final_chemo_y = as.numeric(difftime(final_chemo_date,dob,units="days"))/365.25,
+         diagnosis_to_final_chemo_time = as.numeric(difftime(final_chemo_date,defin_date,units="days"))/365,
+                                                             symptoms_to_first_pres=as.numeric(difftime(first_pres_date,OR_signs_date,units="days"))/365,
+                                                             symptoms_to_defin_diagnosis =as.numeric(difftime(defin_date,OR_signs_date,units="days"))/365
+  )
+```
+
+## Values categorising/tidying/sorting
+
+```{r}
+
+#put all of df into lower case
+GRLS_lymphoma <-GRLS_lymphoma %>%
+mutate_all(tolower)
+
+#convert all n/a to proper na string
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(across(everything(), ~na_if(., "n/a")))
+
+#convert all other NA options 
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(across(everything(), ~na_if(., "NA")))
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(across(everything(), ~na_if(., "nr")))
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(across(everything(), ~na_if(., "not recorded")))
+
+lapply(GRLS_lymphoma[, c(2,9,13:16,18:24,26,28:48,51,54:56,58,60,62:87,89:105,
+                         107:117,119:127)], table)
+
+```
+
+### Tidying neuter data
+
+```{r}
+table(GRLS_lymphoma$Neuter.status.at.time.of.diagnosis)
+
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(neuter_diagnosis_tidy = case_when(
+    grepl("neut|spayed", Neuter.status.at.time.of.diagnosis, ignore.case = TRUE) ~ "neutered",
+    grepl("intac|entire", Neuter.status.at.time.of.diagnosis, ignore.case = TRUE) ~ "entire",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(sex_tidy = case_when(
+    grepl("f",Neuter.status.at.time.of.diagnosis,ignore.case=TRUE)~ "F",
+    grepl("m",Neuter.status.at.time.of.diagnosis,ignore.case=TRUE)~ "M",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+
+```
+
+### Mechanism of death/death cause
+
+```{r}
+table(GRLS_lymphoma$Mechanism.of.death)
+
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(mechanism_of_death_tidy = case_when(
+    grepl("asia",Mechanism.of.death,ignore.case=TRUE)~ "euthanasia",
+    grepl("natur|passed|collap|doa",Mechanism.of.death,ignore.case=TRUE)~ "unassisted_death",
+    grepl("reco|nr", Mechanism.of.death,ignore.case=TRUE)~"not_recorded",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+table(GRLS_lymphoma$Cause.s.of.death.recorded)
+
+#this one feels too messy to tidy up and probably just YN next column of death attrib to lymphoma will suffice
+```
+
+### Clinical presentation features
+
+```{r}
+table(GRLS_lymphoma$OR.healthy.or.sick.dog)
+
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(OR_healthy_or_sick_tidy = case_when(
+    grepl("health",OR.healthy.or.sick.dog,ignore.case=TRUE)~ "healthy",
+    grepl("sic",OR.healthy.or.sick.dog,ignore.case=TRUE)~ "sick",
+    grepl("reco|nr", OR.healthy.or.sick.dog,ignore.case=TRUE)~"not_recorded",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+
+#cols 18:21
+table(GRLS_lymphoma$OR.appetite.reduced.increased.normal
+      )
+
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(OR_appetite_tidy = case_when(
+    grepl("i|inc",OR.appetite.reduced.increased.normal,ignore.case=TRUE)~ "increased",
+    grepl("nr",OR.appetite.reduced.increased.normal,ignore.case=TRUE)~ "not_recorded",
+    grepl("n", OR.appetite.reduced.increased.normal,ignore.case=TRUE)~"normal",
+    grepl("r|reduc", OR.appetite.reduced.increased.normal,ignore.case=TRUE)~"reduced",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+table(GRLS_lymphoma$OR.drinking.reduced.increased.normal)
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(OR_drinking_tidy = case_when(
+    grepl("i|inc",OR.drinking.reduced.increased.normal,ignore.case=TRUE)~ "increased",
+    grepl("nr",OR.drinking.reduced.increased.normal,ignore.case=TRUE)~ "not_recorded",
+    grepl("n", OR.drinking.reduced.increased.normal,ignore.case=TRUE)~"normal",
+    grepl("r|reduc", OR.drinking.reduced.increased.normal,ignore.case=TRUE)~"reduced",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+table(GRLS_lymphoma$OR.urination.reduced.increased.normal)
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(OR_urination_tidy = case_when(
+    grepl("i|inc",OR.urination.reduced.increased.normal,ignore.case=TRUE)~ "increased",
+    grepl("nr",OR.urination.reduced.increased.normal,ignore.case=TRUE)~ "not_recorded",
+    grepl("n", OR.urination.reduced.increased.normal,ignore.case=TRUE)~"normal",
+    grepl("r|reduc", OR.urination.reduced.increased.normal,ignore.case=TRUE)~"reduced",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+table(GRLS_lymphoma$OR.weight.reduced.increased.normal)
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(OR_weight_tidy = case_when(
+    grepl("i|inc",OR.weight.reduced.increased.normal,ignore.case=TRUE)~ "increased",
+    grepl("nr",OR.weight.reduced.increased.normal,ignore.case=TRUE)~ "not_recorded",
+    grepl("n", OR.weight.reduced.increased.normal,ignore.case=TRUE)~"normal",
+    grepl("r|reduc", OR.weight.reduced.increased.normal,ignore.case=TRUE)~"reduced",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+#onset CS
+#acute=<2d, medium = 3-13d , long = 14d+
+table(GRLS_lymphoma$Onset.of.O.reported.signs)
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(CS_onset_tidy =case_when(
+    grepl("acute|short",Onset.of.O.reported.signs,ignore.case=TRUE)~"acute",
+    grepl("4-5 days|1 week|5days|medium", Onset.of.O.reported.signs,ignore.case=TRUE)~"medium",
+    grepl("years|long|chronic|3 weeks", Onset.of.O.reported.signs,ignore.case=TRUE)~"long",
+    grepl("reported", Onset.of.O.reported.signs,ignore.case=TRUE)~"not_recorded",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+#which LNs enlarged
+table(GRLS_lymphoma$Which.LNs.enlarged)
+#list to deal with messy terms then recode each into new column for each location_YN
+
+ln_variations <- list(
+  "mandibular" = c("mandibular", "mandib","sm","both mandibular"),
+  "parotid" = c("parotid", "parot"),
+  "retropharyngeal" = c("retropharyngeal", "retro", "rpharyngeal"),
+  "superficial_cervical" = c("superficial cervical", "prescapular", "sc","cervical"),
+  "axillary" = c("axillary", "ax", "axill"),
+  "sternal" = c("sternal", "stern"),
+  "mediastinal" = c("mediastinal", "mediast"),
+  "tracheobronchial" = c("tracheobronchial", "trbr", "tbr"),
+  "hepatic" = c("hepatic", "hep"),
+  "splenic" = c("splenic", "splen"),
+  "gastric" = c("gastric", "gastr"),
+  "pancreaticoduodenal" = c("pancreaticoduodenal", "pancreatic", "pd"),
+  "mesenteric" = c("mesenteric", "mesent"),
+  "iliosacral" = c("iliosacral", "ilio"),
+  "popliteal" = c("popliteal", "pop"),
+  "inguinal" = c("inguinal", "inguin","ing"),
+  "subiliac" = c("subiliac", "superficial inguinal", "si"),
+  "generalized"=c("generalized","gener")
+)
+
+
+
+
+# Create new columns based on the variations
+# Function to check if any variation of a lymph node is present in the row
+detect_ln <- function(ln_names, text) {
+  pattern <- paste0("\\b(", paste(ln_names, collapse = "|"), ")\\b")  # Word boundary regex
+  return(ifelse(str_detect(text, regex(pattern, ignore_case = TRUE)), "yes", "no"))
+}
+
+# Add new columns dynamically
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(
+    !!!map(ln_variations, ~ detect_ln(.x, GRLS_lymphoma$Which.LNs.enlarged)) %>%
+      set_names(paste0(names(ln_variations), "LN_YN"))
+  )
+
+
+
+##Free fluid location
+table(GRLS_lymphoma$Free.fluid.location)
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(FF_location_tidy =case_when(
+    grepl("abdo|quadrant",Free.fluid.location,ignore.case=TRUE)~"abdomen",
+    grepl("n", Free.fluid.location,ignore.case=TRUE)~"no_FF",
+    grepl("report|record|nr", Free.fluid.location,ignore.case=TRUE)~"not_recorded",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+
+
+#MM colour
+table(GRLS_lymphoma$Mucus.membranes.colour)
+
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(MM_colour_tidy =case_when(
+    grepl("pink",Mucus.membranes.colour,ignore.case=TRUE)~"pink",
+    grepl("yello|ict", Mucus.membranes.colour,ignore.case=TRUE)~"yellow",
+    grepl("report|record|nr", Mucus.membranes.colour,ignore.case=TRUE)~"not_recorded",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+```
+
+### Diagnostics
+
+Radiographs - the free text (unsurprisingly, is very messy to work with) = create a normal vs abnormal variable from it
+
+```{r}
+table(GRLS_lymphoma$Radiographs.done.in.initial.diagnostics.Y.N) # fine dont need to tidy
+table(GRLS_lymphoma$Radiographic.findings..free.text.)
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(radiographs_normal_abnormal = case_when(
+    grepl("unremark|normal|nsf|no significant|no obvious|no sign|clear cxr", Radiographic.findings..free.text., ignore.case = TRUE) ~ "normal",
+    !is.na(Radiographic.findings..free.text.) & Radiographic.findings..free.text. != "" ~ "abnormal",
+    TRUE ~ NA_character_  # Keeps empty cells (NA) as NA
+  ))
+
+```
+
+US - the free text (unsurprisingly, is very messy to work with) = create a normal vs abnormal variable from it
+
+There is a lot more info to get from the US with more detailed tidying , could revisit for MRes but think this will work for RP2 and initial exploratory projects
+
+```{r}
+table(GRLS_lymphoma$Ultrasound.done.in.initial.diagnostics.Y.N)
+
+table(GRLS_lymphoma$Ultrasound.findings..free.text.)
+
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(US_normal_abnormal = case_when(
+    grepl("unremark|normal|nsf|no significant|no obvious|no sign|clear cxr| no fluid| no evidence", Ultrasound.findings..free.text., ignore.case = TRUE) ~ "normal",
+    !is.na(Ultrasound.findings..free.text.) & Ultrasound.findings..free.text. != "" ~ "abnormal",
+    TRUE ~ NA_character_  # Keeps empty cells (NA) as NA
+  ))
+```
+
+Mass location
+
+```{r}
+#
+table(GRLS_lymphoma$Mass.location)
+
+
+loc_variations <- list(
+  "cardiac" = c("parotid", "parot"),
+  "splenic" = c("splen","spleen"),
+  "hepatic" = c("superficial cervical", "prescapular", "sc","cervical"),
+  "gastrointestinal"=c("intest","jeju","duod","ileu","mesent","stomac","si wall","colon"),
+  "urinary" = c("kidney","bladd"),
+  "mediastinal"=c("medias"),
+  "other_location"=c("abdo","larynx","retroper","prost","thorac")
+)
+
+
+
+
+# Create new columns based on the variations
+# Function to check if any variation of a lymph node is present in the row
+#using detect_ln funct from LN locations earlier
+
+# Add new columns dynamically
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(
+    !!!map(loc_variations, ~ detect_ln(.x, GRLS_lymphoma$Mass.location)) %>%
+      set_names(paste0(names(loc_variations), "_mass_YN"))
+  )
+
+
+```
+
+Tumour size ante-mortem - this is very messy X by X and multi measurements single column
+
+```{r}
+table(GRLS_lymphoma$Recorded.measurement.of.tumour.s.ante.mortem)
+#check enough measurements to be worth recoding
+## code to extract the max dimension out else put not recorded 
+extract_max_tumour_dimension <- function(text) {
+  if (is.na(text) || text == "" || str_detect(text, regex("nr|not recorded", ignore_case = TRUE))) {
+    return(NA)  # Handle missing values and "nr"/"not recorded"
+  }
+  
+  # Extract all numbers (decimals included)
+  numbers <- str_extract_all(text, "\\d+\\.?\\d*")[[1]]
+  numbers <- as.numeric(numbers)  # Convert to numeric
+  
+  if (length(numbers) == 0) return(NA)  # Return NA if no numbers found
+  
+  # Detect if "mm" is present anywhere
+  mm_indices <- str_detect(text, "mm")
+  
+  # Convert mm to cm if applicable
+  if (mm_indices) {
+    numbers <- ifelse(mm_indices, numbers * 0.1, numbers)
+  }
+  
+  return(max(numbers, na.rm = TRUE))  # Return the max tumour dimension
+}
+GRLS_lymphoma$max_tumour_dimension <- sapply(GRLS_lymphoma$Recorded.measurement.of.tumour.s.ante.mortem, extract_max_tumour_dimension)
+
+```
+
+Blood test results
+
+```{r}
+         
+#PCV
+table(GRLS_lymphoma$PCV.....Same.as.hematocrit)
+#replace a random value thats non numeric
+GRLS_lymphoma <- GRLS_lymphoma%>%
+  mutate(PCV.....Same.as.hematocrit = case_when(
+    PCV.....Same.as.hematocrit == "42.8 …......2/11/1900  7:12:00 pm" ~ "42.8",
+    TRUE ~ PCV.....Same.as.hematocrit  # Keeps other values unchanged
+  ))
+GRLS_lymphoma$PCV.....Same.as.hematocrit <- as.numeric(GRLS_lymphoma$PCV.....Same.as.hematocrit)
+summary(GRLS_lymphoma$PCV.....Same.as.hematocrit)
+#see if enough varto split quartiles or just low/normal/high etc
+#split into quartiles
+PCV<- GRLS_lymphoma %>%
+  summarise(
+    LQ = quantile(PCV.....Same.as.hematocrit, 0.25, na.rm = TRUE),
+    median = quantile(PCV.....Same.as.hematocrit, 0.5, na.rm = TRUE),
+    UQ = quantile(PCV.....Same.as.hematocrit, 0.75, na.rm = TRUE)
+  )
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(
+    PCV_quartiles = case_when(
+      (PCV.....Same.as.hematocrit < PCV$LQ) ~ "< 42%",
+      (PCV.....Same.as.hematocrit >= PCV$LQ & PCV.....Same.as.hematocrit < body_mass_stats$median) ~ "42-44%",
+      (PCV.....Same.as.hematocrit >= PCV$median & PCV.....Same.as.hematocrit < body_mass_stats$UQ) ~ "44-48%",
+      (PCV.....Same.as.hematocrit >= PCV$UQ) ~ ">= 48%",
+    )
+  )
+
+#split into low (<35%) normal (35-55%) high (>55%) - there's only 2 with high PCV
+
+#TS
+table(GRLS_lymphoma$TS.g.DL)
+GRLS_lymphoma$TS.g.DL <- as.numeric(GRLS_lymphoma$TS.g.DL)
+summary(GRLS_lymphoma$TS.g.DL)
+TS<- GRLS_lymphoma %>%
+  summarise(
+    LQ = quantile(TS.g.DL, 0.25, na.rm = TRUE),
+    median = quantile(TS.g.DL, 0.5, na.rm = TRUE),
+    UQ = quantile(TS.g.DL, 0.75, na.rm = TRUE)
+  )
+TS
+#same as for PCV, low (<5.5), normal 5.5-7.5, high 7.5+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(TS_low_med_high_tidy = case_when(
+    (TS.g.DL <5.5) ~ "low_TS",
+    (TS.g.DL >=5.5 & TS.g.DL <7.5) ~ "normal_TS",
+    (TS.g.DL >7.5) ~"high_TS"
+  ))
+#anaemia severity - not useful
+table(GRLS_lymphoma$Anaemia.severity..mild..mod..severe)
+#other abnormalities on CBC - if free text not too messy to tidy 
+table(GRLS_lymphoma$Other.abnormalities.on.CBC)
+#biochem free text- if not too messy to tidy
+table(GRLS_lymphoma$Biochem.abnormalitites..free.text)
+#Calcium values
+table(GRLS_lymphoma$Total.vs.ionized.Ca.value)
+# total (mg/dL), ica or ionised (mmol/L) and osm ca or not specified which ca value
+#total Ca values 8.5-11.5 = normal normal iCa 1.25-1.45
+
+
+```
+
+Lymphoma cytology/histopath etc
+
+```{r}
+#Cytology free text - too messy to tidy for now
+table(GRLS_lymphoma$Cytology.results..free.text.)
+#IPT result
+table(GRLS_lymphoma$IPT.result.B.or.T)
+
+IPT_variations <- list(
+  "b" = c("b","b (cd21+, cd34+)","b - but not sure"),
+  "t" = c("t", "t ","t (abnormal)"),
+  "both"=c("t and b","t, with small pop of b cell emerging" )
+)
+
+
+
+# Create new columns based on the variations
+# Function to check if any variation of a lymph node is present in the row
+#using detect_ln funct from LN locations earlier
+
+# Add new columns dynamically
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(
+    !!!map(IPT_variations, ~ detect_ln(.x, GRLS_lymphoma$IPT.result.B.or.T)) %>%
+      set_names(paste0(names(IPT_variations), "_YN"))
+  )
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(IPT_cell_type =case_when(
+    grepl("yes", both_YN,ignore.case=TRUE)~"B_and_T",
+    grepl("b| (cd21+, cd34+)| b - but not sure", IPT.result.B.or.T,ignore.case=TRUE)~"B",
+    grepl("t", IPT.result.B.or.T,ignore.case=TRUE)~"T",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+
+
+#Ki67
+table(GRLS_lymphoma$Ki.67.result)
+#Ki67 only done for 4 dogs , can describe if desired
+#CD3
+table(GRLS_lymphoma$CD3.result)
+#tidy
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(CD3_result_tidy =case_when(
+    grepl("neg", CD3.result,ignore.case=TRUE)~"CD3_negative",
+    grepl("pos", CD3.result,ignore.case=TRUE)~"CD3_positive",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+#CD20
+table(GRLS_lymphoma$CD20.result)
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(CD20result_tidy =case_when(
+    grepl("neg", CD20.result,ignore.case=TRUE)~"CD20_negative",
+    grepl("pos", CD20.result,ignore.case=TRUE)~"CD20_positive",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+#PARR
+table(GRLS_lymphoma$PARR.result)
+#class so the high % ones are positive an
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(PARR_result_tidy = case_when(
+    grepl("t cell| tcell|t zone", PARR.result, ignore.case=TRUE)~"T_cell_positive",
+    grepl("b cell",PARR.result,ignore.case=TRUE)~"B_cell_positive",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+```
+
+### Case management
+
+Surgery
+
+```{r}
+table(GRLS_lymphoma$Surgical.procedures.performed..free.text.)
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(surgery_type_tidy =case_when(
+    grepl("biop|bios",Surgical.procedures.performed..free.text.,ignore.case=TRUE)~"biopsy",
+    grepl("splen",Surgical.procedures.performed..free.text.,ignore.case=TRUE)~"splenectomy",
+    grepl("r&a|kidney|ex",Surgical.procedures.performed..free.text.,ignore.case=TRUE)~"other_abdominal_surgery",
+    grepl("ln",Surgical.procedures.performed..free.text.,ignore.case=TRUE)~"LN_removal",
+    grepl("tube|amp|mass|sts",Surgical.procedures.performed..free.text.,ignore.case=TRUE)~"other_surgery",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+
+table(GRLS_lymphoma$surgery_type_tidy)
+```
+
+Staging
+
+```{r}
+table(GRLS_lymphoma$Staging.done.YN)
+table(GRLS_lymphoma$Staging...liver.spleen.investigated.YN)
+table(GRLS_lymphoma$Staging..blood.smear.investigated.YN)
+table(GRLS_lymphoma$Staging..bone.marrow.investigated.YN)
+
+table(GRLS_lymphoma$Tumour.stage)
+
+#reclassify stage
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(tumour_stage_tidy =case_when(
+    grepl("biop|bios",Tumour.stage,ignore.case=TRUE)~"stage_1",
+    grepl("2|2-3",Tumour.stage,ignore.case=TRUE)~"stage_2",
+    grepl("3a|iiia|3b+|stg 3",Tumour.stage,ignore.case=TRUE)~"stage_3",
+    grepl("iv|iva|4b",Tumour.stage,ignore.case=TRUE)~"stage_4",
+    grepl("v|va|va",Tumour.stage,ignore.case=TRUE)~"stage_5",
+    TRUE ~ NA_character_  # For rows that don't match any condition
+  ))
+table(GRLS_lymphoma$tumour_stage_tidy)
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(tumour_substage = case_when(
+    grepl("a|iiia|va|iva",Tumour.stage,ignore.case=TRUE)~"substage_a",
+    grepl("b|3b+|4b|vb|ivb",Tumour.stage,ignore.case=TRUE)~"substage_b",
+    TRUE ~ NA_character_
+  ))
+
+
+```
+
+Lymphoma type/size/grade
+
+```{r}
+table(GRLS_lymphoma$Lymphoma.type..multicentric..cutaneous..gastrointestinal..other.not.specified.)
+
+#reclass
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(lymphoma_type_tidy = case_when(
+    grepl("multicentric",Lymphoma.type..multicentric..cutaneous..gastrointestinal..other.not.specified., ignore.case=TRUE)~"multicentric",
+    grepl("cutaneous",Lymphoma.type..multicentric..cutaneous..gastrointestinal..other.not.specified., ignore.case=TRUE)~"cutaneous",
+    grepl("gastro|gi",Lymphoma.type..multicentric..cutaneous..gastrointestinal..other.not.specified., ignore.case=TRUE)~"gastrointestinal",
+    grepl("indollukemia|leukemia",Lymphoma.type..multicentric..cutaneous..gastrointestinal..other.not.specified.,ignore.case=TRUE)~"indolent",
+    grepl("opth|splen|tongue|spinal|leuk|cardiac|retro",Lymphoma.type..multicentric..cutaneous..gastrointestinal..other.not.specified., ignore.case=TRUE)~"other_location",
+    grepl("not specified",Lymphoma.type..multicentric..cutaneous..gastrointestinal..other.not.specified., ignore.case=TRUE)~"not_specified"
+    TRUE ~ NA_character_
+  ))
+
+
+#size
+table(GRLS_lymphoma$Cell.size...large.or.intermediate.or.small)
+#classify according to first size mentioned
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(lymphoma_cell_size_tidy = case_when(
+    grepl("small to intermediate|small",Cell.size...large.or.intermediate.or.small, ignore.case=TRUE)~"small_size",
+    grepl("int|intermediate to large| medium|intermediate",Cell.size...large.or.intermediate.or.small, ignore.case=TRUE)~"intermediate_size",
+    grepl("large",Cell.size...large.or.intermediate.or.small, ignore.case=TRUE)~"large_size",
+    grepl("abnormal|not specified",Cell.size...large.or.intermediate.or.small, ignore.case=TRUE)~"not_specified_size",
+    TRUE ~ NA_character_
+  ))
+table(GRLS_lymphoma$lymphoma_cell_size_tidy)
+
+```
+
+Chemo
+
+```{r}
+#which protocol used
+table(GRLS_lymphoma$Chemotherapy.protocol)
+
+#seperate columns for did they have X chemo YN (NB, this is from protocol and second protocol columns)
+chemo_groupings <- list(
+  "CHOP_Protocol" = c("chop", "chop- 10/6/2019 to 27/10/2019", "chop- started 23/10/2019 to 5/4/2020",
+                      "chop 12/11/18-13/2/19", "chop switched to ccnu", "chop, adriamycin, cytotoxan + lasix",
+                      "chop, asparginase to 11/2/2019", "vincristine and elspar (modified chop)", "vincristine/cytoxan/lasix",
+                      "modified lchop", "vincristine, pred, cyclophosphamide, doxorubicin", 
+                      "2nd chop started 29/8/2022, out of remission on 19/12/2022- started lomustine", 
+                      "chop 2 16/12/2016, relapse 2/22/2018", "chop 2 22/7/19, changed to tenovea 21/10/19, elspar and lomustine since 11/19",
+                      "chop 2 to ccnu and tanovea snd mitoxantrone", "chop again, 21/3/19", "chop with weekly treatments"),
+  "Lomustine" = c("ccnu", "ccnu, vincristine + steroids", "ccnu, vincristine +steroids", "lomustine", "lomustine & prednisone",
+                  "lomustine 2/3/2022 to 27/7/2022 lopp: vincristine, lomustine, prednisone, and procarbazine", 
+                  "lomustine, tanovea", "lomustine, tanovea, mitoxantrone", 
+                  "chlorambucil- gi issues, restart lomustine and pred 25/10/2022, start elspar and ctx 22/3/2023, change to lomustine and ctx 5/5/2023, adriamycin and l-asp post pneumonia 19/5/2023"),
+  "L-Asparaginase" = c("elspar", "elspar & chop", "elspar & prednisone", "l-asp given 15/11/2021 and chop started 22/11/2021",
+                      "l-asparaginase, vincristine, achieved cr 29/1/2016", "lspar", "lspar & prednisone", "vincristine and elspar (modified chop)",
+                      "l-asp with steroids, the chlorambucil 4 times, switched to cyclophosphamide 3 times- last 7/10/2020, modified chop started 13/10/2020 finished 15/2/2021, march 2021 started ccnu post relapse"),
+  "Prednisone_Based" = c("chlorambucil & prednisone", "chlorambucil and prednisolone", "vincristine & prednisone", "vincristine, prednisone",
+                        "vincristine and prednisone", "vincristine and prednisolone", "vincristine, prednisone, cytoxan, vincristine, doxorubicin",
+                        "oral investigational drug given by owner, prednisone, cytoxan, vincristine, doxorubicin"),
+  "MOPP" = c("l-asp-> vincristine, procarbazine, mustargen (mopp)", "mopp", "tanovea + elspar, mop, then ccnu", "tanovea, mopp"),
+  "Chlorambucil_Protocol" = c("chlorambucil", "chlorambucil & prednisone", "chlorambucil and prednisolone"),
+  "Miscellaneous" = c("wisconsin protocol, lspar and prednisone", "yes, but not for lymphoma", "laverdia (mentioned but unclear treatment)"),
+  "Other_Drugs" = c("vincristine +steroids", "vincristine and elspar (modified chop)", "palladia, tanovea", "t cep antibody therapy", "tanovea")
+)
+
+
+# Create new columns dynamically
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(
+    !!!map(chemo_groupings, ~ detect_ln(.x, GRLS_lymphoma$Chemotherapy.protocol)) %>%
+      set_names(paste0(names(chemo_groupings), "_YN"))
+  )
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(chemo_group_tidy = case_when(
+    grepl("chop|adriamycin|cytoxan|lasix|vincristine", Chemotherapy.protocol, ignore.case=TRUE) ~ "CHOP_Protocol",
+    grepl("ccnu|lomustine", Chemotherapy.protocol, ignore.case=TRUE) ~ "Lomustine",
+    grepl("elspar|l-asp", Chemotherapy.protocol, ignore.case=TRUE) ~ "L-Asparaginase",
+    grepl("prednisone|vincristine|cyclophosphamide|doxorubicin", Chemotherapy.protocol, ignore.case=TRUE) ~ "Prednisone_Based",
+    grepl("mopp|mustargen", Chemotherapy.protocol, ignore.case=TRUE) ~ "MOPP",
+    grepl("chlorambucil", Chemotherapy.protocol, ignore.case=TRUE) ~ "Chlorambucil_Protocol",
+    grepl("wisconsin|lspar", Chemotherapy.protocol, ignore.case=TRUE) ~ "Miscellaneous",
+    grepl("vincristine", Chemotherapy.protocol, ignore.case=TRUE) ~ "Other_Drugs",
+    TRUE ~ NA_character_
+  ))
+
+
+#how many protocols
+table(GRLS_lymphoma$Is.there..1.chemo.protocol.recorded_YN)
+table(GRLS_lymphoma$X2nd.chemo.protocol.recorded)
+#now classify second protocol
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(second_chemo_group_tidy = case_when(
+    grepl("chop|adriamycin|cytoxan|lasix|vincristine", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "CHOP_Protocol",
+    grepl("ccnu|lomustine", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Lomustine",
+    grepl("elspar|l-asp", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "L-Asparaginase",
+    grepl("prednisone|vincristine|cyclophosphamide|doxorubicin", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Prednisone_Based",
+    grepl("mopp|mustargen", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "MOPP",
+    grepl("chlorambucil", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Chlorambucil_Protocol",
+    grepl("wisconsin|lspar", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Miscellaneous",
+    grepl("vincristine", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Other_Drugs",
+    grepl("tanovea", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Miscellaneous",
+    grepl("palladia", X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Other_Drugs",
+    grepl("t cep antibody therapy",X2nd.chemo.protocol.recorded, ignore.case=TRUE) ~ "Other_Drugs",
+    TRUE ~ NA_character_
+  ))
+
+#pre-chemo steroids?
+table(GRLS_lymphoma$Pre.chemotherapy.corticosteroid.use_YN)
+#palliative steroids?
+table(GRLS_lymphoma$Palliative.corticosteroid.use_YN)
+#radiation?
+table(GRLS_lymphoma$Radiation.therapy_YN)
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(radiation_tidy = case_when(
+         grepl("y",Radiation.therapy_YN,ignore.case=TRUE)~"y",
+         grepl("n|na",Radiation.therapy_YN,ignore.case=TRUE)~"n",
+         TRUE ~ NA_character_
+  ))
+#remission lengths
+table(GRLS_lymphoma$Remission_YN)
+GRLS_lymphoma <- GRLS_lymphoma%>%
+  mutate(Remission_YN = case_when(
+    Remission_YN == "partial" ~ "y",
+    TRUE ~ Remission_YN  # Keeps other values unchanged
+  ))
+table(GRLS_lymphoma$Remission.1.length)
+#recode these remissions into groups 
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(remission_1_length_tidied= case_when(
+    grepl("day|1 week|2 week",Remission.1.length,ignore.case=TRUE)~"<1_month",
+    grepl("1 month|1 mo|1.5m|2 months|3.5m|4 months|5 m|5m|6 weeks",Remission.1.length,ignore.case=TRUE)~">1m-<6_months",
+    grepl("6 months|9 months|9m",Remission.1.length,ignore.case=TRUE)~">=6m-<1y",
+    grepl(">1 year|3 years|>3y",Remission.1.length,ignore.case=TRUE)~">=1y",
+    TRUE ~ NA_character_
+  ))
+table(GRLS_lymphoma$remission_1_length_tidied)
+table(GRLS_lymphoma$Remission.2.length)
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(remission_2_length_tidied= case_when(
+    grepl("day|1 week|2 week",Remission.2.length,ignore.case=TRUE)~"<1_month",
+    grepl("1 month|1 mo|1mo|1.5m|2 months|3m|3.5m|4 months|5 m|5m|6 weeks",Remission.1.length,ignore.case=TRUE)~">1m-<6_months",
+    grepl("6 months|9 months|9m",Remission.2.length,ignore.case=TRUE)~">=6m-<1y",
+    grepl(">1 year|3 years|>3y|12mo",Remission.2.length,ignore.case=TRUE)~">=1y",
+    TRUE ~ NA_character_
+  ))
+```
+
+### Comorbidities and pre-existing meds
+
+```{r}
+#classify comorbidities 1 and 2 like in other GRLS work
+#pre-existing medications group like in other GRLS work
+```
+
+### Necropsy findings
+
+```{r}
+
+```
+
+### Final sense checks
+
+```{r}
+#checking across all _YN columns that there is only Y/N/NR/NA type answers
+
+
+#replace all NAs with not recorded 
+```
+
+## Final tidied dataset for students:
+
+```{r}
+#all columns
+write.csv(GRLS_lymphoma, "C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/GRLS lymphoma RP2 projects/clinical_records_coding_compiled_CT_tidy.csv")
+#tidied dataset
+GRLS_lymphoma_tidy  <- GRLS_lymphoma %>%
+  dplyr::select(c())
+```
