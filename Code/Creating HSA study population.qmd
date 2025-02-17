@@ -317,7 +317,10 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(c(371:400), ~ replace(., is.na(.), "medication_use_not_recorded")))
+  mutate(across(c(383:442), ~ replace(., is.na(.), "medication_use_not_recorded")))
+
+merged_HSA_data <- merged_HSA_data %>%
+  rename(study_year_first_chronic_inflam = study_year_first_chronic_inflam.x)
 
 #write to csv
 write.csv(merged_HSA_data,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")

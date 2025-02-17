@@ -385,6 +385,19 @@ HSA_comorbs_unique3 <- comorbs_unique_3 %>%
       "")
   ) %>%
   ungroup()
+  
+  
+  
+  HSA_comorbs_unique3 <- HSA_comorbs_unique3 %>%
+  group_by(subject_id) %>%
+  mutate(study_year_first_chronic_inflam =  if_else(
+      any(chronic_inflam_present_lifetime == 1),
+      min(year_in_study_comorb[chronic_inflam_present_lifetime == 1], na.rm = TRUE),
+      as.numeric(NA)
+    )
+  ) %>%
+    ungroup()
+  
 ```
 
 HSA cohort comorbs within 5y of endpoint date
@@ -476,14 +489,37 @@ HSA_comorbs_unique4 <- HSA_comorbs_unique4 %>%
     )
   ) %>% 
   ungroup()
+
+
+HSA_comorbs_unique4 <- HSA_comorbs_unique4 %>%
+  group_by(subject_id) %>%
+     mutate(diagnosis_after_comorb = 
+      if_else(year_in_study_diagnosis_or_final_record_year > study_year_first_chronic_inflam, 1, 0
+    ),
+    time_between_first_comorb_and_endpoint = if_else(
+      diagnosis_after_comorb == 1,
+      year_in_study_diagnosis_or_final_record_year - study_year_first_chronic_inflam,
+      as.numeric(NA))
+    )%>%
+  ungroup()
 ```
 
-Now retaining single row per dog
+Add in the lifetime data to these dogs:
 
 ```{r}
-HSA_distinct <- HSA_comorbs_unique4 %>%
-    distinct(subject_id,.keep_all = TRUE)
+HSA_comorbs_unique4_distinct <- HSA_comorbs_unique4 %>%
+  distinct(subject_id,.keep_all = TRUE)
 
+#join in other df with further lifetime calcs
+df_result7_distinct <- df_result7 %>%
+  distinct(subject_id,.keep_all = TRUE)
+HSA_comorbs_unique4_df7_distinct <- HSA_comorbs_unique4_distinct %>%
+  left_join(df_result7_distinct,by="subject_id")
+```
 
-write.csv(HSA_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_with_HSA_final_date_calculations.csv")
+Output to csv
+
+```{r}
+
+write.csv(HSA_comorbs_unique4_df7_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_with_HSA_final_date_calculations.csv")
 ```
