@@ -78,7 +78,7 @@ age_summary
 cohort <- cohort %>%
   mutate(
     age_at_final_date_quartiles = case_when(
-      (age_at_final_date < age_summary$LQ) ~ ">0.74-<8.47 years",
+      (age_at_final_date < age_summary$LQ) ~ "0.74-<8.47 years",
       (age_at_final_date >= age_summary$LQ & age_at_final_date < age_summary$Median) ~ ">=8.47-<10.68 years",
       (age_at_final_date >= age_summary$Median & age_at_final_date < age_summary$UQ) ~ ">=10.68-<11.64 years",
       (age_at_final_date >= age_summary$UQ) ~ ">=11.64-14.51 years",
@@ -124,7 +124,7 @@ print(cross_table_percent)
 ```{r}
 #tidy up redundant cols - not wanted for univar and those that are essentially duplicats
 cohort_abr <- cohort %>%
-  dplyr::select(c(1,2,4:12,23,225,227:240,244,246:375,final_date.y,380:459))
+  dplyr::select(c(1,2,4:12,23,225,227:240,244,246:375,378,final_date.y,380:459))
 
 #also need to add in a survival time variable (days/weeks/months/years)
 enrol_date <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
@@ -190,43 +190,43 @@ cohort_abr <- cohort_abr %>%
 #weight quartiles
 weight_summary <- cohort_abr %>%
   summarise(
-      Mean  = mean(avg_weight_5y_prior_endpoint,na.rm=T),
-      SD = sd(avg_weight_5y_prior_endpoint,na.rm=T),
-      Median = median(avg_weight_5y_prior_endpoint,na.rm=T),
-      LQ = quantile(avg_weight_5y_prior_endpoint, 0.25,na.rm=T),
-      UQ = quantile(avg_weight_5y_prior_endpoint, 0.75,na.rm=T),
-      Min = min(avg_weight_5y_prior_endpoint,na.rm=T),
-      Max = max(avg_weight_5y_prior_endpoint,na.rm=T)
+      Mean  = mean(avg_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      SD = sd(avg_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      Median = median(avg_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      LQ = quantile(avg_weight_5y_prior_endpoint_kg_outliers_removed, 0.25,na.rm=T),
+      UQ = quantile(avg_weight_5y_prior_endpoint_kg_outliers_removed, 0.75,na.rm=T),
+      Min = min(avg_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      Max = max(avg_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T)
     )
 weight_summary
 cohort_abr <- cohort_abr %>%
   mutate(
     avg_weight_5y_prior_endpoint_quartiles = case_when(
-      (avg_weight_5y_prior_endpoint < weight_summary$LQ) ~ "21.53-<47.06kg",
-      (avg_weight_5y_prior_endpoint >= weight_summary$LQ & avg_weight_5y_prior_endpoint < weight_summary$Median) ~ ">=47.06-<54.55kg",
-      (avg_weight_5y_prior_endpoint >= weight_summary$Median & avg_weight_5y_prior_endpoint < weight_summary$UQ) ~ ">=54.55-<65kg",
-      (avg_weight_5y_prior_endpoint>= weight_summary$UQ) ~ ">=65-100kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$LQ) ~ "9.75-<21.31kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$LQ & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$Median) ~ ">=21.31-<24.66kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$Median & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$UQ) ~ ">=24.66-<29.37kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed>= weight_summary$UQ) ~ ">=29.37-41.52kg",
     )
   )
 #hieght quartiles
 height_summary <- cohort_abr %>%
   summarise(
-      Mean  = mean(avg_height_5y_prior_endpoint,na.rm=T),
-      SD = sd(avg_height_5y_prior_endpoint,na.rm=T),
-      Median = median(avg_height_5y_prior_endpoint,na.rm=T),
-      LQ = quantile(avg_height_5y_prior_endpoint, 0.25,na.rm=T),
-      UQ = quantile(avg_height_5y_prior_endpoint, 0.75,na.rm=T),
-      Min = min(avg_height_5y_prior_endpoint,na.rm=T),
-      Max = max(avg_height_5y_prior_endpoint,na.rm=T)
+      Mean  = mean(avg_height_5y_prior_endpoint_cm_outliers_removed,na.rm=T),
+      SD = sd(avg_height_5y_prior_endpoint_cm_outliers_removed,na.rm=T),
+      Median = median(avg_height_5y_prior_endpoint_cm_outliers_removed,na.rm=T),
+      LQ = quantile(avg_height_5y_prior_endpoint_cm_outliers_removed, 0.25,na.rm=T),
+      UQ = quantile(avg_height_5y_prior_endpoint_cm_outliers_removed, 0.75,na.rm=T),
+      Min = min(avg_height_5y_prior_endpoint_cm_outliers_removed,na.rm=T),
+      Max = max(avg_height_5y_prior_endpoint_cm_outliers_removed,na.rm=T)
     )
 height_summary
 cohort_abr <- cohort_abr %>%
   mutate(
     avg_height_5y_prior_endpoint_quartiles = case_when(
-      (avg_height_5y_prior_endpoint < height_summary$LQ) ~ "17.54-<22.13cm",
-      (avg_height_5y_prior_endpoint >= height_summary$LQ & avg_height_5y_prior_endpoint < height_summary$Median) ~ ">=22.13-<23cm",
-      (avg_height_5y_prior_endpoint >= height_summary$Median & avg_height_5y_prior_endpoint < height_summary$UQ) ~ ">=23-<24cm",
-      (avg_height_5y_prior_endpoint>= height_summary$UQ) ~ ">=24cm-59cm",
+      (avg_height_5y_prior_endpoint_cm_outliers_removed< height_summary$LQ) ~ "49.13-<56.07cm",
+      (avg_height_5y_prior_endpoint_cm_outliers_removed >= height_summary$LQ & avg_height_5y_prior_endpoint_cm_outliers_removed < height_summary$Median) ~ ">=56.07-<58.42cm",
+      (avg_height_5y_prior_endpoint_cm_outliers_removed >= height_summary$Median & avg_height_5y_prior_endpoint_cm_outliers_removed< height_summary$UQ) ~ ">=58.42-<60.32cm",
+      (avg_height_5y_prior_endpoint_cm_outliers_removed>= height_summary$UQ) ~ ">=60.32cm-67.73cm",
     )
   )
 #age at neuter quartiles
@@ -245,6 +245,8 @@ neut_summary
 cohort_abr <- cohort_abr %>%
   mutate(
     age_at_neuter_years_quartiles = case_when(
+      #so that entire dogs dont end up coded as Not_recorded
+      neuter == "Entire" ~ "Entire",
       (age_at_neuter_years< neut_summary$LQ) ~ "0.15-<0.52y",
       (age_at_neuter_years >= neut_summary$LQ & age_at_neuter_years < neut_summary$Median) ~ ">=0.52-<0.83y",
       (age_at_neuter_years >= neut_summary$Median & age_at_neuter_years < neut_summary$UQ) ~ ">=0.83-2.44y",
@@ -646,6 +648,31 @@ cohort_abr <- cohort_abr %>%
 ```
 
 ```{r}
+#last tidying up of variables
+cohort_abr <- cohort_abr %>%
+  mutate(heating_fuel_primary_mode_5yrs_prior = recode(heating_fuel_primary_mode_5yrs_prior, "natural gas" = "natural_gas"))
+
+#recode unknown in the heating/cooking variables to not_recorded
+cohort_abr <- cohort_abr %>%
+  mutate(heating_fuel_primary_mode_5yrs_prior = recode(heating_fuel_primary_mode_5yrs_prior, "unknown" = "not_recorded"))
+cohort_abr <- cohort_abr %>%
+  mutate(cooking_fuel_primary_mode_5yrs_prior = recode(cooking_fuel_primary_mode_5yrs_prior, "unknown" = "not_recorded"))
+cohort_abr <- cohort_abr %>%
+  mutate(heating_fuel_secondary_mode_5yrs_prior = recode(heating_fuel_secondary_mode_5yrs_prior, "unknown" = "not_recorded"))
+cohort_abr <- cohort_abr %>%
+  mutate(cooking_fuel_secondary_mode_5yrs_prior = recode(cooking_fuel_secondary_mode_5yrs_prior, "unknown" = "not_recorded"))
+
+cohort_abr <- cohort_abr %>%
+  mutate(region_mode_5y_prior = recode(region_mode_5y_prior, "unknown" = "not_recorded"))
+
+#recode 0 in neutered_reason to not_neutered and unknown as not_recorded
+cohort_abr <- cohort_abr %>%
+  mutate(neutered_reason = recode(neutered_reason, "unknown" = "not_recorded"))
+cohort_abr <- cohort_abr %>%
+  mutate(neutered_reason = recode(neutered_reason, "0" = "Entire"))
+```
+
+```{r}
 
 #replace all missing with NA (so "" and NA)
 cohort_abr <- cohort_abr %>%
@@ -662,12 +689,40 @@ cohort_abr$survival_time_months <- as.numeric(cohort_abr$survival_time_months)
 cohort_abr$status_factor <- as.factor(as.character(cohort_abr$had_HSA))
 cohort_abr$status <-as.numeric(cohort_abr$had_HSA) 
 cohort_abr$survival_time_months <- as.numeric(cohort_abr$survival_time_months)
+
+
+#manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
+#height
+cohort_abr <- cohort_abr%>%
+  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
+#weight
+cohort_abr <- cohort_abr%>%
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("9.75-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
+#bcs
+cohort_abr <- cohort_abr%>%
+  mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
+#neut age
+
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_neuter_years_quartiles = factor(age_at_neuter_years_quartiles, levels = c("0.15-<0.52y", ">=0.52-<0.83y", ">=0.83-2.44y", ">=2.44-9.59y","Entire","not_recorded")))
+#diagnosis age
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years","not_recorded")))
 ```
 
 ## Setting factors with baselines correct
 
 ```{r}
+#ensure not_recorded is default not baseline
+convert_and_relevel <- function(df) {
+  df <- df %>%
+    mutate(across(where(is.character), ~ factor(.))) %>%  # Convert all character columns to factors
+    mutate(across(where(is.factor), ~ fct_relevel(., "not_recorded", after = Inf)))  # Move "not_recorded" to last place
+  return(df)
+}
 
+# Apply to your dataset
+cohort_abr <- convert_and_relevel(cohort_abr)
 ```
 
 ## Kaplan Meier curves
@@ -714,7 +769,7 @@ cohort_abr %>%
 
 -   there is a variable with \<2 levels in it
 
--   NB way function is writtne is surv(survival_time_days) could set to months to calc for more appropriate month of survival
+-   NB way function is written is surv(survival_time_days) could set to months to calc for more appropriate month of survival
 
 ```{r}
 
@@ -746,10 +801,10 @@ perform_univariable_analysis(
   explanatory_vars = c("MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_name_mode_5yrs_prior",  "number_comorbs_present_lifetime", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
              "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
-             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year", "comorbidities_no_min_year", "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
-             "study_year_first_chronic_inflam.y",  "num_lifetime_chronic_inflam", 
+             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", 
  "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
              "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
  "avg_activity_freq_sy1_2_terciles", 
@@ -769,14 +824,14 @@ perform_univariable_analysis(
  #            "use_air_cleaner_sum_rest_of_life", "use_hepa_filter_sum_rest_of_life", "use_moth_balls_sum_rest_of_life", 
           #   "use_incense_or_candles_sum_rest_of_life", 
 # "smoke_exposure_sum_rest_of_life", 
- "any_treated_weeds_sum_rest_of_life", 
+# "any_treated_weeds_sum_rest_of_life", 
             # "any_treated_insects_sum_rest_of_life", "any_treated_fertilizer_sum_rest_of_life", 
 "use_aerosol_study_years_whole_life", 
              "use_air_cleaner_study_years_whole_life", "use_hepa_filter_study_years_whole_life", "use_moth_balls_study_years_whole_life", 
              "use_incense_or_candles_study_years_whole_life", "smoke_exposure_study_years_whole_life", "any_treated_weeds_study_years_whole_life", 
              "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life",# "use_aerosol_sum_whole_life", 
            #  "use_air_cleaner_sum_whole_life", "use_hepa_filter_sum_whole_life", "use_moth_balls_sum_whole_life",# "use_incense_or_candles_sum_whole_life", 
-             "smoke_exposure_sum_whole_life", 
+            # "smoke_exposure_sum_whole_life", 
  #"any_treated_weeds_sum_whole_life", "any_treated_insects_sum_whole_life", 
             # "any_treated_fertilizer_sum_whole_life",
  "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
@@ -832,3 +887,160 @@ perform_univariable_analysis(
 
 
 ```
+
+Create a counts cross table for each variable:
+
+```{r}
+library(finalfit)
+explanatory = c("MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
+             "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
+             "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
+             "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
+             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", 
+ "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
+             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",
+ "avg_activity_freq_sy1_2_terciles", 
+             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
+             "use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
+             "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life", 
+   
+ "use_aerosol_study_years_rest_of_life", 
+             "use_air_cleaner_study_years_rest_of_life", "use_hepa_filter_study_years_rest_of_life", "use_moth_balls_study_years_rest_of_life", 
+             "use_incense_or_candles_study_years_rest_of_life", "smoke_exposure_study_years_rest_of_life", "any_treated_weeds_study_years_rest_of_life", 
+             "any_treated_insects_study_years_rest_of_life", "any_treated_fertilizer_study_years_rest_of_life",
+"use_aerosol_study_years_whole_life", 
+             "use_air_cleaner_study_years_whole_life", "use_hepa_filter_study_years_whole_life", "use_moth_balls_study_years_whole_life", 
+             "use_incense_or_candles_study_years_whole_life", "smoke_exposure_study_years_whole_life", "any_treated_weeds_study_years_whole_life", 
+             "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life",
+ "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
+             "hours_of_smoke_whole_life_total_dosage_terciles", "in.the.garage_YN_study_years_early_life", "in.the.house_YN_study_years_early_life", 
+             "outside_YN_study_years_early_life",  "in.the.house_YN_sum_early_life_terciles", 
+             "in.the.garage_YN_study_years_rest_of_life", "in.the.house_YN_study_years_rest_of_life", "outside_YN_study_years_rest_of_life", 
+              "in.the.house_YN_sum_rest_of_life_quartiles",  
+             "in.the.garage_YN_study_years_whole_life", "in.the.house_YN_study_years_whole_life", "outside_YN_study_years_whole_life", 
+             "in.the.house_YN_sum_whole_life_quartiles",  
+             "majority_sleep_location_lifetime",  "main_lifestyle_category", 
+ "main_lifestyle_category_mode_5yrs_prior", "sleep_location_mode_5yrs_prior", 
+             "use_aerosol_exposed_5yrs_prior", "use_air_cleaner_exposed_5yrs_prior", "use_hepa_filter_exposed_5yrs_prior", 
+             "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
+             "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
+             "hours_of_smoke_exposure_hours_5yrs_prior_terciles", "sex", "neuter", "mismating_ever",
+             "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
+             "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
+             "neutered_sired_litters_natural_ever", "heats_before_neutering", 
+             "preg_pre_neuter",
+ "num_breeding_before_neutering_terciles", "ever_bred_from", 
+              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles",  "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
+             "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
+             "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", "half_anti_viral_lifetime", 
+             "quartile_anti_inflam_lifetime", "quartile_anti_microbials_lifetime", "quartile_dietary_supplements_lifetime", 
+
+ "quartile_hormones_and_related_lifetime", 
+             "quartile_immunologicals_lifetime", "quartile_misc_lifetime", "quartile_neurological_lifetime", 
+             "quartile_anti_parasites_lifetime", 
+
+ "quartile_anti_viral_lifetime", 
+             "half_anti_inflam_5y_prior_endpoint", "half_anti_microbials_5y_prior_endpoint", "half_enteric_5y_prior_endpoint", 
+             "half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint", "half_neurological_5y_prior_endpoint", 
+             "half_anti_parasites_5y_prior_endpoint", "half_dietary_supplements_5y_prior_endpoint", 
+             "half_anti_septics_5y_prior_endpoint", "half_hormones_and_related_5y_prior_endpoint", 
+             "half_cardio_respiratory_5y_prior_endpoint", "half_fluid_metabolites_5y_prior_endpoint", 
+             "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", "half_anti_viral_5y_prior_endpoint", 
+             "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint", 
+ "quartile_immunologicals_5y_prior_endpoint", 
+             "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
+             "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
+ "quartile_hormones_and_related_5y_prior_endpoint", 
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles")
+dependent = "status_factor" # Bowel perforation
+results <- cohort_abr %>%
+  summary_factorlist(dependent, explanatory,
+  p=TRUE, add_dependent_label=TRUE) -> t1
+knitr::kable(t1, row.names=FALSE, align=c("l", "l", "r", "r", "r"))
+
+results_df <- as.data.frame(results)
+
+# Write the results to CSV
+write.csv(results_df, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.csv", row.names = FALSE)
+
+#save as worddoc
+# Install and load the required packages
+library(officer)
+library(flextable)
+
+# Create a Word document
+doc <- read_docx()
+
+# Convert finalfit output to a flextable
+results_flextable <- flextable(results_df)
+
+# Add the flextable to the Word document
+doc <- doc %>%
+  body_add_flextable(results_flextable) %>%
+  body_add_par("Finalfit Regression Results", style = "heading 1")
+
+# Save the Word document
+print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.docx")
+```
+
+## Multivariable Cox PH
+
+```{r}
+lrt_pvalues <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv")
+multivar_variables <- lrt_pvalues %>%
+  filter(lrt_pvalue <= 0.2) %>%
+  distinct(variable)
+cols_to_keep = multivar_variables$variable
+cols_to_keep <- append(cols_to_keep, "status")
+cols_to_keep <- append(cols_to_keep, "survival_time_days")
+
+cohort_abr_sig <- cohort_abr[,cols_to_keep]
+```
+
+Variables to take forward (p\<0.2):
+
+```{r}
+print(multivar_variables)
+```
+
+Assess which variables are correlated:
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
+#use sig variables list generated above
+
+create_corr_matrix(cohort_abr_sig,c(1:65), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
+```
+
+Correlated variables:
+
+```{r}
+corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv")
+
+#ditch rows where variable 1 and 2 values are same as in another row :
+corr_values2 <- corr_values %>%
+  dplyr::select(-c(X))
+
+corr_values3 <- corr_values2 %>%
+  mutate(Var1_sorted = pmin(Variable1, Variable2),  
+         Var2_sorted = pmax(Variable1, Variable2)) %>%  
+  distinct(Var1_sorted, Var2_sorted, Correlation, .keep_all = TRUE) %>%  
+  select(-Var1_sorted, -Var2_sorted)  # Remove helper columns
+
+
+print(corr_values3)
+```
+
+-   Repro
+
+    -   
+
+Multivar model building:
+
+Other things to do:
+
+-   consider should BCS be reclassed 2 different ways - mode BCS in 5y prior to endpoint AND/OR overweight/underweight/ideal
