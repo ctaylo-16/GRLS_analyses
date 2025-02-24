@@ -650,26 +650,27 @@ cohort_abr <- cohort_abr %>%
 ```{r}
 #last tidying up of variables
 cohort_abr <- cohort_abr %>%
-  mutate(heating_fuel_primary_mode_5yrs_prior = recode(heating_fuel_primary_mode_5yrs_prior, "natural gas" = "natural_gas"))
+  dplyr::mutate(heating_fuel_primary_mode_5yrs_prior = case_when(
+    heating_fuel_primary_mode_5yrs_prior == "natural gas" ~ "natural_gas",
+    TRUE ~ heating_fuel_primary_mode_5yrs_prior
+  ))
 
-#recode unknown in the heating/cooking variables to not_recorded
-cohort_abr <- cohort_abr %>%
-  mutate(heating_fuel_primary_mode_5yrs_prior = recode(heating_fuel_primary_mode_5yrs_prior, "unknown" = "not_recorded"))
-cohort_abr <- cohort_abr %>%
-  mutate(cooking_fuel_primary_mode_5yrs_prior = recode(cooking_fuel_primary_mode_5yrs_prior, "unknown" = "not_recorded"))
-cohort_abr <- cohort_abr %>%
-  mutate(heating_fuel_secondary_mode_5yrs_prior = recode(heating_fuel_secondary_mode_5yrs_prior, "unknown" = "not_recorded"))
-cohort_abr <- cohort_abr %>%
-  mutate(cooking_fuel_secondary_mode_5yrs_prior = recode(cooking_fuel_secondary_mode_5yrs_prior, "unknown" = "not_recorded"))
 
-cohort_abr <- cohort_abr %>%
-  mutate(region_mode_5y_prior = recode(region_mode_5y_prior, "unknown" = "not_recorded"))
 
 #recode 0 in neutered_reason to not_neutered and unknown as not_recorded
-cohort_abr <- cohort_abr %>%
-  mutate(neutered_reason = recode(neutered_reason, "unknown" = "not_recorded"))
+
 cohort_abr <- cohort_abr %>%
   mutate(neutered_reason = recode(neutered_reason, "0" = "Entire"))
+
+
+cohort_abr <- cohort_abr %>%
+  mutate(
+    heating_fuel_primary_mode_5yrs_prior = recode(heating_fuel_primary_mode_5yrs_prior, "unknown" = "not_recorded"),
+    cooking_fuel_primary_mode_5yrs_prior = recode(cooking_fuel_primary_mode_5yrs_prior, "unknown" = "not_recorded"),
+    heating_fuel_secondary_mode_5yrs_prior = recode(heating_fuel_secondary_mode_5yrs_prior, "unknown" = "not_recorded"),
+    cooking_fuel_secondary_mode_5yrs_prior = recode(cooking_fuel_secondary_mode_5yrs_prior, "unknown" = "not_recorded"),
+    region_mode_5y_prior = recode(region_mode_5y_prior, "unknown" = "not_recorded")
+  )
 ```
 
 ```{r}
@@ -708,6 +709,51 @@ cohort_abr <- cohort_abr%>%
 #diagnosis age
 cohort_abr <- cohort_abr%>%
   mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years","not_recorded")))
+
+#change spayed while in heat to account for males and entire females
+cohort_abr <- cohort_abr %>%
+  mutate(spayed_while_in_heat = case_when(
+    sex== "M" ~ "Male",
+    sex_status == "Intact Female" ~ "Intact Female",
+    spayed_while_in_heat == "0" ~ "0",
+    spayed_while_in_heat == "1" ~"1"
+  ))
+#same as above account for unnetered and males 
+heats <- cohort_abr %>%
+# Convert to numeric
+  filter(heats_before_neutering != 0) %>% 
+# Remove rows where the column is 0
+  select(heats_before_neutering) %>%
+  filter(heats_before_neutering != "not_recorded") # Keep only this column
+heats <- as.numeric(heats$heats_before_neutering)
+
+breaks <- get_breaks(heats, c(0, 0.25, 0.5, 0.75, 1))
+
+
+# Assign labels dynamically
+labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
+cohort_abr <- cohort_abr %>%
+  mutate(heats_before_neutering_terciles = case_when(
+    sex== "M" ~ "Male",
+    sex_status == "Intact Female" ~ "Intact Female",
+    heats_before_neutering == "0" ~ "0",
+    heats_before_neutering == "1" ~"1-<=2",
+    heats_before_neutering == "2" ~"1-<=2",
+    heats_before_neutering == "3" ~">2-<=4",
+    heats_before_neutering == "4" ~">2-<=4",
+    heats_before_neutering == "5" ~">4-12",
+    heats_before_neutering == "6" ~">4-12",
+    heats_before_neutering == "7" ~">4-12",
+    heats_before_neutering == "8" ~">4-12",
+    heats_before_neutering == "9" ~">4-12",
+    heats_before_neutering == "10" ~">4-12",
+    heats_before_neutering == "11" ~">4-12",
+    heats_before_neutering == "12" ~">4-12"
+  ))
+
+cohort_abr <- cohort_abr%>%
+  mutate(heats_before_neutering_terciles = factor(heats_before_neutering_terciles, levels = c("0", "1-<=2", ">2-<=4", ">4-12","Intact Female","Male","not_recorded")))
+
 ```
 
 ## Setting factors with baselines correct
@@ -849,27 +895,26 @@ perform_univariable_analysis(
              "hours_of_smoke_exposure_hours_5yrs_prior_terciles", "sex", "neuter", "mismating_ever",
              "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
              "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
-             "neutered_sired_litters_natural_ever", "heats_before_neutering", 
+             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
              "preg_pre_neuter",# "mated_pre_neuter",
  "num_breeding_before_neutering_terciles", "ever_bred_from", 
               "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
              "avg_purina_BCS_5y_prior_endpoint_quartiles",  "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
              "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
-             "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", "half_anti_viral_lifetime", 
+             "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
              "quartile_anti_inflam_lifetime", "quartile_anti_microbials_lifetime", "quartile_dietary_supplements_lifetime", 
             #not enough data for quartiles "quartile_enteric_lifetime", "quartile_fluid_metabolites_lifetime", 
  "quartile_hormones_and_related_lifetime", 
              "quartile_immunologicals_lifetime", "quartile_misc_lifetime", "quartile_neurological_lifetime", 
              "quartile_anti_parasites_lifetime", 
  #not enough data for quartiles "quartile_anti_septics_lifetime", "quartile_cardio_respiratory_lifetime",   "quartile_diuretics_lifetime", "quartile_anti_hist_lifetime", 
- "quartile_anti_viral_lifetime", 
              "half_anti_inflam_5y_prior_endpoint", "half_anti_microbials_5y_prior_endpoint", "half_enteric_5y_prior_endpoint", 
              "half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint", "half_neurological_5y_prior_endpoint", 
              "half_anti_parasites_5y_prior_endpoint", "half_dietary_supplements_5y_prior_endpoint", 
              "half_anti_septics_5y_prior_endpoint", "half_hormones_and_related_5y_prior_endpoint", 
              "half_cardio_respiratory_5y_prior_endpoint", "half_fluid_metabolites_5y_prior_endpoint", 
-             "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", "half_anti_viral_5y_prior_endpoint", 
+             "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", 
              "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint", 
             # "quartile_enteric_5y_prior_endpoint",
  "quartile_immunologicals_5y_prior_endpoint", 
@@ -929,27 +974,25 @@ explanatory = c("MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs
              "hours_of_smoke_exposure_hours_5yrs_prior_terciles", "sex", "neuter", "mismating_ever",
              "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
              "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
-             "neutered_sired_litters_natural_ever", "heats_before_neutering", 
+             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
              "preg_pre_neuter",
  "num_breeding_before_neutering_terciles", "ever_bred_from", 
               "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
              "avg_purina_BCS_5y_prior_endpoint_quartiles",  "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
              "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
-             "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", "half_anti_viral_lifetime", 
+             "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
              "quartile_anti_inflam_lifetime", "quartile_anti_microbials_lifetime", "quartile_dietary_supplements_lifetime", 
 
  "quartile_hormones_and_related_lifetime", 
              "quartile_immunologicals_lifetime", "quartile_misc_lifetime", "quartile_neurological_lifetime", 
              "quartile_anti_parasites_lifetime", 
-
- "quartile_anti_viral_lifetime", 
              "half_anti_inflam_5y_prior_endpoint", "half_anti_microbials_5y_prior_endpoint", "half_enteric_5y_prior_endpoint", 
              "half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint", "half_neurological_5y_prior_endpoint", 
              "half_anti_parasites_5y_prior_endpoint", "half_dietary_supplements_5y_prior_endpoint", 
              "half_anti_septics_5y_prior_endpoint", "half_hormones_and_related_5y_prior_endpoint", 
              "half_cardio_respiratory_5y_prior_endpoint", "half_fluid_metabolites_5y_prior_endpoint", 
-             "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", "half_anti_viral_5y_prior_endpoint", 
+             "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint",
              "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint", 
  "quartile_immunologicals_5y_prior_endpoint", 
              "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
@@ -997,8 +1040,10 @@ multivar_variables <- lrt_pvalues %>%
 cols_to_keep = multivar_variables$variable
 cols_to_keep <- append(cols_to_keep, "status")
 cols_to_keep <- append(cols_to_keep, "survival_time_days")
-
+cols_to_keep <- append(cols_to_keep, "status_factor")
 cohort_abr_sig <- cohort_abr[,cols_to_keep]
+
+lrt_pvalues$pval <- sprintf("%.20f", lrt_pvalues$lrt_pvalue)
 ```
 
 Variables to take forward (p\<0.2):
@@ -1013,10 +1058,10 @@ Assess which variables are correlated:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:65), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
+create_corr_matrix(cohort_abr_sig,c(1:63), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
 ```
 
-Correlated variables:
+### Correlated variables:
 
 ```{r}
 corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv")
@@ -1035,11 +1080,598 @@ corr_values3 <- corr_values2 %>%
 print(corr_values3)
 ```
 
+-   Home enviro
+
+    -   Sleep location and primary heating source
+
+    -   early vs rest vs whole life for variables like incense, candles, moth balls etc
+
+-   Dog health
+
+    -   comorbs lifetime vs 5y
+
+    -   half vs quartiles for drug admin
+
+    -   lifetime vs 5y prior for drug admin
+
+    -   anti viral and fluid halves 5y prior endpoint
+
+-   Activity/lifestyle
+
+    -   activity intensity vs frequency
+
+    -   lifestyle category and sleep location
+
 -   Repro
+
+    -   sex and no preg, heats before neutering, age at neutering
 
     -   
 
 Multivar model building:
+
+-   Stepwise with most sig initially
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/HSA-VC-survival-analyses/HSA-VC-survival-analyses/code/functions/multivar_cox_model_analyse_AIC_funct.R")
+
+#null model
+cox_model_null <- coxph(Surv(survival_time_days, status) ~1
+, data = cohort_abr_sig)
+summary(cox_model_null)
+```
+
+### Age at endpoint - not sure this is a variable to include??
+
+```{r}
+cox_model_1<- coxph(Surv(survival_time_days, status) ~  age_at_final_date_quartiles
+, data = cohort_abr_sig)
+
+#vif(cox_model_1)
+
+
+analyse_model(cox_model_1,cohort_abr_sig,cox_model_null)
+```
+
+### Weight quartiles 5y prior
+
+cox_model_2 %\>%
+
+ff_model_summary()
+
+```{r}
+cox_model_2<- coxph(Surv(survival_time_days, status) ~  
+                      #age_at_final_date_quartiles
+                       avg_weight_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+
+
+
+analyse_model(cox_model_2,cohort_abr_sig,cox_model_null)
+
+```
+
+### Purina BCS 5y prior
+
+```{r}
+cox_model_3<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+
+vif(cox_model_3)
+
+
+analyse_model(cox_model_3,cohort_abr_sig,cox_model_2)
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+### Activity 
+
+-   rest of life terciles
+
+    -   frequency or intensity
+
+-   frequency best fit via AIC
+
+-   rest of life(SY3+) vs 5y prior
+
+    -   SY3+ improved model parsimonious-ness with BIC \~100 less than 5y prior mdoels
+
+```{r}
+cox_model_4a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles
+, data = cohort_abr_sig)
+
+vif(cox_model_4a)
+
+
+analyse_model(cox_model_4a,cohort_abr_sig,cox_model_3)
+
+cox_model_4b<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_intensity_sy3_quartiles
+, data = cohort_abr_sig)
+
+vif(cox_model_4b)
+
+
+analyse_model(cox_model_4b,cohort_abr_sig,cox_model_3)
+
+#5y prior rather than SY3+
+cox_model_4c<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+analyse_model(cox_model_4c,cohort_abr_sig,cox_model_3)
+
+cox_model_4d<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_intensity_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+analyse_model(cox_model_4d,cohort_abr_sig,cox_model_3)
+```
+
+### Height
+
+-   doesnt improve model
+
+```{r}
+cox_model_5<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + avg_height_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+
+vif(cox_model_5)
+
+
+analyse_model(cox_model_5,cohort_abr_sig,cox_model_4a)
+```
+
+### Parasite 5y prior quartiles
+
+```{r}
+cox_model_6<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint
+, data = cohort_abr_sig)
+
+vif(cox_model_6)
+
+
+analyse_model(cox_model_6,cohort_abr_sig,cox_model_4a)
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_activity_freq_sy3_terciles","quartile_anti_parasites_5y_prior_endpoint")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+### In the house rest of life main sleep location
+
+-   not include
+
+```{r}
+cox_model_7<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+in.the.house_YN_study_years_rest_of_life
+, data = cohort_abr_sig)
+
+vif(cox_model_7)
+
+
+analyse_model(cox_model_7,cohort_abr_sig,cox_model_6)
+
+
+```
+
+### Main lifestyle category 5y prior
+
+-   approaching VIF of 5 so assessed if activity and lifestyle which one was better for model - activity
+
+```{r}
+cox_model_8<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+main_lifestyle_category_mode_5yrs_prior
+, data = cohort_abr_sig)
+
+vif(cox_model_8)
+
+
+analyse_model(cox_model_8,cohort_abr_sig,cox_model_6)
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_activity_freq_sy3_terciles","quartile_anti_parasites_5y_prior_endpoint", "main_lifestyle_category_mode_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+
+#assess if activity freq SY3 tercile or main lifestyle better model (as VIF is 4.5 and 3.5 for these)
+cox_model_8a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles +  quartile_anti_parasites_5y_prior_endpoint+main_lifestyle_category_mode_5yrs_prior
+, data = cohort_abr_sig)
+
+vif(cox_model_8a)
+
+cox_model_8b<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles +  quartile_anti_parasites_5y_prior_endpoint+ avg_activity_freq_sy3_terciles
+, data = cohort_abr_sig)
+
+vif(cox_model_8b)
+analyse_model(cox_model_8a,cohort_abr_sig,cox_model_8b)
+
+```
+
+### Pipes plastic 5y prior
+
+-   does not improve model
+
+```{r}
+cox_model_9<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+pipes_plastic_any_mode_5yrs_prior
+, data = cohort_abr_sig)
+
+vif(cox_model_9)
+
+
+analyse_model(cox_model_9,cohort_abr_sig,cox_model_6)
+
+
+```
+
+### House type 5y prior 
+
+-   does not improve model
+
+```{r}
+cox_model_10<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+house_type_mode_5yrs_prior
+, data = cohort_abr_sig)
+
+vif(cox_model_10)
+
+
+analyse_model(cox_model_10,cohort_abr_sig,cox_model_6)
+```
+
+### Sleep location 5y prior
+
+-   does not improve model
+
+```{r}
+cox_model_11<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sleep_location_mode_5yrs_prior
+, data = cohort_abr_sig)
+
+vif(cox_model_11)
+
+
+analyse_model(cox_model_11,cohort_abr_sig,cox_model_6)
+```
+
+### Primary cooking fuel
+
+-   not significant
+
+```{r}
+cox_model_12<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+cooking_fuel_primary_mode_5yrs_prior
+, data = cohort_abr_sig)
+
+vif(cox_model_12)
+
+
+analyse_model(cox_model_12,cohort_abr_sig,cox_model_6)
+```
+
+### Water source
+
+```{r}
+cox_model_13<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+water_source_mode_5yrs_prior
+, data = cohort_abr_sig)
+
+vif(cox_model_13)
+
+
+analyse_model(cox_model_13,cohort_abr_sig,cox_model_6)
+```
+
+### Sex
+
+-   does improve model
+
+```{r}
+cox_model_14<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
+, data = cohort_abr_sig)
+
+vif(cox_model_14)
+
+
+analyse_model(cox_model_14,cohort_abr_sig,cox_model_6)
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_activity_freq_sy3_terciles","quartile_anti_parasites_5y_prior_endpoint", "sex")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+### No pregnancy ever
+
+-   sex and no_preg ever are collinear
+
+-   assess which is better - equivocal so keep sex in model
+
+```{r}
+cox_model_15<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex+no_pregnancy_ever
+, data = cohort_abr_sig)
+
+vif(cox_model_15)
+
+
+analyse_model(cox_model_15,cohort_abr_sig,cox_model_14)
+
+cox_model_15a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+no_pregnancy_ever
+, data = cohort_abr_sig)
+
+
+
+
+vif(cox_model_15a)
+analyse_model(cox_model_15a,cohort_abr_sig,cox_model_14)
+
+```
+
+### Area type
+
+-   does not improve model
+
+```{r}
+cox_model_16<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ area_type_mode_5yrs_prior, data = cohort_abr_sig)
+
+vif(cox_model_16)
+
+
+analyse_model(cox_model_16,cohort_abr_sig,cox_model_14)
+```
+
+### Primary heating fuel
+
+-   does not improve model
+
+```{r}
+cox_model_17<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ heating_fuel_primary_mode_5yrs_prior, data = cohort_abr_sig)
+
+vif(cox_model_17)
+
+
+analyse_model(cox_model_17,cohort_abr_sig,cox_model_14)
+```
+
+### Heats before neutering terciles
+
+-   cant have sex and heats before neutering in same model as collinear
+
+-   keep sex
+
+```{r}
+cox_model_18<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ heats_before_neutering_terciles, data = cohort_abr_sig)
+
+#vif(cox_model_18)
+cox_model_18a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint
++ heats_before_neutering_terciles, data = cohort_abr_sig)
+
+#vif(cox_model_18a)
+
+cox_model_18b<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_18a,cohort_abr_sig,cox_model_18b)
+```
+
+### Use of incense whole life
+
+```{r}
+cox_model_19<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ use_incense_or_candles_study_years_whole_life, data = cohort_abr_sig)
+
+vif(cox_model_19)
+
+
+analyse_model(cox_model_19,cohort_abr_sig,cox_model_14)
+```
+
+### Primarily outside whole life/rest of life
+
+-   not improving
+
+```{r}
+cox_model_20<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ use_incense_or_candles_study_years_whole_life+outside_YN_study_years_rest_of_life, data = cohort_abr_sig)
+
+vif(cox_model_20)
+
+
+analyse_model(cox_model_20,cohort_abr_sig,cox_model_19)
+
+cox_model_20a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ use_incense_or_candles_study_years_whole_life+outside_YN_study_years_whole_life, data = cohort_abr_sig)
+
+vif(cox_model_20a)
+
+
+analyse_model(cox_model_20a,cohort_abr_sig,cox_model_19)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_activity_freq_sy3_terciles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","outside_YN_study_years_whole_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+### Hepa filter use rest of life
+
+-   does not improve model
+
+```{r}
+cox_model_21<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ use_incense_or_candles_study_years_whole_life +use_hepa_filter_study_years_whole_life, data = cohort_abr_sig)
+
+vif(cox_model_21)
+
+
+analyse_model(cox_model_21,cohort_abr_sig,cox_model_19)
+```
+
+### Age at neuter quartiles
+
+-   does not improve model
+
+```{r}
+cox_model_22<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ use_incense_or_candles_study_years_whole_life +age_at_neuter_years_quartiles, data = cohort_abr_sig)
+
+vif(cox_model_22)
+
+
+analyse_model(cox_model_22,cohort_abr_sig,cox_model_19)
+```
+
+### Early life activity duration quartiles
+
+```{r}
+cox_model_23<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ use_incense_or_candles_study_years_whole_life +avg_activity_duration_sy1_2_quartiles, data = cohort_abr_sig)
+
+vif(cox_model_23)
+
+
+analyse_model(cox_model_23,cohort_abr_sig,cox_model_19)
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_activity_freq_sy3_terciles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+### Outside early life
+
+```{r}
+
+cox_model_24<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles + quartile_anti_parasites_5y_prior_endpoint+sex
++ use_incense_or_candles_study_years_whole_life +avg_activity_duration_sy1_2_quartiles +outside_YN_study_years_early_life, data = cohort_abr_sig)
+
+vif(cox_model_24)
+
+
+analyse_model(cox_model_24,cohort_abr_sig,cox_model_23)
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_activity_freq_sy3_terciles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles","outside_YN_study_years_early_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+### In house early and whole life terciles
+
+```{r}
+
+```
+
+### Neutering reason
+
+```{r}
+
+```
+
+### Secondary cooking fuel
+
+```{r}
+
+```
+
+### Neurological drugs lifetime half
+
+```{r}
+
+```
+
+### Enteric meds lifetime half or 5y prior half
+
+```{r}
+
+```
+
+### number comorbs present 5y prior or lifetime
+
+```{r}
+
+```
+
+### lived in garage early life or whole life
+
+```{r}
+
+```
+
+### anti septic half lifetime
+
+```{r}
+
+```
+
+### half anti inflams 5y prior to endpoint
+
+```{r}
+
+```
+
+### incense rest of life
+
+```{r}
+
+```
+
+### aerosol whole life
+
+```{r}
+
+```
+
+### smoke exposure early life
+
+```{r}
+
+```
+
+### moth balls rest of life
+
+```{r}
+
+```
+
+### half cardio resp lifetime
+
+```{r}
+
+```
+
+### half fluid metabolites lifetime
+
+```{r}
+
+```
 
 Other things to do:
 
