@@ -41,7 +41,7 @@ print(df_types)
 
 ```{r}
 cross_table <- table(HSA$area_type_mode_5yrs_prior, HSA$had_HSA)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 
@@ -52,7 +52,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$MDI_quintile)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -61,7 +61,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$house_type_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -70,7 +70,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$water_source_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -79,7 +79,7 @@ Primary heat source
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$heating_fuel_primary_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -88,7 +88,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$cooking_fuel_primary_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -97,7 +97,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$pipes_metal_any_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -106,7 +106,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$pipes_plastic_any_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -115,7 +115,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$region_name_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -124,7 +124,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$state_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -135,7 +135,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_aerosol_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -144,7 +144,7 @@ Air cleaner
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_air_cleaner_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -153,7 +153,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_hepa_filter_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -162,7 +162,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_moth_balls_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -171,7 +171,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$use_incense_or_candles_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -180,7 +180,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$smoke_exposure_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -206,7 +206,7 @@ HSA %>%
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$any_treated_insects_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -215,7 +215,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$any_treated_weeds_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -224,7 +224,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$any_treated_fertilizer_exposed_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -237,7 +237,7 @@ NB. many dogs did not have a comorbidity, this may need removing?
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$chronic_inflam_present_5y)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -298,63 +298,63 @@ Parasitism
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_intestinal_parasitism_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_tick_borne_parasitism_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_other_parasitism_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_infectious_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_orthopaedic_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_immune_mediated_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_cardiovascular_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_gastrointestinal_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_inflammatory_other_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -375,35 +375,35 @@ HSA <- HSA %>%
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_orthopaedic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_immune_mediated)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_cardiovascular)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_gastrointestinal_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$comorb_inflammatory_other_chronic)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -477,7 +477,7 @@ HSA %>%
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$main_lifestyle_category_mode_5yrs_prior)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -606,7 +606,7 @@ HSA %>%
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$neuter)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -615,7 +615,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$sex_status)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -624,7 +624,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$sex)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -633,7 +633,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$neutered_reason)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -661,7 +661,7 @@ NB. need to combine this with entire dog records for "ever bred from variable" w
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$neutered_ever_bred)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -670,7 +670,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$ever_bred_from)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -683,7 +683,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_inflam_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -692,7 +692,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_microbials_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -701,7 +701,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_dietary_supplements_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -710,7 +710,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_enteric_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -719,7 +719,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_fluid_metabolites_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -728,7 +728,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_hormones_and_related_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -737,7 +737,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_immunologicals_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -746,7 +746,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_neurological_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -755,7 +755,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_parasites_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -764,7 +764,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_septics_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -773,7 +773,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_cardio_respiratory_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -782,7 +782,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_diuretics_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -791,7 +791,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_hist_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -800,7 +800,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_viral_5y_prior_endpoint)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -811,7 +811,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_inflam_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -820,7 +820,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_microbials_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -829,7 +829,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_dietary_supplements_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -838,7 +838,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_enteric_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -858,7 +858,7 @@ table(HSA$enteric_lifetime2
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_fluid_metabolites_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -867,7 +867,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_hormones_and_related_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -876,7 +876,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_immunologicals_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -885,7 +885,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_neurological_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -894,7 +894,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_parasites_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -903,7 +903,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_septics_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -912,7 +912,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_cardio_respiratory_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -921,7 +921,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_diuretics_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -930,7 +930,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_hist_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
@@ -939,7 +939,7 @@ print(cross_table_percent)
 
 ```{r}
 cross_table <- table(HSA$had_HSA,HSA$quartile_anti_viral_lifetime)
-cross_table_percent <- prop.table(cross_table) * 100
+cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
 ```
