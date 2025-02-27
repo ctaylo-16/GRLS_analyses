@@ -223,7 +223,7 @@ creating-HSA-RF-dataset
 #MDI
 MDI_dogs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
 MDI_dogs <- MDI_dogs %>%
-  dplyr::select(c(subject_id,MDI_quintile,MDI.rate))
+  dplyr::select(c(subject_id,MDI_quintile,MDI.rate,owner_MDI.rate,owner_MDI_quintile))
 #enviro
 enviro<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_house_location_enviro_exposures.csv")
 enviro <- enviro %>%
@@ -291,16 +291,25 @@ dog_weight <- dog_weight %>%
 dog_weight_HSA <- dog_weight %>%
   left_join(merged_HSA_data,by="subject_id")
 ###for record years 5y prior to endpoint record year do an average of weight
+# Function to calculate mode
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
+}
+
+# Modify your pipeline to include mode calculation for purina_BCS
 dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
   summarise(
-    avg_weight_5y_prior_endpoint = mean(weight),
-    avg_height_5y_prior_endpoint = mean(height),
-    avg_purina_BCS_5y_prior_endpoint = mean(purina_body_condition_score),
+    avg_weight_5y_prior_endpoint = mean(weight, na.rm = TRUE),
+    avg_height_5y_prior_endpoint = mean(height, na.rm = TRUE),
+    avg_purina_BCS_5y_prior_endpoint = mean(purina_body_condition_score, na.rm = TRUE),
+    mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score), # Mode calculation
     .groups = "drop"
   )
-  
+
+
 #remove extra columns before join
 
 #rejoin back to merged HSA data
@@ -317,7 +326,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(c(383:442), ~ replace(., is.na(.), "medication_use_not_recorded")))
+  mutate(across(c(387:446), ~ replace(., is.na(.), "medication_use_not_recorded")))
 
 merged_HSA_data <- merged_HSA_data %>%
   rename(study_year_first_chronic_inflam = study_year_first_chronic_inflam.x)

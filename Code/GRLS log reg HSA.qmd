@@ -1,0 +1,499 @@
+---
+title: "GRLS HSA vs non-HSA logistic regression"
+format: html
+editor: visual
+---
+
+## HSA GRLS cohort
+
+HSA cases vs non-case control logistic regression
+
+```{r}
+library(tidyverse)
+library(tidyverse)
+library(dplyr)
+library(survival)
+library(ggplot2)
+library(tibble)
+library(kableExtra)
+library(epiDisplay)
+library(lme4)
+#devtools::install_github("zabore/ezfun")
+ezfun::set_ccf_palette("contrast")
+library(lubridate)
+library(ggsurvfit)
+library(gtsummary)
+library(tidycmprsk)
+library(gtable)
+#devtools::install_github("zabore/condsurv")
+library(condsurv)
+library(survminer)
+library(cardx)
+library(finalfit)
+library(crosstable)
+library(kableExtra)
+cohort_abr <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
+```
+
+Converting columns to factors for analyses
+
+```{r}
+
+#replace all missing with NA (so "" and NA)
+cohort_abr <- cohort_abr %>%
+  mutate(across(everything(), as.character)) %>%  # Ensure all columns are character
+  mutate(across(everything(), ~na_if(.x, "n/a"))) %>%
+  mutate(across(everything(), ~na_if(.x, "NA"))) %>%
+  mutate(across(everything(), ~na_if(.x, "nr"))) %>%
+  mutate(across(everything(), ~na_if(.x, "not recorded"))) %>%
+  mutate(across(everything(), ~na_if(.x, ""))) %>%
+  mutate(across(everything(), ~replace_na(.x, "not_recorded")))
+cohort_abr$survival_time_months <- as.numeric(cohort_abr$survival_time_months)
+
+
+cohort_abr$status_factor <- as.factor(as.character(cohort_abr$had_HSA))
+cohort_abr$status <-as.numeric(cohort_abr$had_HSA) 
+cohort_abr$survival_time_months <- as.numeric(cohort_abr$survival_time_months)
+
+
+#manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
+#height
+cohort_abr <- cohort_abr%>%
+  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
+#weight
+cohort_abr <- cohort_abr%>%
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("9.75-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
+#bcs
+cohort_abr <- cohort_abr%>%
+  mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
+#neut age
+
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_neuter_years_quartiles = factor(age_at_neuter_years_quartiles, levels = c("0.15-<0.52y", ">=0.52-<0.83y", ">=0.83-2.44y", ">=2.44-9.59y","Entire","not_recorded")))
+#diagnosis age
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years","not_recorded")))
+
+#change spayed while in heat to account for males and entire females
+cohort_abr <- cohort_abr %>%
+  mutate(spayed_while_in_heat = case_when(
+    sex== "M" ~ "Male",
+    sex_status == "Intact Female" ~ "Intact Female",
+    spayed_while_in_heat == "0" ~ "0",
+    spayed_while_in_heat == "1" ~"1"
+  ))
+#same as above account for unnetered and males 
+cohort_abr$heats_before_neutering <- as.numeric(cohort_abr$heats_before_neutering)
+heats <- cohort_abr %>%
+# Convert to numeric
+  filter(heats_before_neutering != 0) %>% 
+# Remove rows where the column is 0
+  filter(heats_before_neutering != "not_recorded")%>%
+  dplyr::select(heats_before_neutering)# Keep only this column
+heats <- as.numeric(heats$heats_before_neutering)
+
+breaks <- get_breaks(heats, c(0, 0.25, 0.5, 0.75, 1))
+
+
+# Assign labels dynamically
+labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
+cohort_abr <- cohort_abr %>%
+  mutate(heats_before_neutering_terciles = case_when(
+    sex== "M" ~ "Male",
+    sex_status == "Intact Female" ~ "Intact Female",
+    heats_before_neutering == "0" ~ "0",
+    heats_before_neutering == "1" ~"1-<=2",
+    heats_before_neutering == "2" ~"1-<=2",
+    heats_before_neutering == "3" ~">2-<=4",
+    heats_before_neutering == "4" ~">2-<=4",
+    heats_before_neutering == "5" ~">4-12",
+    heats_before_neutering == "6" ~">4-12",
+    heats_before_neutering == "7" ~">4-12",
+    heats_before_neutering == "8" ~">4-12",
+    heats_before_neutering == "9" ~">4-12",
+    heats_before_neutering == "10" ~">4-12",
+    heats_before_neutering == "11" ~">4-12",
+    heats_before_neutering == "12" ~">4-12"
+  ))
+
+cohort_abr <- cohort_abr%>%
+  mutate(heats_before_neutering_terciles = factor(heats_before_neutering_terciles, levels = c("0", "1-<=2", ">2-<=4", ">4-12","Intact Female","Male","not_recorded")))
+
+
+#neuter reason levels
+cohort_abr <- cohort_abr%>%
+  mutate(neutered_reason = factor(neutered_reason, levels = c("Elective",  "Medical Reason", "Entire","Unknown")))
+
+
+cohort_abr <- cohort_abr%>%
+  mutate(mode_purina_BCS_5y_prior_endpoint = factor(mode_purina_BCS_5y_prior_endpoint, levels = c("5", "3", "4", "6","7","8","9","not_recorded")))
+
+
+#ensure not_recorded is default not baseline
+convert_and_relevel <- function(df) {
+  df <- df %>%
+    mutate(across(where(is.character), ~ factor(.))) %>%  # Convert all character columns to factors
+    mutate(across(where(is.factor), ~ fct_relevel(., "not_recorded", after = Inf)))  # Move "not_recorded" to last place
+  return(df)
+}
+
+# Apply to your dataset
+cohort_abr <- convert_and_relevel(cohort_abr)
+```
+
+## Univariable logstic regression
+
+-   Counts
+
+```{r}
+dependent <- "had_HSA"
+
+# All other variables as explanatory variables
+explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
+             "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
+             "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
+             "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
+             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic","comorb_other_parasitism_chronic","comorb_other_parasitism_chronic","comorb_orthopaedic_chronic","comorb_immune_mediated_chronic","comorb_cardiovascular_chronic","comorb_gastrointestinal_chronic","comorb_inflammatory_other_chronic","comorb_orthopaedic","comorb_immune_mediated","comorb_cardiovascular","comorb_gastrointestinal","comorb_inflammatory_other",
+ "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
+             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
+ "avg_activity_freq_sy1_2_terciles", 
+             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
+             "use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
+             "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life", 
+       #      "any_treated_weeds_study_years_early_life", "any_treated_insects_study_years_early_life", #"any_treated_fertilizer_study_years_early_life", 
+         #    "use_aerosol_sum_early_life", "use_air_cleaner_sum_early_life", "use_hepa_filter_sum_early_life", "use_moth_balls_sum_early_life", 
+          #   "use_incense_or_candles_sum_early_life", 
+ #"smoke_exposure_sum_early_life",
+ #"any_treated_weeds_sum_early_life", 
+    #         "any_treated_insects_sum_early_life", #"any_treated_fertilizer_sum_early_life", 
+ "use_aerosol_study_years_rest_of_life", 
+             "use_air_cleaner_study_years_rest_of_life", "use_hepa_filter_study_years_rest_of_life", "use_moth_balls_study_years_rest_of_life", 
+             "use_incense_or_candles_study_years_rest_of_life", "smoke_exposure_study_years_rest_of_life", "any_treated_weeds_study_years_rest_of_life", 
+             "any_treated_insects_study_years_rest_of_life", "any_treated_fertilizer_study_years_rest_of_life", #"use_aerosol_sum_rest_of_life", 
+ #            "use_air_cleaner_sum_rest_of_life", "use_hepa_filter_sum_rest_of_life", "use_moth_balls_sum_rest_of_life", 
+          #   "use_incense_or_candles_sum_rest_of_life", 
+# "smoke_exposure_sum_rest_of_life", 
+# "any_treated_weeds_sum_rest_of_life", 
+            # "any_treated_insects_sum_rest_of_life", "any_treated_fertilizer_sum_rest_of_life", 
+"use_aerosol_study_years_whole_life", 
+             "use_air_cleaner_study_years_whole_life", "use_hepa_filter_study_years_whole_life", "use_moth_balls_study_years_whole_life", 
+             "use_incense_or_candles_study_years_whole_life", "smoke_exposure_study_years_whole_life", "any_treated_weeds_study_years_whole_life", 
+             "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life",# "use_aerosol_sum_whole_life", 
+           #  "use_air_cleaner_sum_whole_life", "use_hepa_filter_sum_whole_life", "use_moth_balls_sum_whole_life",# "use_incense_or_candles_sum_whole_life", 
+            # "smoke_exposure_sum_whole_life", 
+ #"any_treated_weeds_sum_whole_life", "any_treated_insects_sum_whole_life", 
+            # "any_treated_fertilizer_sum_whole_life",
+ "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
+             "hours_of_smoke_whole_life_total_dosage_terciles", "in.the.garage_YN_study_years_early_life", "in.the.house_YN_study_years_early_life", 
+             "outside_YN_study_years_early_life",  "in.the.house_YN_sum_early_life_terciles", 
+             "in.the.garage_YN_study_years_rest_of_life", "in.the.house_YN_study_years_rest_of_life", "outside_YN_study_years_rest_of_life", 
+              "in.the.house_YN_sum_rest_of_life_quartiles",  
+             "in.the.garage_YN_study_years_whole_life", "in.the.house_YN_study_years_whole_life", "outside_YN_study_years_whole_life", 
+             "in.the.house_YN_sum_whole_life_quartiles",  
+             "majority_sleep_location_lifetime",  "main_lifestyle_category", 
+ "main_lifestyle_category_mode_5yrs_prior", "sleep_location_mode_5yrs_prior", 
+             "use_aerosol_exposed_5yrs_prior", "use_air_cleaner_exposed_5yrs_prior", "use_hepa_filter_exposed_5yrs_prior", 
+             "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
+             "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
+             "hours_of_smoke_exposure_hours_5yrs_prior_terciles", "sex", "neuter", "mismating_ever",
+             "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
+             "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
+             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
+             "preg_pre_neuter",# "mated_pre_neuter",
+ "num_breeding_before_neutering_quartiles", "ever_bred_from", 
+              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
+             "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
+             "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
+             "quartile_anti_inflam_lifetime", "quartile_anti_microbials_lifetime", "quartile_dietary_supplements_lifetime", 
+            #not enough data for quartiles "quartile_enteric_lifetime", "quartile_fluid_metabolites_lifetime", 
+ "quartile_hormones_and_related_lifetime", 
+             "quartile_immunologicals_lifetime", "quartile_misc_lifetime", "quartile_neurological_lifetime", 
+             "quartile_anti_parasites_lifetime", 
+ #not enough data for quartiles "quartile_anti_septics_lifetime", "quartile_cardio_respiratory_lifetime",   "quartile_diuretics_lifetime", "quartile_anti_hist_lifetime", 
+             "half_anti_inflam_5y_prior_endpoint", "half_anti_microbials_5y_prior_endpoint", "half_enteric_5y_prior_endpoint", 
+             "half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint", "half_neurological_5y_prior_endpoint", 
+             "half_anti_parasites_5y_prior_endpoint", "half_dietary_supplements_5y_prior_endpoint", 
+             "half_anti_septics_5y_prior_endpoint", "half_hormones_and_related_5y_prior_endpoint", 
+             "half_cardio_respiratory_5y_prior_endpoint", "half_fluid_metabolites_5y_prior_endpoint", 
+             "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", 
+             "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint", 
+            # "quartile_enteric_5y_prior_endpoint",
+ "quartile_immunologicals_5y_prior_endpoint", 
+             "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
+             "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
+       #      "quartile_anti_septics_5y_prior_endpoint", 
+ "quartile_hormones_and_related_5y_prior_endpoint", 
+          #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
+         #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
+             #"quartile_anti_viral_5y_prior_endpoint",
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles")
+
+# Create a univariable logistic regression table
+univar_table <- cohort_abr %>%summary_factorlist(dependent, explanatory, 
+  p=TRUE,  add_dependent_label=TRUE)
+
+
+univar_table2 <- cohort_abr %>%summary_factorlist(dependent, explanatory, 
+  p=TRUE,  add_dependent_label=TRUE,na_include = TRUE)
+# View the results
+print(univar_table)
+```
+
+-   Univar log reg with ORs
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/univar_log_reg_auto.R")
+
+cohort_abr$had_HSA <- as.factor(cohort_abr$had_HSA)
+
+#leaving out the continuous variables as missing data causing issues
+#"max_tumour_cm_value" "age_at_diagnosis_cont"
+cohort_abr2 <- cohort_abr %>%
+  dplyr::select("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
+             "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
+             "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
+             "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
+             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic","comorb_other_parasitism_chronic","comorb_other_parasitism_chronic","comorb_orthopaedic_chronic","comorb_immune_mediated_chronic","comorb_cardiovascular_chronic","comorb_gastrointestinal_chronic","comorb_inflammatory_other_chronic","comorb_orthopaedic","comorb_immune_mediated","comorb_cardiovascular","comorb_gastrointestinal","comorb_inflammatory_other",
+ "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
+             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
+ "avg_activity_freq_sy1_2_terciles", 
+             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
+             "use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
+             "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life", 
+       #      "any_treated_weeds_study_years_early_life", "any_treated_insects_study_years_early_life", #"any_treated_fertilizer_study_years_early_life", 
+         #    "use_aerosol_sum_early_life", "use_air_cleaner_sum_early_life", "use_hepa_filter_sum_early_life", "use_moth_balls_sum_early_life", 
+          #   "use_incense_or_candles_sum_early_life", 
+ #"smoke_exposure_sum_early_life",
+ #"any_treated_weeds_sum_early_life", 
+    #         "any_treated_insects_sum_early_life", #"any_treated_fertilizer_sum_early_life", 
+ "use_aerosol_study_years_rest_of_life", 
+             "use_air_cleaner_study_years_rest_of_life", "use_hepa_filter_study_years_rest_of_life", "use_moth_balls_study_years_rest_of_life", 
+             "use_incense_or_candles_study_years_rest_of_life", "smoke_exposure_study_years_rest_of_life", "any_treated_weeds_study_years_rest_of_life", 
+             "any_treated_insects_study_years_rest_of_life", "any_treated_fertilizer_study_years_rest_of_life", #"use_aerosol_sum_rest_of_life", 
+ #            "use_air_cleaner_sum_rest_of_life", "use_hepa_filter_sum_rest_of_life", "use_moth_balls_sum_rest_of_life", 
+          #   "use_incense_or_candles_sum_rest_of_life", 
+# "smoke_exposure_sum_rest_of_life", 
+# "any_treated_weeds_sum_rest_of_life", 
+            # "any_treated_insects_sum_rest_of_life", "any_treated_fertilizer_sum_rest_of_life", 
+"use_aerosol_study_years_whole_life", 
+             "use_air_cleaner_study_years_whole_life", "use_hepa_filter_study_years_whole_life", "use_moth_balls_study_years_whole_life", 
+             "use_incense_or_candles_study_years_whole_life", "smoke_exposure_study_years_whole_life", "any_treated_weeds_study_years_whole_life", 
+             "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life",# "use_aerosol_sum_whole_life", 
+           #  "use_air_cleaner_sum_whole_life", "use_hepa_filter_sum_whole_life", "use_moth_balls_sum_whole_life",# "use_incense_or_candles_sum_whole_life", 
+            # "smoke_exposure_sum_whole_life", 
+ #"any_treated_weeds_sum_whole_life", "any_treated_insects_sum_whole_life", 
+            # "any_treated_fertilizer_sum_whole_life",
+ "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
+             "hours_of_smoke_whole_life_total_dosage_terciles", "in.the.garage_YN_study_years_early_life", "in.the.house_YN_study_years_early_life", 
+             "outside_YN_study_years_early_life",  "in.the.house_YN_sum_early_life_terciles", 
+             "in.the.garage_YN_study_years_rest_of_life", "in.the.house_YN_study_years_rest_of_life", "outside_YN_study_years_rest_of_life", 
+              "in.the.house_YN_sum_rest_of_life_quartiles",  
+             "in.the.garage_YN_study_years_whole_life", "in.the.house_YN_study_years_whole_life", "outside_YN_study_years_whole_life", 
+             "in.the.house_YN_sum_whole_life_quartiles",  
+             "majority_sleep_location_lifetime",  "main_lifestyle_category", 
+ "main_lifestyle_category_mode_5yrs_prior", "sleep_location_mode_5yrs_prior", 
+             "use_aerosol_exposed_5yrs_prior", "use_air_cleaner_exposed_5yrs_prior", "use_hepa_filter_exposed_5yrs_prior", 
+             "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
+             "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
+             "hours_of_smoke_exposure_hours_5yrs_prior_terciles", "sex", "neuter", "mismating_ever",
+             "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
+             "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
+             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
+             "preg_pre_neuter",# "mated_pre_neuter",
+ "num_breeding_before_neutering_quartiles", "ever_bred_from", 
+              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
+             "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
+             "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
+             "quartile_anti_inflam_lifetime", "quartile_anti_microbials_lifetime", "quartile_dietary_supplements_lifetime", 
+            #not enough data for quartiles "quartile_enteric_lifetime", "quartile_fluid_metabolites_lifetime", 
+ "quartile_hormones_and_related_lifetime", 
+             "quartile_immunologicals_lifetime", "quartile_misc_lifetime", "quartile_neurological_lifetime", 
+             "quartile_anti_parasites_lifetime", 
+ #not enough data for quartiles "quartile_anti_septics_lifetime", "quartile_cardio_respiratory_lifetime",   "quartile_diuretics_lifetime", "quartile_anti_hist_lifetime", 
+             "half_anti_inflam_5y_prior_endpoint", "half_anti_microbials_5y_prior_endpoint", "half_enteric_5y_prior_endpoint", 
+             "half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint", "half_neurological_5y_prior_endpoint", 
+             "half_anti_parasites_5y_prior_endpoint", "half_dietary_supplements_5y_prior_endpoint", 
+             "half_anti_septics_5y_prior_endpoint", "half_hormones_and_related_5y_prior_endpoint", 
+             "half_cardio_respiratory_5y_prior_endpoint", "half_fluid_metabolites_5y_prior_endpoint", 
+             "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", 
+             "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint", 
+            # "quartile_enteric_5y_prior_endpoint",
+ "quartile_immunologicals_5y_prior_endpoint", 
+             "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
+             "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
+       #      "quartile_anti_septics_5y_prior_endpoint", 
+ "quartile_hormones_and_related_5y_prior_endpoint", 
+          #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
+         #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
+             #"quartile_anti_viral_5y_prior_endpoint",
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "had_HSA")
+
+cohort_abr2<- cohort_abr2%>%
+  mutate_all(~factor(ifelse(is.na(.), "not_recorded", as.character(.))))
+univar_logistic_regression(cohort_abr2, "had_HSA", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
+```
+
+Potentially significant univariable variables:
+
+```{r}
+lrt_pvalues <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
+multivar_variables <- lrt_pvalues %>%
+  filter(LR_T_pvalue <= 0.2) %>%
+  distinct(predictor)
+cols_to_keep = multivar_variables$predictor
+cols_to_keep <- append(cols_to_keep, "had_HSA")
+cohort_abr_sig <- cohort_abr2[,cols_to_keep]
+
+
+```
+
+## Multivariable logistic regression
+
+Assessing collinearity of potentially sig univariable variables:
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
+#use sig variables list generated above
+
+create_corr_matrix(cohort_abr_sig,c(1:109), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.png")
+```
+
+Correlated variables
+
+```{r}
+corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv")
+
+#ditch rows where variable 1 and 2 values are same as in another row :
+corr_values2 <- corr_values %>%
+  dplyr::select(-c(X))
+
+corr_values3 <- corr_values2 %>%
+  mutate(Var1_sorted = pmin(Variable1, Variable2),  
+         Var2_sorted = pmax(Variable1, Variable2)) %>%  
+  distinct(Var1_sorted, Var2_sorted, Correlation, .keep_all = TRUE) %>%  
+  dplyr::select(-c(Var1_sorted, Var2_sorted))  # Remove helper columns
+
+
+print(corr_values3)
+```
+
+Correlated variables (99):
+
+-   Comorbidities
+
+    -   5y vs lifetime
+
+    -   comorb inflam vs chronic inflam
+
+    -   time between comorb and endpoint and diagnosis after comorb
+
+-   Activity
+
+    -   activity freq and intensity for SY3+
+
+-   Enviro
+
+    -   hours of smoke whole life and smoke exposure YN early life
+
+    -   for all the exposure YN variables corr between early vs whole vs rest vs 5y prior
+
+    -   fertilizer and weeds 5y prior
+
+-   Repro
+
+    -   sex and spayed in heat, no preg ever, heats before neutering,age at neuter quartiles (and amongst all these variables)
+
+    -   
+
+-   Medications
+
+    -   half vs quartile and lifetime vs 5y for most are correlated
+
+    -   fluid metabolites and diuretic and antihistamines
+
+Automated log reg model building
+
+```{r}
+sig_variables <- unique(multivar_variables$predictor)
+
+# Construct formula for full model
+full_formula <- as.formula(paste("had_HSA ~", paste(sig_variables, collapse = " + ")))
+
+# Build the null model
+model_null <- glm(had_HSA ~ 1, data = cohort_abr_sig, family = binomial)
+
+# Build the full model
+model_full <- glm(full_formula, data = cohort_abr_sig, family = binomial)
+
+# Display model summary
+summary(model_full)
+#check VIF of full model - doesnt run as aliased coeffs
+#vif_values <- car::vif(model_full)
+
+# Stepwise selection using both directions and LRT test
+step(model_null,
+     scope = list(upper = model_full),
+     direction = "both",
+     test = "LRT",
+     data = df_for_multivar)
+```
+
+Automated model final:
+
+```{r}
+model_auto <- glm(formula = had_HSA ~ age_at_final_date_quartiles + in.the.house_YN_study_years_rest_of_life + 
+    avg_frequency_5y_prior_endpoint_quartiles + mode_purina_BCS_5y_prior_endpoint + 
+    avg_height_5y_prior_endpoint_quartiles + cooking_fuel_secondary_mode_5yrs_prior + 
+    in.the.house_YN_sum_whole_life_quartiles + quartile_anti_parasites_5y_prior_endpoint + 
+    quartile_anti_parasites_lifetime + avg_weight_5y_prior_endpoint_quartiles + 
+    no_pregnancy_ever + comorb_immune_mediated_chronic + number_comorbs_present_lifetime + 
+    comorb_inflammatory_other + in.the.house_YN_sum_rest_of_life_quartiles + 
+    mismating_ever + smoke_exposure_study_years_early_life + 
+    main_lifestyle_category + outside_YN_study_years_early_life, 
+    family = binomial, data = cohort_abr_sig)
+summary(model_auto)
+#car::vif(model_auto)
+
+dependent ="had_HSA"
+explanatory2 <- c(
+  "age_at_final_date_quartiles", 
+  "in.the.house_YN_study_years_rest_of_life", 
+  "avg_frequency_5y_prior_endpoint_quartiles", 
+  "mode_purina_BCS_5y_prior_endpoint", 
+  "avg_height_5y_prior_endpoint_quartiles", 
+  "cooking_fuel_secondary_mode_5yrs_prior", 
+  "in.the.house_YN_sum_whole_life_quartiles", 
+  "quartile_anti_parasites_5y_prior_endpoint", 
+  "quartile_anti_parasites_lifetime", 
+  "avg_weight_5y_prior_endpoint_quartiles", 
+  "no_pregnancy_ever", 
+  "comorb_immune_mediated_chronic", 
+  "number_comorbs_present_lifetime", 
+  "comorb_inflammatory_other", 
+  "in.the.house_YN_sum_rest_of_life_quartiles", 
+  "mismating_ever", 
+  "smoke_exposure_study_years_early_life", 
+  "main_lifestyle_category", 
+  "outside_YN_study_years_early_life"
+)
+
+# only presenting factors not management factors - explanatory_2 <- c("haem_cs_present","mass_cs_present","no_cs_present","splenic_interest")
+cohort_abr_sig %>%
+  finalfit(dependent, explanatory2, metrics=TRUE) -> t2
+knitr::kable(t2[[1]], row.names=FALSE, align=c("l", "l", "r", "r", "r", "r"))
+knitr::kable(t2[[2]], row.names=FALSE, col.names="")
+```
+
+Multivariable model building from most significant to least (p\<0.2) :
+
+```{r}
+
+```

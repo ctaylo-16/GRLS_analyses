@@ -45,7 +45,7 @@ MDI_2019 <- MDI_2019 %>%
 Need to calculate quintiles for MDI 2019 across all counties and then apply this to our clinics
 
 ```{r}
-MDI_quintiles <- quantile(MDI_2019$MDI.rate, probs = seq(0, 1, 0.2))
+MDI_quintiles <- quantile(MDI_2019$MDI.rate, probs = seq(0, 1, 0.2),na.rm = TRUE)
 
 
 MDI_2019$MDI_quintile <- cut(MDI_2019$MDI.rate, breaks = MDI_quintiles, include.lowest = TRUE, labels = 1:5)
@@ -57,5 +57,61 @@ Join MDI data to clinics
 ```{r}
 clinics_and_fips2_mdi <- clinics_and_fips2 %>% left_join (MDI_2019,by="county_fips" )
 
-write.csv(clinics_and_fips2_mdi,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+
+```
+
+Calculate Owner MDI
+
+```{r}
+owner_address <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+owner_address <- owner_address %>%
+  dplyr::select(c(subject_id,year_in_study,primary_zip_code))
+
+#get mode of postcode
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
+}
+
+# Keep only mode postcode per patient
+owner_address <- owner_address %>%
+  group_by(subject_id) %>%
+  summarise(mode_zipcode= get_mode(primary_zip_code), .groups = "drop")
+
+#keep only single row for each 
+
+owner_address<- owner_address %>%
+  mutate(postal_code = substr(mode_zipcode
+, 1, 5))
+
+owner_address$postal_code <- as.numeric(owner_address$postal_code)
+
+
+#join clinics up to the FIPS data
+owner_and_fips <- owner_address %>% left_join(FIPS, by = "postal_code")
+
+#delete redundant columns
+owner_and_fips2 <- owner_and_fips %>%
+  dplyr::select(c(subject_id,mode_zipcode, postal_code,county_fips,county_name))
+
+
+owner_and_fips2_mdi <- owner_and_fips2 %>% left_join (MDI_2019,by="county_fips" )
+
+owner_and_fips2_mdi <- owner_and_fips2_mdi %>%
+  rename(owner_MDI.rate= MDI.rate,
+         owner_MDI_quintile=MDI_quintile)
+
+owner_and_fips2_mdi <- owner_and_fips2_mdi %>%
+  dplyr::select(c(subject_id,owner_MDI.rate,owner_MDI_quintile))
+```
+
+Combine all
+
+```{r}
+owner_and_clinic_fips <- clinics_and_fips2_mdi %>%
+  left_join(owner_and_fips2_mdi, by="subject_id")
+
+owner_and_clinic_fips <- owner_and_clinic_fips %>%
+  dplyr::select(c(subject_id,clinic_name,MDI.rate,MDI_quintile,owner_MDI.rate,owner_MDI_quintile))
+write.csv(owner_and_clinic_fips,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
 ```

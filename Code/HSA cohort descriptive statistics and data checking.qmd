@@ -598,6 +598,18 @@ HSA %>%
     n = n(),
     n_missing = sum(is.na(avg_purina_BCS_5y_prior_endpoint))
   )
+
+
+HSA %>%
+    summarize(
+    mean_bcs = mean(mode_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    median_bcs = median(mode_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    sd_bcs= sd(mode_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    min_bcs = min(mode_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    max_bcs= max(mode_purina_BCS_5y_prior_endpoint, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(mode_purina_BCS_5y_prior_endpoint))
+  )
 ```
 
 ### Reproduction
@@ -846,12 +858,7 @@ print(cross_table_percent)
 \*convert to had/didnt have
 
 ```{r}
-HSA <- HSA %>%
-  mutate(enteric_lifetime2 = recode(quartile_enteric_lifetime, "Q1" = "drug_administered",
-                                    "Q4"="drug_administered"))
 
-table(HSA$enteric_lifetime2
-      )
 ```
 
 ##### Fluid metabolites
@@ -942,4 +949,8 @@ cross_table <- table(HSA$had_HSA,HSA$quartile_anti_viral_lifetime)
 cross_table_percent <- prop.table(cross_table, margin = 1) * 100
 print(cross_table)
 print(cross_table_percent)
+```
+
+```{r}
+write.csv(HSA,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied2.csv")
 ```
