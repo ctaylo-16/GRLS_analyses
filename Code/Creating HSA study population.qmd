@@ -300,6 +300,9 @@ get_mode <- function(x) {
 }
 
 # Modify  pipeline to include mode calculation for purina_BCS
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
