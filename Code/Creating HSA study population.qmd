@@ -291,6 +291,16 @@ dog_weight <- dog_weight %>%
 dog_weight_HSA <- dog_weight %>%
   left_join(merged_HSA_data,by="subject_id")
 ###for record years 5y prior to endpoint record year do an average of weight
+<<<<<<< Updated upstream
+=======
+# Function to calculate mode
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
+}
+
+# Modify  pipeline to include mode calculation for purina_BCS
+>>>>>>> Stashed changes
 dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%

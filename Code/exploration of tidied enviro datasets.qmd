@@ -132,8 +132,9 @@ for (col in cols) {
 ```{r}
 endpoints_house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_all_house_location.csv")
 print(colnames(endpoints_house))
-endpoints_house_abr <- endpoints_house%>%
-  dplyr::select(c(subject_id,house_type,area_type,asbestos_exposure, radon_exposure,68:149,152,162:171))
+endpoints_house_abr <- endpoints_house
+#%>%
+ # dplyr::select(c(subject_id,house_type,area_type,asbestos_exposure, radon_exposure,68:149,152,162:171))
 house_dead_only <- endpoints_house_abr %>%
   filter(subject_id %in% dead_subject_ids)
 
@@ -241,7 +242,7 @@ enviro_repro <- enviro_repro %>%
 enviro_repro_house <- enviro_repro %>%
   left_join(house_dead_only,by="subject_id")
 enviro_repro_house <- enviro_repro_house %>%
-  dplyr::select(-diagnosis_date, - had_lymphoma.x,-had_lymphoma.y)
+  dplyr::select(- had_lymphoma.x,-had_lymphoma.y)
 enviro_repro_house_comorb <- enviro_repro_house %>%
   left_join(endpoints_comorb, by="subject_id") %>%
   #keep only distinct rows in the join 
@@ -266,8 +267,9 @@ condition_df <- enviro_repro_house_comorb %>%
   group_by(subject_id) %>%
   mutate(condition_number = row_number()) %>%
   ungroup()
-
-
+#rename the .x columns
+condition_df <-condition_df %>%
+  rename(tracked_condition = tracked_condition.x)
 # Reshape data to wide format
 enviro_repro_house_comorb_single_subjectid_wide <-condition_df %>%
   pivot_wider(
@@ -377,6 +379,99 @@ enviro_repro_house_comorb_profile_activity <- enviro_repro_house_comorb_profile 
   left_join(activity,by="subject_id")
 ```
 
+Add in weight data for demographics dataset
+
+```{r}
+###add in weight and BCS data for the dogs
+dog_weight <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical.csv")
+dog_weight <- dog_weight %>%
+  dplyr::select(c(subject_id,year_in_study,height,weight,purina_body_condition_score))
+#get endpoints data to calc BCS 5y
+endpoints_years <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+endpoints_years <- endpoints_years %>%
+  dplyr::select(c(subject_id,year_in_study))
+#rename year_in_study
+endpoints_years <- endpoints_years %>%
+  rename(endpoint_year_in_study= year_in_study)
+dog_weight_endpoints <- dog_weight %>%
+  left_join(endpoints_years,by="subject_id")
+###for record years 5y prior to endpoint record year do an average of weight and height and BCS and also mode BCS
+#funct for BCS mode
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
+}
+
+
+dog_weight_endpoints2 <- dog_weight_endpoints %>%
+  group_by(subject_id) %>%
+  filter(year_in_study >= (endpoint_year_in_study - 5)) %>%
+  summarise(
+    avg_weight_5y_prior_endpoint = mean(weight, na.rm = TRUE),
+    avg_height_5y_prior_endpoint = mean(height, na.rm = TRUE),
+    avg_purina_BCS_5y_prior_endpoint = mean(purina_body_condition_score, na.rm = TRUE),
+    mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score), # Mode calculation
+    .groups = "drop"
+  )
+
+#remove outliers of this dataset and convert to kg and cm
+dog_weight_endpoints2 <- dog_weight_endpoints2 %>%
+  mutate(avg_weight_5y_prior_endpoint_kg = avg_weight_5y_prior_endpoint * 0.453)
+
+
+#how does data look now
+dog_weight_endpoints2 %>%
+    summarize(
+    mean_weight = mean(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    median_weight = median(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    sd_weight = sd(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    min_weight = min(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    max_weight= max(avg_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_weight_5y_prior_endpoint_kg))
+  )
+#remove outliers >1.5X above IQR
+
+Q1 <- quantile(dog_weight_endpoints2$avg_weight_5y_prior_endpoint_kg, 0.25, na.rm = TRUE)
+Q3 <- quantile(dog_weight_endpoints2$avg_weight_5y_prior_endpoint_kg, 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+dog_weight_endpoints2 <- dog_weight_endpoints2 %>%
+  mutate(avg_weight_5y_prior_endpoint_kg_outliers_removed= ifelse(avg_weight_5y_prior_endpoint_kg < (Q1 - 1.5 * IQR) | avg_weight_5y_prior_endpoint_kg > (Q3 + 1.5 * IQR), NA, avg_weight_5y_prior_endpoint_kg))
+
+#height
+dog_weight_endpoints2<- dog_weight_endpoints2%>%
+  mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
+
+
+#how does data look now
+dog_weight_endpoints2 %>%
+    summarize(
+    mean_height = mean(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    median_height = median(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    sd_height = sd(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    min_height = min(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    max_height= max(avg_height_5y_prior_endpoint_cm, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(avg_height_5y_prior_endpoint_cm))
+  )
+#remove outliers >1.5X above IQR
+
+Q1 <- quantile(dog_weight_endpoints2$avg_height_5y_prior_endpoint_cm, 0.25, na.rm = TRUE)
+Q3 <- quantile(dog_weight_endpoints2$avg_height_5y_prior_endpoint_cm, 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+dog_weight_endpoints2 <- dog_weight_endpoints2%>%
+  mutate(avg_height_5y_prior_endpoint_cm_outliers_removed= ifelse(avg_height_5y_prior_endpoint_cm < (Q1 - 1.5 * IQR) | avg_height_5y_prior_endpoint_cm > (Q3 + 1.5 * IQR), NA, avg_height_5y_prior_endpoint_cm))
+
+#keep only tidied columns
+dog_weight_endpoints3 <- dog_weight_endpoints2 %>%
+  dplyr::select(c(subject_id,avg_purina_BCS_5y_prior_endpoint,mode_purina_BCS_5y_prior_endpoint,avg_weight_5y_prior_endpoint_kg_outliers_removed,avg_height_5y_prior_endpoint_cm_outliers_removed))
+#join this to the enviro dataset
+enviro_repro_house_comorb_profile_activity <- enviro_repro_house_comorb_profile_activity %>%
+  left_join(dog_weight_endpoints3,by="subject_id")
+```
+
 Save all cols of whole dataset
 
 ```{r}
@@ -403,7 +498,7 @@ Dataset 1 = demographic variables = age at diagnosis, sex, neuter status, other 
 
 ```{r}
 demographics <- enviro_repro_house_comorb_profile_activity %>%
-  dplyr::select(c(subject_id,had_lymphoma,main_lifestyle_category,sex,neuter,age_at_neuter_years,age_at_endpoint_diagnosis, age_at_death,time_enrolled,heats_before_neutering,num_bred_before_neutering,neutered_reason,region_name_mode_whole_life,area_type))
+  dplyr::select(c(subject_id,had_lymphoma,main_lifestyle_category,sex,neuter,age_at_neuter_years,age_at_endpoint_diagnosis, age_at_death,time_enrolled,heats_before_neutering,num_bred_before_neutering,neutered_reason,region_name_mode_whole_life,area_type,avg_weight_5y_prior_endpoint_kg_outliers_removed,avg_height_5y_prior_endpoint_cm_outliers_removed,avg_purina_BCS_5y_prior_endpoint,mode_purina_BCS_5y_prior_endpoint))
 
 
 #write.csv(demographics,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
