@@ -788,6 +788,11 @@ convert_and_relevel <- function(df) {
 
 # Apply to your dataset
 cohort_abr <- convert_and_relevel(cohort_abr)
+cohort_abr$status_factor <- as.factor(as.character(cohort_abr$had_HSA))
+cohort_abr$status <-as.numeric(cohort_abr$had_HSA) 
+cohort_abr$survival_time_months <- as.numeric(cohort_abr$survival_time_months)
+#have written my function package stupidly so need to call the variable specifically survival_time_days even though for here using months
+cohort_abr$survival_time_days <- as.numeric(cohort_abr$survival_time_months)
 ```
 
 ## Kaplan Meier curves
@@ -804,7 +809,7 @@ survfit(Surv(cohort_abr$survival_time_months, cohort_abr$status) ~ 1, data = coh
 
 Age
 
-```{r}
+```{r,eval=FALSE}
 survdiff(Surv(survival_time_months, status) ~ age_at_final_date_quartiles, data = cohort_abr)
 
 #KM for neuter
@@ -1403,26 +1408,6 @@ cox_model_null <- coxph(Surv(survival_time_days, status) ~1
 summary(cox_model_null)
 ```
 
-### Age at endpoint - not sure this is a variable to include??
-
-```{r,error=FALSE}
-cox_model_1<- coxph(Surv(survival_time_days, status) ~  age_at_final_date_quartiles
-, data = cohort_abr_sig)
-
-#vif(cox_model_1)
-
-explanatory <- c("age_at_final_date_quartiles")
-dependent = 'Surv(survival_time_days,status)'
-# Summarize the Cox model output in a table
-mod <- cohort_abr_sig %>%
-  coxphmulti(dependent,explanatory)%>%
-  fit2df()
-
-mod
-
-
-analyse_model(cox_model_1,cohort_abr_sig,cox_model_null)
-```
 
 ### Weight quartiles 5y prior
 
@@ -2337,12 +2322,6 @@ mod
 
 ```
 
-```{r}
-cross_table <- table(cohort_abr_sig$status_factor,cohort_abr_sig$age_at_final_date_quartiles)
-cross_table_percent <- prop.table(cross_table, margin = 1) * 100
-print(cross_table)
-print(cross_table_percent)
-```
 
 Verify that BCS and weight should both be in final model
 
@@ -2401,21 +2380,7 @@ library(gtsummary)
 tbl_regression(cox_model_f, exponentiate = TRUE)
 ```
 
-Age in
 
-```{r}
-cox_model_age<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
-+ comorb_intestinal_parasitism_chronic +comorb_tick_borne_parasitism_chronic +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life + age_at_final_date_quartiles
-, data = cohort_abr_sig)
-
-vif(cox_model_weight_and_BCS)
-
-analyse_model(cox_model_age,cohort_abr_sig,cox_model_weight_and_BCS)
-
-library(gtsummary)
-tbl_regression(cox_model_age, exponentiate = TRUE)
-```
 
 ```{r}
 HSA_multivar_cox_ph_int <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
@@ -2439,7 +2404,7 @@ ggforest(HSA_multivar_cox_ph_int, data = cohort_abr_sig, fontsize = 1) + ggtitle
 ```{r}
 dependent = "Surv(survival_time_days, status)"
 explanatory = c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles","neutered_reason",
-                 "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic"#,"age_at_final_date_quartiles"
+                 "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic"
                 )
 
 ph_schoen <- cohort_abr_sig %>% 
@@ -2454,32 +2419,13 @@ zph_result
 
 ```
 
-Assess stratifying by age
 
-\- improves but doesnt resolve for weight, activity frequency, parasite treatment and sex
-
-```{r}
-dependent = "Surv(survival_time_days, status)"
-explanatory = c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles","neutered_reason",
-                 "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic","strata(age_at_final_date_quartiles)")
-
-ph_schoen <- cohort_abr_sig %>% 
-    coxphmulti(dependent, explanatory) %>% 
-    cox.zph() %>% 
-    {zph_result <<- .} %>% 
-    plot(var=6)
-
-zph_result
-
-
-```
 
 Consider if swap out weight and BCS avg quartiles for just mode BCS or just weight:
 
 ```{r}
 dependent = "Surv(survival_time_days, status)" 
-explanatory = c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles","neutered_reason", "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic"#,"age_at_final_date_quartiles" 
-                )
+explanatory = c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles","neutered_reason", "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic")
 
 ph_schoen <- cohort_abr_sig %>% coxphmulti(dependent, explanatory) %>% cox.zph() %>% {zph_result <<- .} %>% plot(var=6)
 

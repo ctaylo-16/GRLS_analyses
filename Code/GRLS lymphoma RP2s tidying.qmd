@@ -1033,6 +1033,45 @@ table(GRLS_lymphoma$BCS.at.diagnosis)
 })  
 ```
 
+### Calculate survival time from diagnosis and presentation
+
+```{r}
+#combine date of death and final record column
+GRLS_lymphoma<- GRLS_lymphoma %>%
+    mutate(defin_diagnosis_date =as.Date(defin_date,format="%Y-%m-%d"),
+         final_record_date_any2 = as.Date(final_record_date_any,format="%Y-%m-%d"),date_signs_noticed_O = as.Date(OR_signs_date,format="%Y-%m-%d") )
+
+ GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(final_record_date_any2 = replace_na(final_record_date_any2, as.Date("2024-12-01"))) 
+  
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(
+    survival_time_days_defin_diag = round(as.numeric(difftime(final_record_date_any2, defin_diagnosis_date, units = "days")), 2),
+    survival_time_weeks_defin_diag = round(as.numeric(difftime(final_record_date_any2, defin_diagnosis_date, units = "weeks")), 2),
+    survival_time_months_defin_diag = round(time_length(interval(defin_diagnosis_date, final_record_date_any2), "months"), 2),
+    survival_time_year_defin_diag = round(time_length(interval(defin_diagnosis_date, final_record_date_any2), "years"), 2)
+  )
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(
+    survival_time_days_first_pres = round(as.numeric(difftime(final_record_date_any2, date_signs_noticed_O, units = "days")), 2),
+    survival_time_weeks_first_pres = round(as.numeric(difftime(final_record_date_any2, date_signs_noticed_O, units = "weeks")), 2),
+    survival_time_months_first_pres = round(time_length(interval(date_signs_noticed_O, final_record_date_any2), "months"), 2),
+    survival_time_year_first_pres = round(time_length(interval(date_signs_noticed_O, final_record_date_any2), "years"), 2)
+  )
+
+
+#any neg ones put as 0 - e.g defin diagnosis happened after 
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(across(
+    c(survival_time_days_defin_diag, survival_time_weeks_defin_diag, 
+      survival_time_months_defin_diag, survival_time_year_defin_diag,
+      survival_time_days_first_pres, survival_time_weeks_first_pres, 
+      survival_time_months_first_pres, survival_time_year_first_pres),
+    ~ ifelse(. < 0, 0, .)
+  ))
+```
+
 ### Final sense checks
 
 ```{r}
@@ -1047,8 +1086,13 @@ print(subset_df)
 summary(subset_df)
 #e.gfor comorb and drug cols and necropsy locations- NAs and empty cells replaced with not recorded
 #replace all NAs with not recorded 
+
 GRLS_lymphoma <- GRLS_lymphoma %>%
-  mutate_all(~replace(., is.na(.), "not_recorded"))
+  mutate(across(where(~ !inherits(., "Date")), ~ replace(., is.na(.), "not_recorded")))
+
+
+GRLS_lymphoma <- GRLS_lymphoma %>%
+  mutate(across(where(is.character), ~ recode(., "n" = "no", "y" = "yes")))
 
 ```
 
@@ -1058,8 +1102,8 @@ GRLS_lymphoma <- GRLS_lymphoma %>%
 #all columns
 write.csv(GRLS_lymphoma, "C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/GRLS lymphoma RP2 projects/clinical_records_coding_compiled_CT_tidy_and_original_columns.csv")
 #tidied dataset
-GRLS_lymphoma_tidy  <- GRLS_lymphoma2 %>%
-  dplyr::select(c(PatientID,Lymphoma.confirmed.with.necropsy.histology.cytology,Weight.at.diagnosis..kg.,Weight.at.death.kg.,BCS.at.diagnosis2,BCS.at.death2,first_pres_date,defin_date,neut_date,OR_signs_date,final_chemo_date,final_record_date_any,age_defin_diagnosis_y,age_first_pres_y,age_at_neuter_y,age_final_record_y,age_final_chemo_y,diagnosis_to_final_chemo_time,symptoms_to_first_pres,symptoms_to_defin_diagnosis,neuter_diagnosis_tidy,sex_tidy,mechanism_of_death_tidy,117,119:127,147:239))
+GRLS_lymphoma_tidy  <- GRLS_lymphoma %>%
+  dplyr::select(c(PatientID,Lymphoma.confirmed.with.necropsy.histology.cytology,Weight.at.diagnosis..kg.,Weight.at.death.kg.,BCS.at.diagnosis2,BCS.at.death2,first_pres_date,defin_date,neut_date,OR_signs_date,final_chemo_date,final_record_date_any,age_defin_diagnosis_y,age_first_pres_y,age_at_neuter_y,age_final_record_y,age_final_chemo_y,diagnosis_to_final_chemo_time,symptoms_to_first_pres,symptoms_to_defin_diagnosis,neuter_diagnosis_tidy,sex_tidy,mechanism_of_death_tidy,117,119:127,147:252))
 
 write.csv(GRLS_lymphoma_tidy, "C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/GRLS lymphoma RP2 projects/clinical_records_coding_compiled_CT_tidy.csv")
 ```
