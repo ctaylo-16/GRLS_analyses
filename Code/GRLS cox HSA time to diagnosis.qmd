@@ -2299,41 +2299,352 @@ corr_values3 <- corr_values2 %>%
 print(corr_values3)
 ```
 
+Correlated variables:
+
+-   Similar as above
+
 #### Multivariable stepwise
 
 -   starting with smallest p value variables
 
+-   also not retaining variables where only the 'not_recorded' is the only sig category
+
 Weight
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/HSA-VC-survival-analyses/HSA-VC-survival-analyses/code/functions/multivar_cox_model_analyse_AIC_funct.R")
+
+#null model
+cox_model_null <- coxph(Surv(survival_time_days, status) ~1
+, data = cohort_abr_sig)
+summary(cox_model_null)
+
+#weight model
+cox_model_1 <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_1)
+
+analyse_model(cox_model_1,cohort_abr_sig,cox_model_null)
+```
 
 Activity freq SY3
 
+```{r}
+cox_model_2 <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles
+, data = cohort_abr_sig)
+summary(cox_model_2)
+
+analyse_model(cox_model_2,cohort_abr_sig,cox_model_1)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Antiparasites quartiles/halves
+
+```{r}
+cox_model_3 <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint
+, data = cohort_abr_sig)
+summary(cox_model_3)
+
+analyse_model(cox_model_3,cohort_abr_sig,cox_model_2)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 In the house rest of life and quartiles
 
+-   neither improve model
+
+```{r}
+#rest of life
+cox_model_4 <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + in.the.house_YN_study_years_rest_of_life
+, data = cohort_abr_sig)
+summary(cox_model_4)
+
+analyse_model(cox_model_4,cohort_abr_sig,cox_model_3)
+#quartiles
+cox_model_4a <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + in.the.house_YN_sum_whole_life_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_4a)
+
+analyse_model(cox_model_4a,cohort_abr_sig,cox_model_3)
+```
+
 Spayed when in heat
+
+-   exclude as only male cateogry sig
+
+```{r}
+cox_model_5 <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + spayed_while_in_heat
+, data = cohort_abr_sig)
+summary(cox_model_5)
+
+analyse_model(cox_model_5,cohort_abr_sig,cox_model_3)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","spayed_while_in_heat")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Sex
 
+```{r}
+cox_model_6 <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex
+, data = cohort_abr_sig)
+summary(cox_model_6)
+
+analyse_model(cox_model_6,cohort_abr_sig,cox_model_3)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Outside whole life/rest of life
+
+```{r}
+cox_model_7a <- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +outside_YN_study_years_whole_life
+, data = cohort_abr_sig)
+summary(cox_model_7a)
+
+analyse_model(cox_model_7a,cohort_abr_sig,cox_model_6)
+
+cox_model_7b<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +outside_YN_study_years_rest_of_life
+, data = cohort_abr_sig)
+summary(cox_model_7b)
+
+analyse_model(cox_model_7b,cohort_abr_sig,cox_model_6)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","outside_YN_study_years_whole_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 No pregnancy ever
 
+-   sex and no pregnancy correlated so cannot keep both in
+
+-   no pregnancy ever doesnt improve model
+
+```{r}
+cox_model_8<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +outside_YN_study_years_rest_of_life +no_pregnancy_ever
+, data = cohort_abr_sig)
+summary(cox_model_8)
+
+analyse_model(cox_model_8,cohort_abr_sig,cox_model_6)
+vif(cox_model_8)
+
+```
+
 Main lifestyle category 5y prior and ever
 
-Heats before neutering
+-says improve model LRT but no levels are significant = not retained
+
+```{r}
+cox_model_9a<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +outside_YN_study_years_rest_of_life +main_lifestyle_category
+, data = cohort_abr_sig)
+summary(cox_model_9a)
+
+analyse_model(cox_model_9a,cohort_abr_sig,cox_model_6)
+vif(cox_model_9a)
+
+cox_model_9b<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +outside_YN_study_years_rest_of_life +main_lifestyle_category_mode_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_9b)
+
+analyse_model(cox_model_9b,cohort_abr_sig,cox_model_6)
+vif(cox_model_9b)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","main_lifestyle_category")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+Heats before neutering terciles
+
+-   cant have sex and heats
+
+```{r}
+cox_model_10<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +outside_YN_study_years_rest_of_life +heats_before_neutering_terciles
+, data = cohort_abr_sig)
+summary(cox_model_10)
+
+analyse_model(cox_model_10,cohort_abr_sig,cox_model_6)
+vif(cox_model_10)
+```
 
 Incense whole life
 
+-   not significant
+
+```{r}
+cox_model_11<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +use_incense_or_candles_study_years_whole_life
+, data = cohort_abr_sig)
+summary(cox_model_11)
+
+analyse_model(cox_model_11,cohort_abr_sig,cox_model_6)
+vif(cox_model_11)
+
+```
+
 Mismating ever
+
+-   doesnt improve model
+
+```{r}
+cox_model_12<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex +mismating_ever
+, data = cohort_abr_sig)
+summary(cox_model_12)
+
+analyse_model(cox_model_12,cohort_abr_sig,cox_model_6)
+vif(cox_model_12)
+```
 
 Use hepa filters rest of life
 
+```{r}
+cox_model_13<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life
+, data = cohort_abr_sig)
+summary(cox_model_13)
+
+analyse_model(cox_model_13,cohort_abr_sig,cox_model_6)
+vif(cox_model_13)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Avg height
 
-Use air cleaner
+-   improves model but no categories significant = not retain
+
+```{r}
+cox_model_14<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + avg_height_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_14)
+
+analyse_model(cox_model_14,cohort_abr_sig,cox_model_13)
+vif(cox_model_14)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","avg_height_5y_prior_endpoint_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+Use air cleaner - rest, whole,early
+
+-   none improve model
+
+```{r}
+#5y prior
+cox_model_16a<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + use_air_cleaner_exposed_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_16a)
+
+analyse_model(cox_model_16a,cohort_abr_sig,cox_model_13)
+vif(cox_model_16a)
+#whole life
+cox_model_16b<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + use_air_cleaner_study_years_whole_life
+, data = cohort_abr_sig)
+summary(cox_model_16b)
+
+analyse_model(cox_model_16b,cohort_abr_sig,cox_model_13)
+vif(cox_model_16b)
+#rest of life
+
+cox_model_16c<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + use_air_cleaner_study_years_rest_of_life
+, data = cohort_abr_sig)
+summary(cox_model_16c)
+
+analyse_model(cox_model_16c,cohort_abr_sig,cox_model_13)
+vif(cox_model_16c)
+```
 
 Age at neuter
+
+-   corr with sex so need to choose which to include
+
+-   also create an interaction variable between these two
+
+```{r}
+cox_model_17<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + age_at_neuter_years_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_17)
+
+analyse_model(cox_model_17,cohort_abr_sig,cox_model_13)
+vif(cox_model_17)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","age_at_neuter_years_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 In the garage
 

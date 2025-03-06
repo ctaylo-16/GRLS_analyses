@@ -92,11 +92,26 @@ heats <- cohort_abr %>%
   dplyr::select(heats_before_neutering)# Keep only this column
 heats <- as.numeric(heats$heats_before_neutering)
 
+# Function to calculate quartiles or terciles dynamically
+get_breaks <- function(x, probs) {
+  breaks <- quantile(x, probs = probs, na.rm = TRUE)
+  
+  # If breaks are not unique, switch to terciles
+  if (length(unique(breaks)) < length(probs)) {
+    message("Quartiles not unique, switching to terciles.")
+    breaks <- quantile(x, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE)
+  }
+  
+  return(breaks)
+}
+
 breaks <- get_breaks(heats, c(0, 0.25, 0.5, 0.75, 1))
 
 
 # Assign labels dynamically
 labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
+
+
 cohort_abr <- cohort_abr %>%
   mutate(heats_before_neutering_terciles = case_when(
     sex== "M" ~ "Male",
@@ -128,6 +143,19 @@ cohort_abr <- cohort_abr%>%
 cohort_abr <- cohort_abr%>%
   mutate(mode_purina_BCS_5y_prior_endpoint = factor(mode_purina_BCS_5y_prior_endpoint, levels = c("5", "3", "4", "6","7","8","9","not_recorded")))
 
+#change BCS to be over underweight
+cohort_abr <- cohort_abr %>%
+  mutate(mode_BCS_classify = case_when(
+    mode_purina_BCS_5y_prior_endpoint == "1" ~"underweight",
+    mode_purina_BCS_5y_prior_endpoint == "2" ~"underweight",
+    mode_purina_BCS_5y_prior_endpoint == "3" ~"underweight",
+    mode_purina_BCS_5y_prior_endpoint == "4" ~"ideal",
+    mode_purina_BCS_5y_prior_endpoint == "5" ~"ideal",
+    mode_purina_BCS_5y_prior_endpoint == "6" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "7" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "8" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "9" ~"overweight",
+  ))
 
 #ensure not_recorded is default not baseline
 convert_and_relevel <- function(df) {
@@ -204,7 +232,7 @@ explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior",
              "preg_pre_neuter",# "mated_pre_neuter",
  "num_breeding_before_neutering_quartiles", "ever_bred_from", 
               "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
-             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify","half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
              "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
              "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
@@ -308,7 +336,7 @@ cohort_abr2 <- cohort_abr %>%
              "preg_pre_neuter",# "mated_pre_neuter",
  "num_breeding_before_neutering_quartiles", "ever_bred_from", 
               "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
-             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
              "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
              "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
@@ -363,7 +391,7 @@ Assessing collinearity of potentially sig univariable variables:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:109), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.png")
+create_corr_matrix(cohort_abr_sig,c(1:110), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.png")
 ```
 
 Correlated variables
@@ -419,7 +447,7 @@ Correlated variables (99):
 
     -   fluid metabolites and diuretic and antihistamines
 
-Automated log reg model building
+#### Automated log reg model building
 
 ```{r}
 sig_variables <- unique(multivar_variables$predictor)
@@ -492,8 +520,14 @@ knitr::kable(t2[[1]], row.names=FALSE, align=c("l", "l", "r", "r", "r", "r"))
 knitr::kable(t2[[2]], row.names=FALSE, col.names="")
 ```
 
-Multivariable model building from most significant to least (p\<0.2) :
+### Manual multivariable model building
+
+from most significant to least (p\<0.2) :
+
+-   age
 
 ```{r}
 
 ```
+
+-   in house
