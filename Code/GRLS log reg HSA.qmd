@@ -520,6 +520,33 @@ knitr::kable(t2[[1]], row.names=FALSE, align=c("l", "l", "r", "r", "r", "r"))
 knitr::kable(t2[[2]], row.names=FALSE, col.names="")
 ```
 
+### Model build with only 5y prior or no time point variables
+
+```{r}
+cols_to_keep
+```
+
+```{r}
+
+
+dependent ="had_HSA"
+explanatory_abr <- c(
+  "age_at_final_date_quartiles", 
+  "avg_frequency_5y_prior_endpoint_quartiles", 
+  "mode_purina_BCS_5y_prior_endpoint", 
+  "avg_height_5y_prior_endpoint_quartiles", 
+  "cooking_fuel_secondary_mode_5yrs_prior", 
+  "in.the.house_YN_sum_whole_life_quartiles", 
+  "quartile_anti_parasites_5y_prior_endpoint", 
+  "avg_weight_5y_prior_endpoint_quartiles", 
+  "no_pregnancy_ever", 
+  "comorb_immune_mediated_chronic", 
+  "comorb_inflammatory_other", 
+  "mismating_ever", 
+  "main_lifestyle_category", 
+)
+```
+
 ### Manual multivariable model building
 
 from most significant to least (p\<0.2) :

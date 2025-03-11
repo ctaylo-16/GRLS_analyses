@@ -126,7 +126,7 @@ print(cross_table_percent)
 ```{r}
 #tidy up redundant cols - not wanted for univar and those that are essentially duplicats
 cohort_abr <- cohort %>%
-  dplyr::select(c(1,2,4:12,23,24,225,227:240,244,246:375,379:382,final_date.y,384:444))
+  dplyr::select(c(1,2,4:13,23,24,25,225,227:240,244,246:376,379:383,final_date.y,384:445))
 
 #also need to add in a survival time variable (days/weeks/months/years)
 enrol_date <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
@@ -923,7 +923,7 @@ perform_univariable_analysis(
   data = cohort_abr,
   dependent_var = "status",
   dependent_var_factor="status_factor",
-  explanatory_vars = c("MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
+  explanatory_vars = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
              "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
@@ -1016,7 +1016,7 @@ Create a counts cross table for each variable:
 
 ```{r}
 library(finalfit)
-explanatory = c("MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
+explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
              "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
@@ -1213,10 +1213,6 @@ analyse_model(cox_model_1,cohort_abr_sig,cox_model_null)
 ```
 
 ### Weight quartiles 5y prior
-
-cox_model_2 %\>%
-
-ff_model_summary()
 
 ```{r}
 cox_model_2<- coxph(Surv(survival_time_days, status) ~  
@@ -2648,56 +2644,898 @@ mod
 
 In the garage
 
+-   early years sig
+
+```{r}
+#early years
+cox_model_18<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life
+, data = cohort_abr_sig)
+summary(cox_model_18)
+
+analyse_model(cox_model_18,cohort_abr_sig,cox_model_13)
+vif(cox_model_18)
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","in.the.garage_YN_study_years_early_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+
+#whole life
+cox_model_18a<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_whole_life
+, data = cohort_abr_sig)
+summary(cox_model_18a)
+
+analyse_model(cox_model_18a,cohort_abr_sig,cox_model_13)
+vif(cox_model_18a)
+
+
+```
+
 Avg purina BCS
+
+-   only sig for not recorded category once in model, elect not to retain
+
+```{r}
+cox_model_19<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +avg_purina_BCS_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_19)
+
+analyse_model(cox_model_19,cohort_abr_sig,cox_model_18)
+vif(cox_model_19)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","avg_purina_BCS_5y_prior_endpoint_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Avg activity duration early years
 
+-   although sig it is only due to the not recorded variable, not retained
+
+```{r}
+cox_model_20<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +avg_activity_duration_sy1_2_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_20)
+
+analyse_model(cox_model_20,cohort_abr_sig,cox_model_18)
+vif(cox_model_20)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","avg_activity_duration_sy1_2_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Outside early years
 
-In the garage whole life
+-   sig
 
-IN the house whole life quartiles
+```{r}
+cox_model_21<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
+, data = cohort_abr_sig)
+summary(cox_model_21)
+
+analyse_model(cox_model_21,cohort_abr_sig,cox_model_18)
+vif(cox_model_21)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Neutering reason
 
+-   only neuter category significant is 'Entire' = not retain
+
+```{r}
+cox_model_22<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ neutered_reason, data = cohort_abr_sig)
+summary(cox_model_22)
+
+analyse_model(cox_model_22,cohort_abr_sig,cox_model_21)
+vif(cox_model_22)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","neutered_reason")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Activity freq 5y prior endpoint quartiles
+
+-   sig
+
+```{r}
+cox_model_23<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_23)
+
+analyse_model(cox_model_23,cohort_abr_sig,cox_model_21)
+vif(cox_model_23)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles
+")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Half neuro lifetime
 
+-   not sig
+
+```{r}
+cox_model_24<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + half_neurological_lifetime
+, data = cohort_abr_sig)
+summary(cox_model_24)
+
+analyse_model(cox_model_24,cohort_abr_sig,cox_model_23)
+vif(cox_model_24)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles
+", "half_neurological_lifetime")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Half enteric lifetime
+
+-   sig but collinear with parasites, keep parasites
+
+```{r}
+cox_model_25<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + half_enteric_lifetime
+, data = cohort_abr_sig)
+summary(cox_model_25)
+
+analyse_model(cox_model_25,cohort_abr_sig,cox_model_23)
+vif(cox_model_25)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "half_enteric_lifetime")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Use air cleaner rest of life/5y
 
+```{r}
+cox_model_26<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + use_air_cleaner_exposed_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_26)
+
+analyse_model(cox_model_26,cohort_abr_sig,cox_model_23)
+vif(cox_model_26)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "use_air_cleaner_exposed_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Half enteric 5y
+
+-   not sig
+
+```{r}
+cox_model_27<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + half_enteric_5y_prior_endpoint
+, data = cohort_abr_sig)
+summary(cox_model_27)
+
+analyse_model(cox_model_27,cohort_abr_sig,cox_model_23)
+#vif(cox_model_27)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "half_enteric_5y_prior_endpoint")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Number of comorbs present
 
+-   not significant
+
+```{r}
+cox_model_28<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + number_comorbs_present_5y
+, data = cohort_abr_sig)
+summary(cox_model_28)
+
+analyse_model(cox_model_28,cohort_abr_sig,cox_model_23)
+#vif(cox_model_28)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "number_comorbs_present_5y")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Cooking fuel secondary
+
+-   sig but only not recorded category, not retained
+
+```{r}
+cox_model_29<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + cooking_fuel_secondary_mode_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_29)
+
+analyse_model(cox_model_29,cohort_abr_sig,cox_model_23)
+vif(cox_model_29)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "cooking_fuel_secondary_mode_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Prevent heat ever
 
+-   not sig
+
+```{r}
+cox_model_30<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + prevent_heat_ever
+, data = cohort_abr_sig)
+summary(cox_model_30)
+
+analyse_model(cox_model_30,cohort_abr_sig,cox_model_23)
+vif(cox_model_30)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "prevent_heat_ever")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Half anti septics lifetime
+
+```{r}
+cox_model_31<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + half_anti_septics_lifetime
+, data = cohort_abr_sig)
+summary(cox_model_31)
+
+analyse_model(cox_model_31,cohort_abr_sig,cox_model_23)
+vif(cox_model_31)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "half_anti_septics_lifetime")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Aerosol whole life
 
+-   not sig
+
+```{r}
+cox_model_32<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + use_aerosol_study_years_whole_life
+, data = cohort_abr_sig)
+summary(cox_model_32)
+
+analyse_model(cox_model_32,cohort_abr_sig,cox_model_23)
+vif(cox_model_32)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "use_aerosol_study_years_whole_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Smoke exposure early years
+
+-   not sig
+
+```{r}
+cox_model_33<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + smoke_exposure_study_years_early_life
+, data = cohort_abr_sig)
+summary(cox_model_33)
+
+analyse_model(cox_model_33,cohort_abr_sig,cox_model_23)
+vif(cox_model_33)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "smoke_exposure_study_years_early_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Use mothballs rest of life
 
+-   not significant
+
+```{r}
+cox_model_34<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + use_moth_balls_study_years_rest_of_life
+, data = cohort_abr_sig)
+summary(cox_model_34)
+
+analyse_model(cox_model_34,cohort_abr_sig,cox_model_23)
+vif(cox_model_34)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "use_moth_balls_study_years_rest_of_life")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Half cardioresp lifetime
+
+-   not sig
+
+```{r}
+cox_model_35<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + half_cardio_respiratory_lifetime
+, data = cohort_abr_sig)
+summary(cox_model_35)
+
+analyse_model(cox_model_35,cohort_abr_sig,cox_model_23)
+vif(cox_model_35)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "half_cardio_respiratory_lifetime")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Mode Purina BCS
 
+-   although sig, output is nonsensical
+
+```{r}
+cox_model_36<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + mode_purina_BCS_5y_prior_endpoint
+, data = cohort_abr_sig)
+summary(cox_model_36)
+
+analyse_model(cox_model_36,cohort_abr_sig,cox_model_23)
+vif(cox_model_36)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Pipes plastic 5y
+
+-   only sig due to not recorded category
+
+```{r}
+cox_model_37<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + pipes_plastic_any_mode_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_37)
+
+analyse_model(cox_model_37,cohort_abr_sig,cox_model_23)
+vif(cox_model_37)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "pipes_plastic_any_mode_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Exercise intensity 5y prior
 
+-   cant have freq and intensity in model, freq is more informative but surely overlapping with freq sy3 terciels, keep in 5y prior one
+
+```{r}
+cox_model_38<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + avg_activity_freq_sy3_terciles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + avg_intensity_5y_prior_endpoint_quartiles
+, data = cohort_abr_sig)
+summary(cox_model_38)
+
+analyse_model(cox_model_38,cohort_abr_sig,cox_model_23)
+#vif(cox_model_38)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,"avg_activity_freq_sy3_terciles",
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "avg_intensity_5y_prior_endpoint_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Heating fuel primary 5y prior
+
+-   sig but only due to not recorded category
+
+```{r}
+cox_model_39<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + heating_fuel_primary_mode_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_39)
+
+analyse_model(cox_model_39,cohort_abr_sig,cox_model_23)
+#vif(cox_model_38)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "heating_fuel_primary_mode_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Chronic inflam present no min year
 
+-   not sig
+
+```{r}
+cox_model_40<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + chronic_inflam_present_no_min_year
+, data = cohort_abr_sig)
+summary(cox_model_40)
+
+analyse_model(cox_model_40,cohort_abr_sig,cox_model_23)
+vif(cox_model_40)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "chronic_inflam_present_no_min_year")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 House type
+
+-   not sig
+
+```{r}
+cox_model_41<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + house_type_mode_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_41)
+
+analyse_model(cox_model_41,cohort_abr_sig,cox_model_23)
+vif(cox_model_41)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "house_type_mode_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
 
 Half fluid metabolites
 
+-   not sig
+
+```{r}
+cox_model_42<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles+quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + half_fluid_metabolites_5y_prior_endpoint
+, data = cohort_abr_sig)
+summary(cox_model_42)
+
+analyse_model(cox_model_42,cohort_abr_sig,cox_model_23)
+vif(cox_model_42)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "house_type_mode_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
 Sleep location
+
+-   only not recorded is sig
+
+```{r}
+cox_model_43<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + sleep_location_mode_5yrs_prior
+, data = cohort_abr_sig)
+summary(cox_model_43)
+
+analyse_model(cox_model_43,cohort_abr_sig,cox_model_23)
+vif(cox_model_43)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles", "sleep_location_mode_5yrs_prior")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+Assess final model:
+
+```{r}
+cox_model_final<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint + sex + use_hepa_filter_study_years_rest_of_life + in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles 
+, data = cohort_abr_sig)
+summary(cox_model_final)
+
+vif(cox_model_final)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","use_hepa_filter_study_years_rest_of_life","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+
+#remove hepa as not sig 
+
+cox_model_final<- coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint + sex+ in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles 
+, data = cohort_abr_sig)
+summary(cox_model_final)
+
+vif(cox_model_final)
+
+
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex",
+                 "outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+# Summarize the Cox model output in a table
+mod <- cohort_abr_sig %>%
+  coxphmulti(dependent,explanatory)%>%
+  fit2df()
+
+mod
+```
+
+#### Post-hoc assessment:
+
+##### assess for confounding - OK
+
+```{r}
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles")
+dependent = 'Surv(survival_time_days,status)'
+table<- cohort_abr_sig%>% 
+    finalfit(dependent, explanatory, add_dependent_label = FALSE) %>% 
+    rename("Overall survival" = label) %>% 
+    rename(" " = levels) %>% 
+    rename("  " = all)
+table
+```
+
+##### Assess for interactions
+
+-   weight and parasite quartiles significant , all else not in pairwise
+
+```{r}
+# Load the survival package
+library(survival)
+
+
+# Function to assess pairwise interactions using LRT
+assess_pairwise_interactions <- function(data, time_var, status_var, variables) {
+  
+  # Initialize a dataframe to store the results
+  results <- data.frame(Interaction = character(), AIC = numeric(), LRT_pvalue = numeric(), stringsAsFactors = FALSE)
+  
+  # Loop through each pair of specified variables
+  for (i in 1:(length(variables) - 1)) {
+    for (j in (i + 1):length(variables)) {
+      
+      # Get the current pair of variables
+      var1 <- variables[i]
+      var2 <- variables[j]
+      
+      # Create the formula for the base model (without interaction)
+      base_formula <- as.formula(paste("Surv(", time_var, ",", status_var, ") ~", var1, "+", var2))
+      
+      # Create the formula for the interaction model (with interaction term)
+      interaction_formula <- as.formula(paste("Surv(", time_var, ",", status_var, ") ~", 
+                                              var1, "+", var2, "+", paste(var1, var2, sep = "*")))
+      
+      # Fit the base model
+      base_model <- coxph(base_formula, data = data)
+      
+      # Fit the interaction model
+      interaction_model <- coxph(interaction_formula, data = data)
+      
+      # Calculate the AIC of the interaction model
+      interaction_aic <- AIC(interaction_model)
+      
+      # Perform Likelihood Ratio Test (LRT) to compare models
+      lrt <- anova(base_model, interaction_model, test = "Chisq")
+      lrt_pvalue <- lrt$`Pr(>|Chi|)`[2]  # Extract p-value for interaction
+      
+      # Store the results
+      results <- rbind(results, data.frame(Interaction = paste(var1, var2, sep = "*"), 
+                                           AIC = interaction_aic, 
+                                           LRT_pvalue = lrt_pvalue))
+      
+      # Display results for each interaction model
+      print(paste("Model with interaction between:", var1, "and", var2))
+      print(summary(interaction_model))
+      print(paste("AIC:", interaction_aic))
+      print(paste("LRT p-value:", lrt_pvalue))
+      cat("\n-----------------------------------------------------\n")
+    }
+  }
+  
+  # Order results by AIC
+  results <- results[order(results$AIC), ]
+  
+  # Display the results
+  print("Pairwise Interaction Terms Ranked by AIC:")
+  print(results)
+  
+  return(results)
+}
+# Specify the time and status variables along with the variables you want to assess for interactions
+time_variable <- "survival_time_days"
+status_variable <- "status"
+specified_variables <- c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles")
+
+# Assess pairwise interactions using only the two terms in each model
+interaction_results <- assess_pairwise_interactions(cohort_abr_sig, time_variable, status_variable, specified_variables)
+```
+
+-   Assess weight \* parasite in multivar model
+
+```{r}
+int <-coxph(Surv(survival_time_days, status) ~ avg_weight_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint + sex+ in.the.garage_YN_study_years_early_life +outside_YN_study_years_early_life
++ avg_frequency_5y_prior_endpoint_quartiles + avg_weight_5y_prior_endpoint_quartiles* quartile_anti_parasites_5y_prior_endpoint  , data = cohort_abr_sig) 
+AIC(int)
+summary(int)
+# Perform the likelihood ratio test
+lr_test <- anova(int, cox_model_final)
+#
+print(lr_test)
+analyse_model(int,HSA_multi_abr_day1,cox_model_final)
+```
+
+```{r}
+library(broom)
+
+cox_summary <- broom::tidy(int, exponentiate = TRUE, conf.int = TRUE) 
+cox_summary <- cox_summary %>%
+ mutate(
+    estimate = sprintf("%.4f", estimate),  # HR to 4 decimal places
+    conf.low = sprintf("%.4f", conf.low),  # Lower 95% CI
+    conf.high = sprintf("%.4f", conf.high), # Upper 95% CI
+    p.value = format(p.value, scientific = FALSE, digits = 4)  # Format p-value
+  )
+
+print(cox_summary)
+```
+
+##### Proportional hazards assumption
+
+-   almost all variables significant in Schoenfeld residuals
+
+```{r}
+dependent = "Surv(survival_time_days, status)"
+explanatory = c("avg_weight_5y_prior_endpoint_quartiles" ,
+                 "quartile_anti_parasites_5y_prior_endpoint","sex","outside_YN_study_years_early_life","avg_frequency_5y_prior_endpoint_quartiles"
+                )
+
+ph_schoen <- cohort_abr_sig %>% 
+    coxphmulti(dependent, explanatory) %>% 
+    cox.zph() %>% 
+    {zph_result <<- .} %>% 
+    plot(var=5)
+
+zph_result
+```
+
+Visualise proportional hazards with KM for each variable
+
+-   Weight
+
+```{r}
+survdiff(Surv(survival_time_months, status) ~ age_at_final_date_quartiles, data = cohort_abr)
+
+dependent_os = "Surv(survival_time_months, status)"
+explanatory = c("avg_weight_5y_prior_endpoint_quartiles")
+
+cohort_abr %>% 
+    surv_plot(dependent_os, explanatory, pval = TRUE)
+```
+
+-   Parasite treatment
+
+```{r}
+survdiff(Surv(survival_time_months, status) ~ quartile_anti_parasites_5y_prior_endpoint, data = cohort_abr)
+
+dependent_os = "Surv(survival_time_months, status)"
+explanatory = c("quartile_anti_parasites_5y_prior_endpoint")
+
+cohort_abr %>% 
+    surv_plot(dependent_os, explanatory, pval = TRUE)
+```
+
+-   Sex
+
+```{r}
+survdiff(Surv(survival_time_months, status) ~ sex, data = cohort_abr)
+
+dependent_os = "Surv(survival_time_months, status)"
+explanatory = c("sex")
+
+cohort_abr %>% 
+    surv_plot(dependent_os, explanatory, pval = TRUE)
+```
+
+-   outside in early life
+
+```{r}
+survdiff(Surv(survival_time_months, status) ~ outside_YN_study_years_early_life, data = cohort_abr)
+
+dependent_os = "Surv(survival_time_months, status)"
+explanatory = c("outside_YN_study_years_early_life")
+
+cohort_abr %>% 
+    surv_plot(dependent_os, explanatory, pval = TRUE)
+```
+
+-   Exercise frequency
+
+```{r}
+survdiff(Surv(survival_time_months, status) ~ avg_frequency_5y_prior_endpoint_quartiles, data = cohort_abr)
+
+dependent_os = "Surv(survival_time_months, status)"
+explanatory = c("avg_frequency_5y_prior_endpoint_quartiles")
+
+cohort_abr %>% 
+    surv_plot(dependent_os, explanatory, pval = TRUE)
+```

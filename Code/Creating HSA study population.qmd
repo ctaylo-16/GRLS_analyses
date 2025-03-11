@@ -223,7 +223,7 @@ creating-HSA-RF-dataset
 #MDI
 MDI_dogs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
 MDI_dogs <- MDI_dogs %>%
-  dplyr::select(c(subject_id,MDI_quintile,MDI.rate))
+  dplyr::select(c(subject_id,MDI_quintile,MDI.rate, owner_MDI_quintile))
 #enviro
 enviro<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_house_location_enviro_exposures.csv")
 enviro <- enviro %>%
