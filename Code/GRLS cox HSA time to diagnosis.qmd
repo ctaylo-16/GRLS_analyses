@@ -126,7 +126,7 @@ print(cross_table_percent)
 ```{r}
 #tidy up redundant cols - not wanted for univar and those that are essentially duplicats
 cohort_abr <- cohort %>%
-  dplyr::select(c(1,2,4:13,23,24,25,225,227:240,244,246:376,379:383,final_date.y,384:445))
+  dplyr::select(c(1,2,4,5:13,24,25,27,30:53,56:160,162:178,179,180,184:187,189:249))
 
 #also need to add in a survival time variable (days/weeks/months/years)
 enrol_date <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
@@ -776,7 +776,7 @@ heats <- cohort_abr %>%
 # Convert to numeric
   filter(heats_before_neutering != 0) %>% 
 # Remove rows where the column is 0
-  select(heats_before_neutering) %>%
+  dplyr::select(heats_before_neutering) %>%
   filter(heats_before_neutering != "not_recorded") # Keep only this column
 heats <- as.numeric(heats$heats_before_neutering)
 
@@ -926,10 +926,10 @@ perform_univariable_analysis(
   explanatory_vars = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
-             "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
-             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
-              "num_lifetime_chronic_inflam", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  #"number_comorbs_present_lifetime", 
+            # "study_year_first_chronic_inflam", #"chronic_inflam_present_5y", #"number_comorbs_present_5y", 
+            # "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", "intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","chronic_inflammatory",
  "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
              "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
  "avg_activity_freq_sy1_2_terciles", 
@@ -1019,10 +1019,10 @@ library(finalfit)
 explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
-             "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
-             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
-              "num_lifetime_chronic_inflam", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  #"number_comorbs_present_lifetime", 
+            # "study_year_first_chronic_inflam", #"chronic_inflam_present_5y", #"number_comorbs_present_5y", 
+            # "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", "intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","chronic_inflammatory",
  "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
              "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",
  "avg_activity_freq_sy1_2_terciles", 
