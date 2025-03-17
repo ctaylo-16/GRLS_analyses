@@ -180,10 +180,10 @@ dependent <- "had_HSA"
 explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
-             "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
-             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
-              "num_lifetime_chronic_inflam", "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic","comorb_other_parasitism_chronic","comorb_other_parasitism_chronic","comorb_orthopaedic_chronic","comorb_immune_mediated_chronic","comorb_cardiovascular_chronic","comorb_gastrointestinal_chronic","comorb_inflammatory_other_chronic","comorb_orthopaedic","comorb_immune_mediated","comorb_cardiovascular","comorb_gastrointestinal","comorb_inflammatory_other",
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  #"number_comorbs_present_lifetime", 
+            # "study_year_first_chronic_inflam", #"chronic_inflam_present_5y", #"number_comorbs_present_5y", 
+            # "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", "intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","chronic_inflammatory",
  "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
              "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
  "avg_activity_freq_sy1_2_terciles", 
@@ -230,9 +230,9 @@ explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior",
              "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
              "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
              "preg_pre_neuter",# "mated_pre_neuter",
- "num_breeding_before_neutering_quartiles", "ever_bred_from", 
+ "num_breeding_before_neutering_terciles", "ever_bred_from", 
               "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
-             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify","half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
              "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
              "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
@@ -284,10 +284,10 @@ cohort_abr2 <- cohort_abr %>%
   dplyr::select("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  "number_comorbs_present_lifetime", 
-             "study_year_first_chronic_inflam", "chronic_inflam_present_5y", "number_comorbs_present_5y", 
-             "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
-              "num_lifetime_chronic_inflam", "comorb_intestinal_parasitism_chronic","comorb_tick_borne_parasitism_chronic","comorb_other_parasitism_chronic","comorb_other_parasitism_chronic","comorb_orthopaedic_chronic","comorb_immune_mediated_chronic","comorb_cardiovascular_chronic","comorb_gastrointestinal_chronic","comorb_inflammatory_other_chronic","comorb_orthopaedic","comorb_immune_mediated","comorb_cardiovascular","comorb_gastrointestinal","comorb_inflammatory_other",
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior",  #"number_comorbs_present_lifetime", 
+            # "study_year_first_chronic_inflam", #"chronic_inflam_present_5y", #"number_comorbs_present_5y", 
+            # "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
+              "num_lifetime_chronic_inflam", "intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","chronic_inflammatory",
  "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
              "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
  "avg_activity_freq_sy1_2_terciles", 
@@ -334,7 +334,7 @@ cohort_abr2 <- cohort_abr %>%
              "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
              "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
              "preg_pre_neuter",# "mated_pre_neuter",
- "num_breeding_before_neutering_quartiles", "ever_bred_from", 
+ "num_breeding_before_neutering_terciles", "ever_bred_from", 
               "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
              "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
@@ -362,7 +362,7 @@ cohort_abr2 <- cohort_abr %>%
           #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
- "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "had_HSA")
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles","had_HSA")
 
 cohort_abr2<- cohort_abr2%>%
   mutate_all(~factor(ifelse(is.na(.), "not_recorded", as.character(.))))
@@ -391,7 +391,7 @@ Assessing collinearity of potentially sig univariable variables:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:110), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.png")
+create_corr_matrix(cohort_abr_sig,c(1:106), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.png")
 ```
 
 Correlated variables
