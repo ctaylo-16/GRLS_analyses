@@ -297,6 +297,10 @@ get_mode <- function(x) {
   ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
 }
 
+<<<<<<< Updated upstream
+=======
+# Modify  pipeline to include mode calculation for purina_BCS
+>>>>>>> Stashed changes
 dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
