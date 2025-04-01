@@ -297,10 +297,7 @@ get_mode <- function(x) {
   ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
 }
 
-<<<<<<< Updated upstream
-=======
 # Modify  pipeline to include mode calculation for purina_BCS
->>>>>>> Stashed changes
 dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
@@ -329,8 +326,10 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(c(189:249), ~ replace(., is.na(.), "medication_use_not_recorded")))
+  mutate(across(c(199:249), ~ replace(., is.na(.), "medication_use_not_recorded")))
 
+merged_HSA_data <- merged_HSA_data %>%
+  dplyr::select(-c(X.y,X.x))
 #merged_HSA_data <- merged_HSA_data %>%
 #  rename(study_year_first_chronic_inflam = study_year_first_chronic_inflam.x)
 
