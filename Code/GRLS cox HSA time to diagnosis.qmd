@@ -14,14 +14,6 @@ editor: visual
 
 ## Import data
 
-cohort \<- cohort %\>%
-
-dplyr::select(-c(X))
-
-cohort \<- cohort %\>%
-
-rename(had_HSA = had_HSA.x.x)
-
 ```{r, echo=FALSE}
 library(tidyverse)
 library(dplyr)
@@ -2112,7 +2104,7 @@ half_fluid_metabolites_5y_prior_endpoint + lifelong_gastrointestinal + inflammat
 analyse_model(cox_model_41,cohort_abr_sig,cox_model_40a)
 ```
 
-### Orthopaedic comorbidities - 5y 
+### Orthopaedic comorbidities - 5y
 
 -   non sig
 
