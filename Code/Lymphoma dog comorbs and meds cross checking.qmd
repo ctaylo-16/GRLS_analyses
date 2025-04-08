@@ -1,0 +1,42 @@
+---
+title: "Lymphoma dog comorbs and meds cross checking"
+format: html
+editor: visual
+---
+
+## Data and packages
+
+## 
+
+```{r}
+lymphoma_dogs <-read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/GRLS lymphoma RP2 projects/clinical_records_coding_compiled_CT_tidy_and_original_columns.csv")
+comorbs_all <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cohort_all_comorbs_ever.csv")
+comorbs_all <- comorbs_all %>%
+  dplyr::select(-X)
+#rename so same patientID col name
+lymphoma_dogs <- lymphoma_dogs %>%
+  rename(subject_id = PatientID)
+```
+
+Filter the comorbs all for only lymphoma cases:
+
+```{r}
+#keep lymphoma IDs
+lymphoma_ids <- unique(lymphoma_dogs$subject_id)
+#keep relevant lymphoma records
+lymphoma_dogs_abr <- lymphoma_dogs %>%
+  dplyr::select(c(subject_id,Co.morbidities_YN,Comorbidity.1,Comorbidity.2,Pre.existing.medications_YN,Pre.existing.medication.1,Pre.existing.medication.2,Pre.existing.medication.3))
+
+
+lymphoma_comorbs<- comorbs_all%>%
+  dplyr::filter(subject_id %in% lymphoma_ids)
+#now add in the RP2 read clinical record bits
+lymphoma_comorbs_with_rp2 <- lymphoma_comorbs %>%
+  left_join(lymphoma_dogs_abr,by="subject_id")
+```
+
+Write this to csv to examine
+
+```{r}
+write.csv(lymphoma_comorbs_with_rp2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_plus_records_comorbs3.csv")
+```

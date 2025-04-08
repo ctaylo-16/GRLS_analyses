@@ -31,7 +31,7 @@ rm(conditions_dictionary)
 
 
 #combine the comorbidities datasets
-comorbs_all <- cbind(conditions_cardio,conditions_dental,conditions_ear_nose_throat,conditions_endocrine,conditions_eye,conditions_gastrointestinal,conditions_hematologic,conditions_infectious,conditions_musculoskeletal)
+comorbs_all <- cbind(conditions_cardio,conditions_dental,conditions_ear_nose_throat,conditions_endocrine,conditions_eye,conditions_gastrointestinal,conditions_hematologic,conditions_infectious,conditions_musculoskeletal,conditions_neoplasia,conditions_reproductive,conditions_urinary)
 
 #remove duplicate subjectid columns
 comorbs_unique <- comorbs_all %>%
@@ -121,7 +121,8 @@ comorbs_to_find <-c("congestive_heart_failure",
   "erythema_multiforme",
   "flea_allergy_dermatitis",
   "food_allergy_dermatitis",
-  "r_o_atopy")
+  "r_o_atopy",
+  "kidney_failure")
 
 
 
@@ -140,7 +141,7 @@ comorbs_unique_2 <- comorbs_unique %>%
   #get rid of the to_date row for each dog
   filter(to_date !=1) %>%
   # replacing NA values with 0 across comorbidity columns
-    mutate_at(vars(5:200), ~replace_na(., 0)) %>%
+    mutate_at(vars(5:271), ~replace_na(., 0)) %>%
   dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
 
 
@@ -202,7 +203,7 @@ df_result2 <- comorbs_unique_2 %>%
 ```{r}
 #keeping record_date for linking up to cancer diagnosis but remove to_date column
 comorbs_unique_3 <- comorbs_unique %>%
-  mutate_at(vars(5:200), ~replace_na(., 0)) %>%
+  mutate_at(vars(5:275), ~replace_na(., 0)) %>%
   filter(to_date !=1) %>%
   dplyr::select(-c(relationship_category,to_date)) %>%
   rename(year_in_study_comorb = year_in_study)
@@ -237,7 +238,7 @@ df_result3 <- comorbs_unique_3 %>%
 
 #keeping less columns 
 df_result4<- df_result3 %>%
-  dplyr::select(c(subject_id,year_in_study_comorb,record_date,199:201))
+  dplyr::select(c(subject_id,year_in_study_comorb,record_date,274:276))
 
 #year first chronic inflam comorb present
 df_result4 <- df_result4 %>%
@@ -300,8 +301,6 @@ Adding endpoints data to chronic inflam dogs
 
 ```{r}
 
-
-
 endpoints_abr <- endpoints %>%
   dplyr::select(-c(public_id,location,phenotype,status, tier_of_confidence,is_cause_of_death,is_recurrence,is_adjudicated)) %>%
   rename(year_in_study_diagnosis=year_in_study)
@@ -353,7 +352,6 @@ write.csv(df_result7,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_records
 ```
 
 Rerun with HSA dog endpoints and censor date and final year of study record:\
-\
 
 ```{r}
 HSA_comorbs_unique3 <- comorbs_unique_3 %>%
@@ -504,7 +502,58 @@ HSA_comorbs_unique4 <- HSA_comorbs_unique4 %>%
   ungroup()
 ```
 
-Add in the lifetime data to these dogs:
+### Adding in a neoplasia variable - not techinically chronic inflammation but as a RF for diagnosis/ survival factor:
+
+NB. haemangiosarcoma not included in these lists for the HSA dataset but will need including back in for other studies
+
+NB. this is in the 5y prior to diagnosis or endpoint
+
+```{r}
+#ggrouping these
+all_cancers <- c("adrenal_tumor","basal_cell_tumor","bile_duct_tumor","bladder_tumor","brain_spinal_cord_tumor","breast_or_mammary_tumor","eye_tumor","hair_matrix_tumor","heart_tumor",#"hemangiosarcoma",
+                 "histiocytic_sarcoma","kidney_tumor","liver_tumor","lung_tumor","lymphoma","mast_cell_tumor","melanmoma","multiple_myeloma","nasal_tumor","osteosarcoma","pancreatic_tumor","perianal_adenoma","pituitary_tumor","plasma_cell_tumor","plasmacytoma","prostate_tumor","soft_tissue_sarcoma","splenic_tumor","squamous_cell_carcinoma","stomach_intestinal_tumor","testicular_tumor","thymoma","thyroid_tumor")
+malig_cancers <- c(#"hemangiosarcoma",
+  "histiocytic_sarcoma", "lymphoma", "melanoma", "multiple_myeloma", "osteosarcoma", "pancreatic_tumor", "plasma_cell_tumor", "plasmacytoma", "soft_tissue_sarcoma", "squamous_cell_carcinoma")
+benign_cancers <- c("adrenal_tumor", "basal_cell_tumor", "bile_duct_tumor", "bladder_tumor", "brain_spinal_cord_tumor", "breast_or_mammary_tumor", "eye_tumor", "hair_matrix_tumor", "heart_tumor", "kidney_tumor", "liver_tumor", "lung_tumor", "mast_cell_tumor", "nasal_tumor", "perianal_adenoma", "pituitary_tumor", "prostate_tumor", "splenic_tumor", "stomach_intestinal_tumor", "testicular_tumor", "thymoma", "thyroid_tumor")
+
+```
+
+```{r}
+HSA_comorbs_unique4$all_cancers_count <- 0
+HSA_comorbs_unique4$malig_cancers_count <- 0
+HSA_comorbs_unique4$benign_cancers_count <- 0
+
+# Define the cancer columns indices (from index 2 to the last column)
+cancer_columns <- 199:232
+
+# Loop through the cancer columns by index
+for (col_index in cancer_columns) {
+  col_name <- colnames(HSA_comorbs_unique4)[col_index]  # Get column name
+  
+  # Count for all cancers
+  HSA_comorbs_unique4$all_cancers_count <- HSA_comorbs_unique4$all_cancers_count + (HSA_comorbs_unique4[[col_name]] == 1)
+  
+  # Count for malignant cancers
+  if (col_name %in% malig_cancers) {
+    HSA_comorbs_unique4$malig_cancers_count <- HSA_comorbs_unique4$malig_cancers_count + (HSA_comorbs_unique4[[col_name]] == 1)
+  }
+  
+  # Count for benign cancers
+  if (col_name %in% benign_cancers) {
+    HSA_comorbs_unique4$benign_cancers_count <- HSA_comorbs_unique4$benign_cancers_count + (HSA_comorbs_unique4[[col_name]] == 1)
+  }
+}
+
+#create Y N columns for each in addition to counts
+HSA_comorbs_unique4 <- HSA_comorbs_unique4 %>%
+  mutate(
+    all_cancers_YN = ifelse(all_cancers_count >= 1, 1, 0),
+    malig_cancers_YN = ifelse(malig_cancers_count >= 1, 1, 0),
+    benign_cancers_YN = ifelse(benign_cancers_count >= 1, 1, 0)
+  )
+```
+
+Adding in lifetime data
 
 ```{r}
 HSA_comorbs_unique4_distinct <- HSA_comorbs_unique4 %>%
@@ -520,6 +569,28 @@ HSA_comorbs_unique4_df7_distinct <- HSA_comorbs_unique4_distinct %>%
 Output to csv
 
 ```{r}
-
+#remove some random colnames not needed
+HSA_comorbs_unique4_df7_distinct <- HSA_comorbs_unique4_df7_distinct %>%
+  dplyr::select(-c(year_in_study_comorb.x,year_in_study_comorb.y,record_date.x,record_date,record_date.y))
 write.csv(HSA_comorbs_unique4_df7_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_with_HSA_final_date_calculations.csv")
+```
+
+Rerun this singular comorbs list for whole cohort ever:
+
+```{r}
+#col names to check through
+comorbs_columns <- colnames(comorbs_unique[7:275]) 
+#only look in these columns and then if a 1 value then put name of col in the comorb_name column
+
+
+whole_cohort2 <- comorbs_unique %>%
+  rowwise() %>%
+  mutate(comorb_name = paste0(comorbs_columns[which(c_across(all_of(comorbs_columns)) == 1)], collapse = ", ")) %>%
+  ungroup()
+whole_cohort_abr2 <- whole_cohort2 %>%
+  dplyr::select(c(subject_id,year_in_study,comorb_name))
+
+whole_cohort_abr_unique2 <- whole_cohort_abr2 %>%
+  distinct(subject_id, comorb_name, .keep_all = TRUE)
+write.csv(whole_cohort_abr_unique2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cohort_all_comorbs_ever.csv")
 ```
