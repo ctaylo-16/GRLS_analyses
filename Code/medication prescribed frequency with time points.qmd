@@ -267,9 +267,7 @@ HSA_medication_5y_filt <-  HSA_medications %>%
 
 ```
 
-
 This code is calculating quartiles and halves for each active ingredient group rather than prev code (now deleted which did it for overall medication counts)
-
 
 ```{r}
 # Step 1: Count occurrences per dog per active ingredient group
@@ -302,7 +300,7 @@ meds_per_dog_quart <- meds_per_dog %>%
     # Assign halves based on median
     half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
   ) %>%
-  select(subject_id, active_ingredient_groups, quartile, half)
+  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
 
 
 # Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
@@ -312,9 +310,6 @@ meds_wide_quart <- meds_per_dog_quart %>%
 # View the final data
 meds_wide_quart
 ```
-
-
-
 
 Now examining the completeness of this data
 
@@ -368,7 +363,7 @@ lifetime_meds_per_dog_quart <- lifetime_meds_per_dog %>%
     # Assign halves based on median
     half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
   ) %>%
-  select(subject_id, active_ingredient_groups, quartile, half)
+  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
 
 
 # Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
@@ -392,7 +387,231 @@ lifetime_meds_wide_quart <- lifetime_meds_wide_quart %>%
 
 ```
 
-Combine 5y and lifetime
+### Examine for specific potential RF medications: 
+
+-   NSAIDs exposure
+
+    -   ever Y N and 5y prior Y N
+
+-   steroids exposure
+
+    -   ever Y N and 5y prior Y N
+
+-   Fenbendazole exposure
+
+    -   ever Y N and 5y prior Y N
+
+```{r}
+NSAID_names<-c("carprofen","meloxicam","firocoxib","deracoxib","flurbiprofen","piroxicam","ketotifen","ketoprofen","rimadyl","metacam","meloxidyl","previcox","vetprofen","ketorolac opthalmic ointment","toradol","acular","voltaren
+","diclofenac","flurbiprofen eye drops
+","carprovet","carprieve","truprofen","ofloxacin ophthalmic ointment + nsaid
+")
+steroid_names<-c("dexamethasone, neomycin sulfate, thiabendazole
+","prednisolone acetate
+","betamethasone, clotrimazole, gentamicin sulfate
+","betamethasone, gentamicin sulfate
+","dexamethasone","dexamethasone, miconazole nitrate
+","dexamethasone, miconazole nitrate
+","methylprednisolone","prednisone","betamethasone, florfenicol, terbinafine
+","clotrimazole, gentamicin sulfate, mometasone furoate
+","dexamethasone, methylprednisolone
+","mometasone furoate, orbifloxacin, posaconazole
+","dexamethasone, neomycin sulfate, polymyxin b
+","bacitracin zinc, dexamethasone, neomycin sulfate, polymyxin b
+","miconazole nitrate, polymyxin b, prednisolone acetate
+","hydrocortisone, gentamicin sulfate, miconazole nitrate
+","gentamicin sulfate, hydrocortisone, miconazole nitrate
+","burow's solution, hydrocortisone
+","acetic acid, boric acid, hydrocortisone, ketoconazole
+","hydrocortisone","bacitracin zinc, hydrocortisone, neomycin sulfate, polymyxin b
+","dexamethasone, enrofloxacin, miconazole nitrate
+","clotrimazole, dexamethasone, enrofloxacin
+","hydrocortisone, ketoconazole
+","dexamethasone, ketoconazole, phytosphingosine
+","betamethasone","acetic acid, boric acid, ceramide complex, hydrocortisone, ketoconazole
+","hydrocortisone, troleandomycin
+","dexamethasone, enrofloxacin, ketoconazole, tris-edta
+","bacitracin zinc, neomycin sulfate, polymyxin b, unspecified steroid
+","clotrimazole, dexamethasone
+","dexamethasone, ketoconazole, tris-edta
+","dexamethasone, ketoconazole
+","betamethasone, clotrimazole, gentamicin sulfate, mometasone furoate
+","dexamethasone, diphenhydramine
+","beclomethasone, clotrimazole, neomycin sulfate
+","dexamethasone, enrofloxacin, ketoconazole
+","dexamethasone, dimethyl sulfoxide, enrofloxacin, lidocaine
+","dexamethasone, enrofloxacin
+","betamethasone, gentamicin sulfate, miconazole nitrate
+","chloramphenicol, dexamethasone
+","hydrocortisone, pramoxine
+","dexamethasone, penicillin
+","betamethasone, chloramphenicol, ketoconazole
+","dexamethasone, tobramycin
+","enrofloxacin, dexamethasone, tris-edta
+","dexamethasone, miconazole nitrate, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide
+","betamethasone, burow's solution, gentamicin sulfate, hydrocortisone, miconazole nitrate
+","ketoconazole, hydrocortisone
+","bacitracin, hydrocortisone
+","dexamethasone, miconazole nitrate, tris-edta
+","chlorhexidine gluconate, dexamethasone
+","dexamethasone, enrofloxacin, tris-edta
+","dexamethasone, enrofloxacin, silver sulfadiazine
+","dexamethasone, miconazole nitrate, neomycin sulfate, polymyxin b, prednisolone acetate, thiabendazole
+","betamethasone, enrofloxacin
+","dexamethasone, ear cleaner (epi-otic advanced), enrofloxacin
+","betamethasone, tobramycin
+","dexamethasone ophthalmic ointment
+","miconazole + dexamethasone ear solution
+","amikacin + dexamethasone ear solution
+","depo-medrol
+","prednisolone acetate ophthalmic suspension
+","neo-poly-dex ophthalmic ointment
+","neo-poly-bac ophthalmic ointment + dexamethasone
+","betamethasone + gentamicin ear solution
+","conofite + dexamethasone ear solution
+","neo-poly-bac ophthalmic ointment + hydrocortisone
+","baytril + conofite + dexamethasone ear solution
+","betamethasone + gentamicin spray
+","baytil + clotrimazole + dexamethasone ear solution
+","baytril + dexamethasone + miconazole ear solution
+","baytril + conzol + dexamethasone ear solution
+","trizulta + keto + baytril + dexamethasone flush
+","clotrimazole + dexamethasone ear solution
+","burow's solution + hydrocortisone
+","betamethasone + clotrimazole + gentamicin ear solution
+","trizulta + keto + dexamethasone flush
+","cortalone
+","baytril + dexamethasone + ketoconazole ear solution
+","betamethasone + gentamicin sulfate + miconazole nitrate ear solution
+","dexamethasone otic
+","baytril + trizulta + dexamethasone ear solution
+","neomycin sulfate + nystatin + triamcinolone acetonide
+","chloramphenicol + ketoconazole + triamcinolone acetonide ear solution
+","triamcinolone","trizedta + dexamethasone + miconazole flush
+","chlorhexiderm + dexamethasone spray
+","trizedta + baytril + dexamethasone flush
+","neomycin sulfate + tetracaine + triamcinolone acetonide
+","clotrimazole + gentamicin + mometasone ear solution
+","baytril + dexamethasone + silvadene ear solution
+","itraconazole + ketoconazole + triamcinolone acetonide ear solution
+","baytril + triamcinolone acetonide
+","troleandomycin + hydrocortisone
+","neo-poly-bac ophthalmic ointment + steroid
+","t8 keto flush + dexamethasone
+","dexamethasone + miconazole
+","dermacool + hydrocortisone
+","trizchlor 4 + hydrocortisone
+","dexamethasone + diphenhydramine
+","tear stimulation forte + betamethasone + ofloxacin
+","baytril + dexamethasone + dimethyl sulfoxide + lidocaine
+","dexamethasone + baytril
+","ketoconazole + mupirocin + triamcinolone acetonide
+","penicillin + dexamethasone
+","tobramycin + betamethasone ophthalmic ointment
+","lotramin + dexamethasone
+","bacitracin + hydrocortisone
+")
+fenbendazole_names<-c("fenbendazole","fenbendazole, maropitant citrate, metronidazole, omeprazole, sucralfate
+","cerenia + fenbendazole + metronidazole + omeprazole + sucralfate
+","panacur","safe-guard")
+```
+
+Ever exposed for each of these drugs :
+
+-   need to go across "medication_name", "medication_name_specify", "medication_ingredients" columns
+
+```{r}
+#NSAID
+NSAID_ever<- HSA_medications %>%
+  mutate(NSAID_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
+                            })) %>%
+  mutate(NSAID_ever= ifelse(NSAID_ever, 1, 0)) %>%
+  arrange(subject_id, desc(NSAID_ever)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, NSAID_ever)
+
+#steroid
+steroid_ever<- HSA_medications %>%
+  mutate(steroid_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
+                            })) %>%
+  mutate(steroid_ever = ifelse(steroid_ever, 1, 0)) %>%
+  arrange(subject_id, desc(steroid_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, steroid_ever)
+#fenbendazole
+fenbendazole_ever <- HSA_medications %>%
+  mutate(fenbendazole_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
+                            })) %>%
+  mutate(fenbendazole_ever = ifelse(fenbendazole_ever, 1, 0)) %>%
+  arrange(subject_id, desc(fenbendazole_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, fenbendazole_ever)
+```
+
+5 y prior  - apply to the previously generated 5y filtered HSA dogs data
+
+```{r}
+
+#NSAID
+NSAID_5y <-HSA_medication_5y_filt %>%
+  ungroup()%>%
+  mutate(NSAID_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
+                            })) %>%
+  mutate(NSAID_5y = ifelse(NSAID_5y, 1, 0)) %>%
+  arrange(subject_id, desc(NSAID_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, NSAID_5y)
+
+#steroid
+steroid_5y <- HSA_medication_5y_filt %>%
+    ungroup()%>%
+  mutate(steroid_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
+                            })) %>%
+  mutate(steroid_5y = ifelse(steroid_5y, 1, 0)) %>%
+  arrange(subject_id, desc(steroid_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, steroid_5y)
+#fenbendazole
+fenbendazole_5y <- HSA_medication_5y_filt %>%
+    ungroup()%>%
+  mutate(fenbendazole_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
+                            })) %>%
+  mutate(fenbendazole_5y = ifelse(fenbendazole_5y, 1, 0)) %>%
+  arrange(subject_id, desc(fenbendazole_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, fenbendazole_5y)
+```
+
+Combine 5y and lifetime for these 3 drugs
+
+```{r}
+combined_df <- reduce(list(NSAID_ever,NSAID_5y,steroid_ever,steroid_5y,fenbendazole_ever,fenbendazole_5y), full_join, by = "subject_id")
+
+```
 
 ```{r}
 HSA_5y_and_lifetime <- lifetime_meds_wide_quart %>%
@@ -402,5 +621,54 @@ HSA_5y_and_lifetime <- lifetime_meds_wide_quart %>%
 HSA_5y_and_lifetime <- HSA_5y_and_lifetime %>%
   mutate_all(~ replace(., is.na(.), "drug_not_administered"))
 
-write.csv(HSA_5y_and_lifetime,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
+#join to 3044 cohort
+HSA_5y_and_lifetime_all_dogs <- HSA_cohort %>%
+  left_join(HSA_5y_and_lifetime,by="subject_id")
+
+
+#add the combined df of the specific extra drugds
+
+#now replace NA with not recorded
+HSA_5y_and_lifetime_all_dogs <- HSA_5y_and_lifetime_all_dogs %>%
+  mutate_all(~ replace(., is.na(.), "drug_not_administered"))
+
+
+
+
+write.csv(HSA_5y_and_lifetime_all_dogs,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
+```
+
+### Medications to signal comorbidities & cross check with comorbidities dogs
+
+```{r}
+lifetime_comorbs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
+```
+
+List of unique medication names/ingredients and pick which ones from there are exclusive to a lifelong disease:
+
+```{r}
+#medication name
+medication_names_unique <- unique(HSA_medications$medication_name)
+medication_names_unique_2 <- unique(HSA_medications$medication_name_specify)
+#combine list
+
+#medication ingredient 
+medication_ingredients_unique <- unique(HSA_medications$medication_ingredients)
+medication_ingredients_unique_2 <- unique(HSA_medications$medication_ingredients_100)
+
+
+#combine these all together and export 
+all_unique_med_ingredients_or_names<-unique(c(medication_ingredients_unique,medication_ingredients_unique_2,medication_names_unique,medication_names_unique_2))
+
+
+#as df for reading in here with ease as too long to print whole list
+all_unique_med_ingredients_or_names_df <-as.data.frame(all_unique_med_ingredients_or_names)
+write.csv(all_unique_med_ingredients_or_names,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_all_unique_medication_names_or_ingredients.csv")
+```
+
+Specific medications (names and ingredients) from manual examination of list:
+
+```{r}
+long_term_meds <- c("insulin","telmisartan","pimobendan","phenobarbital","levetiracetam","potassium bromide","zonisamide", "thyroxine","sotalol","timolol","mexiletine","allopurinol","prazosin","lefulonomide","pyridostigmine bromide","amiodarone","insulin","librela","bedinvetmab","benazepril","levothyroxine","telmisartan","thyrosyn","soloxine","keppra","lypex","pancrezyme","purina ha diet", "thyrocare","thyrokare","levocrine","vetmedin","sotalol","timolol","propanolol","cyclopsorine","atopica","mexiletine","amlodipine","diltiazem","trilostane","vetoryl","sirolimus","tacrolimus","methazolamide","leflunomide","sildenafil","pyridostigmine bromide","vetsulin")
+disease_specific_lifetime_meds<-c("insulin","vetsulin","thyroxine","thyrosyn","thyrocare","thyrokare","levocrine","librela","trilostane","vetoryl","pyridostigmine bromide","vetmedin","pimobendan")
 ```

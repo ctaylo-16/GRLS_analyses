@@ -38,7 +38,7 @@ library(finalfit)
 cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
 colnames(cohort)
 cohort <- cohort %>%
-  dplyr::select(-c(X))
+  dplyr::select(-c(X,had_HSA))
 cohort <- cohort %>%
   rename(had_HSA = had_HSA.x.x)
 
@@ -190,7 +190,6 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "in.the.garage_YN_sum_whole_life", "in.the.house_YN_sum_whole_life",
   "outside_YN_sum_whole_life", "majority_sleep_location_lifetime",
   "lifestyle", "main_lifestyle", "main_lifestyle_category",
-  "year_in_study_diagnosis_or_final_record_year",
   "main_lifestyle_category_mode_5yrs_prior", "sleep_location_mode_5yrs_prior",  "use_aerosol_exposed_5yrs_prior", "use_air_cleaner_exposed_5yrs_prior",
   "use_hepa_filter_exposed_5yrs_prior", "use_moth_balls_exposed_5yrs_prior",
   "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior",
