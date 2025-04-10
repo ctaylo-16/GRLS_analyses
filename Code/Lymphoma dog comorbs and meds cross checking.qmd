@@ -6,7 +6,7 @@ editor: visual
 
 ## Data and packages
 
-## 
+## Comorbidities data
 
 ```{r}
 lymphoma_dogs <-read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/GRLS lymphoma RP2 projects/clinical_records_coding_compiled_CT_tidy_and_original_columns.csv")
@@ -40,3 +40,77 @@ Write this to csv to examine
 ```{r}
 write.csv(lymphoma_comorbs_with_rp2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_plus_records_comorbs3.csv")
 ```
+
+Do counts for manual crosschecking now
+
+```{r}
+records_crosschecked <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_plus_records_comorbs3_annotated.csv")
+
+records_crosschecked_abr <- records_crosschecked %>%
+  distinct(subject_id, .keep_all = TRUE)
+```
+
+```{r}
+table(records_crosschecked_abr$mismatch_YN)
+
+table(records_crosschecked_abr$mismatch_OK_YN)
+
+table(records_crosschecked_abr$reason_for_mismatch_OK)
+```
+
+\~ 70% agreement between records
+
+### Medications data
+
+```{r}
+meds_endpoints_5y<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_endpoints_5y_prior_medications.csv")
+
+#keep lymphoma only records
+lymphoma_meds<- meds_endpoints_5y%>%
+  dplyr::filter(subject_id %in% lymphoma_ids)
+
+#keep relevant columns
+lymphoma_meds_abr <- lymphoma_meds %>%
+  dplyr::select(c(subject_id,year_in_study.x,record_date,medication_name,medication_name_specify,medication_ingredients,medication_ingredients_100,administration_method,duration,active_ingredient_groups,active_ingredient_groups_100))
+
+
+#now add in the RP2 read clinical record bits
+lymphoma_meds_with_rp2 <- lymphoma_meds_abr%>%
+  left_join(lymphoma_dogs_abr,by="subject_id")
+
+
+write.csv(lymphoma_meds_with_rp2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_plus_records_medications.csv")
+```
+
+Cross-check counting
+
+```{r}
+lymphoma_meds_annotated<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_plus_records_medications_annotated.csv")
+
+lymphoma_meds_annotated_unique <- lymphoma_meds_annotated %>%
+  distinct(subject_id, .keep_all = TRUE)
+
+
+
+```
+
+```{r}
+table(lymphoma_meds_annotated_unique$agreement_YN)
+```
+
+\~17% full agreement, remaining 50% had no meds in clinical records / no clinical records ... so of those with clinical records \~50% matched fully
+
+```{r}
+table(lymphoma_meds_annotated_unique$mismatch_OK_YN)
+```
+
+A further \~50% of those with clinical records that didnt fully mismatch had an "OK" reason to mismatch
+
+```{r}
+table(lymphoma_meds_annotated_unique$reason_for_mismatch_OK
+      )
+```
+
+e.g 6 of them had 2/3 of the medications matching, \~10 only had a few early SY records so reasonable to mismatch
+
+So, \~70% of dogs with available meds info and clinical records reading info agreement

@@ -672,3 +672,9 @@ Specific medications (names and ingredients) from manual examination of list:
 long_term_meds <- c("insulin","telmisartan","pimobendan","phenobarbital","levetiracetam","potassium bromide","zonisamide", "thyroxine","sotalol","timolol","mexiletine","allopurinol","prazosin","lefulonomide","pyridostigmine bromide","amiodarone","insulin","librela","bedinvetmab","benazepril","levothyroxine","telmisartan","thyrosyn","soloxine","keppra","lypex","pancrezyme","purina ha diet", "thyrocare","thyrokare","levocrine","vetmedin","sotalol","timolol","propanolol","cyclopsorine","atopica","mexiletine","amlodipine","diltiazem","trilostane","vetoryl","sirolimus","tacrolimus","methazolamide","leflunomide","sildenafil","pyridostigmine bromide","vetsulin")
 disease_specific_lifetime_meds<-c("insulin","vetsulin","thyroxine","thyrosyn","thyrocare","thyrokare","levocrine","librela","trilostane","vetoryl","pyridostigmine bromide","vetmedin","pimobendan")
 ```
+
+### Get all medications data for endpoint dogs for 5y prior to endpoint for GRLS lymphoma clinical records cross-checking:
+
+```{r}
+write.csv(endpoints_medication_5y_filt,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_endpoints_5y_prior_medications.csv")
+```
