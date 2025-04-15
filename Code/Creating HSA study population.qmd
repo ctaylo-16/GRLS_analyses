@@ -328,7 +328,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(c(234:299), ~ replace(., is.na(.), "medication_use_not_recorded")))
+  mutate(across(c(237:302), ~ replace(., is.na(.), "medication_use_not_recorded")))
 
 merged_HSA_data <- merged_HSA_data %>%
   dplyr::select(-c(X.y,X.x))
