@@ -38,15 +38,16 @@ library(finalfit)
 cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
 colnames(cohort)
 cohort <- cohort %>%
-  dplyr::select(-c(X,had_HSA))
+  dplyr::select(-c(X,had_HSA.y, year_in_study_diagnosis_or_final_record_year.y.x,year_in_study_diagnosis_or_final_record_year.x.x,year_in_study_diagnosis_or_final_record_year.y.y,year_in_study_diagnosis_or_final_record_year.x,year_in_study_diagnosis_or_final_record_year.y))
 cohort <- cohort %>%
-  rename(had_HSA = had_HSA.x.x)
+  rename(had_HSA = had_HSA.x)
 
 HSA <- cohort %>%
   dplyr::filter(had_HSA==1)
 non_HSA <- cohort %>%
    dplyr::filter(had_HSA==0)
 
+colnames(cohort)
 
 ```
 
@@ -130,22 +131,9 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior",
   "pipes_plastic_any_mode_5yrs_prior", "heating_fuel_primary_mode_5yrs_prior",
   "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior",
-  "cooking_fuel_secondary_mode_5yrs_prior", "year_in_study_diagnosis_or_final_record_year.y",
+  "cooking_fuel_secondary_mode_5yrs_prior", "year_in_study_diagnosis_or_final_record_year",
   "region_name_mode_5yrs_prior", "state_mode_5yrs_prior", 
-  "final_date.y", 
-  "chronic_inflam_present", "study_year_first_chronic_inflam",
-  "first_chronic_inflam_condition", "study_year_latest_chronic_inflam",
-  "num_lifetime_chronic_inflam", "all_comorbidities_ever", "diagnosis_after_comorb",
-  "time_between_first_chronic_inflam_endpoint_diagnosis", "comorb_within_5_years_diagnosis_TF",
-  "years_between_diagnosis_and_last_chronic_inflam", "number_comorbs_present",
-  "comorbidities", "intestinal_parasitism", "tick_borne_parasitism",
-  "other_parasitism", "all_parasitism", "infectious", "orthopaedic",
-  "immune_mediated", "cardiovascular", "gastrointestinal",
-  "inflammatory_other", "chronic_inflammatory", "lifelong_comorb_present.x",
-  "lifelong_comorbidities", "lifelong_orthopaedic", "lifelong_immune_mediated",
-  "lifelong_cardiovascular", "lifelong_gastrointestinal",
-  "lifelong_inflammatory_other", "lifelong_chronic_inflammatory",
-  "number_lifelong_comorbs_present", "had_HSA",
+  "final_date.y", "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","comorbidities_lifetime","study_year_first_chronic_inflam.x","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","comorbidities_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","comorbidities_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","orthopaedic","inflammatory_other","chronic_inflammatory","lifelong_comorb_present.x","lifelong_comorbidities","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present", "malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","had_HSA",
   "mean_activity_level_overview", "USDA_30min_sy1_2", "activity_1h_min_sy1_2",
   "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2",
   "avg_activity_intensity_sy1_2", "avg_activity_freq_sy1_2",
@@ -233,8 +221,10 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "quartile_anti_septics_5y_prior_endpoint", "quartile_hormones_and_related_5y_prior_endpoint",
   "quartile_cardio_respiratory_5y_prior_endpoint", "quartile_fluid_metabolites_5y_prior_endpoint",
   "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint",
-  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles"
+  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles", "NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"
 )
+
+
 
 cohort_abr <- cohort %>%
   dplyr::select(all_of(cols_to_keep))
@@ -1050,10 +1040,9 @@ perform_univariable_analysis(
   explanatory_vars = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior","chronic_inflam_present","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",  #"number_comorbs_present_lifetime", 
-            # "study_year_first_chronic_inflam", #"chronic_inflam_present_5y", #"number_comorbs_present_5y", 
-            # "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
-              "num_lifetime_chronic_inflam", "intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","chronic_inflammatory","comorb_cardiovascular_all","comorb_orthopaedic_all","comorb_immune_med_all","comorb_gastrointestinal_all","comorb_chronic_inflam_all", "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior"
+            ,"chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",
+            "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
              "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
  "avg_activity_freq_sy1_2_terciles", 
              "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
@@ -1127,7 +1116,8 @@ perform_univariable_analysis(
           #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
- "age_at_final_date_quartiles","age_at_neuter_years_quartiles"),
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
+"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"  ),
   output_csv = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv",
   output_doc = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx"
 )
@@ -1142,11 +1132,9 @@ library(finalfit)
 explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior","chronic_inflam_present","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",  #"number_comorbs_present_lifetime", 
-            # "study_year_first_chronic_inflam", #"chronic_inflam_present_5y", #"number_comorbs_present_5y", 
-            # "chronic_inflam_present_no_min_year", "number_comorbs_present_no_min_year",  "diagnosis_after_comorb",  "time_between_first_comorb_and_endpoint",  
-              "num_lifetime_chronic_inflam", "intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","orthopaedic","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","chronic_inflammatory","comorb_cardiovascular_all","comorb_orthopaedic_all","comorb_immune_med_all","comorb_gastrointestinal_all","comorb_chronic_inflam_all", 
- "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior"
+            ,"chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",
+            "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
              "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
  "avg_activity_freq_sy1_2_terciles", 
              "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
@@ -1220,7 +1208,8 @@ explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior",
           #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
- "age_at_final_date_quartiles","age_at_neuter_years_quartiles")
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
+"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever" )
 dependent = "status_factor" # had HSA or no
 results <- cohort_abr %>%
   summary_factorlist(dependent, explanatory,
@@ -1280,7 +1269,7 @@ Assess which variables are correlated:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:70), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
+create_corr_matrix(cohort_abr_sig,c(1:77), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
 ```
 
 ### Correlated variables:
@@ -1333,6 +1322,8 @@ print(corr_values3)
     -   Ortho 5y prior and all orthopaedic
 
     -   GI 5y and all GI
+
+    -   Cancer counts and cancer YNs
 
 Multivar model building:
 
@@ -1922,18 +1913,6 @@ analyse_model(cox_model_31a,cohort_abr_sig,cox_model_26)
 
 ```
 
-### anti septic half lifetime
-
-```{r}
-cox_model_32<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-half_anti_septics_lifetime, data = cohort_abr_sig)
-
-#vif(cox_model_32)
-
-
-analyse_model(cox_model_32,cohort_abr_sig,cox_model_26)
-```
-
 ### half anti inflams 5y prior to endpoint
 
 ```{r}
@@ -2015,35 +1994,6 @@ analyse_model(cox_model_37,cohort_abr_sig,cox_model_34)
 
 ```
 
-### half cardio resp lifetime
-
-```{r}
-cox_model_38<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
- +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life +
-half_cardio_respiratory_lifetime, data = cohort_abr_sig)
-
-#vif(cox_model_38)
-
-
-analyse_model(cox_model_38,cohort_abr_sig,cox_model_34)
-```
-
-### half fluid metabolites lifetime
-
-```{r}
-cox_model_39<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
- +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint
-, data = cohort_abr_sig)
-
-#vif(cox_model_39)
-
-
-analyse_model(cox_model_39,cohort_abr_sig,cox_model_34)
-```
-
 ### Gastrointestinal comorbidities- lifelong and 5y and all cause
 
 -   all sig in model and all equivocal AIC/BIC
@@ -2052,8 +2002,7 @@ analyse_model(cox_model_39,cohort_abr_sig,cox_model_34)
 #lifelong
 cox_model_40a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
  +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint + lifelong_gastrointestinal
+use_incense_or_candles_study_years_whole_life + lifelong_gastrointestinal
 , data = cohort_abr_sig)
 
 #vif(cox_model_40a)
@@ -2064,7 +2013,7 @@ analyse_model(cox_model_40a,cohort_abr_sig,cox_model_34)
 cox_model_40b<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
  +avg_activity_duration_sy1_2_quartiles +neutered_reason+
 use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint + gastrointestinal
+ gastrointestinal
 , data = cohort_abr_sig)
 
 #vif(cox_model_40b)
@@ -2076,7 +2025,7 @@ analyse_model(cox_model_40b,cohort_abr_sig,cox_model_34)
 cox_model_40c<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
  +avg_activity_duration_sy1_2_quartiles +neutered_reason+
 use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint + comorb_gastrointestinal_all
+gastrointestinal
 
 , data = cohort_abr_sig)
 
@@ -2093,8 +2042,7 @@ analyse_model(cox_model_40c,cohort_abr_sig,cox_model_34)
 ```{r}
 cox_model_41<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
  +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint + lifelong_gastrointestinal + inflammatory_other
+use_incense_or_candles_study_years_whole_life+ lifelong_gastrointestinal + inflammatory_other
 , data = cohort_abr_sig)
 
 #vif(cox_model_40a)
@@ -2111,8 +2059,7 @@ analyse_model(cox_model_41,cohort_abr_sig,cox_model_40a)
 #5y
 cox_model_42a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
  +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint + lifelong_gastrointestinal + orthopaedic
+use_incense_or_candles_study_years_whole_life+ gastrointestinal + orthopaedic
 , data = cohort_abr_sig)
 
 #vif(cox_model_40a)
@@ -2130,8 +2077,7 @@ analyse_model(cox_model_42a,cohort_abr_sig,cox_model_40a)
 ```{r}
 cox_model_43<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
  +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint + lifelong_gastrointestinal + immune_mediated
+use_incense_or_candles_study_years_whole_life+gastrointestinal + immune_mediated
 , data = cohort_abr_sig)
 
 #vif(cox_model_40a)
@@ -2147,8 +2093,7 @@ analyse_model(cox_model_43,cohort_abr_sig,cox_model_40a)
 ```{r}
 cox_model_44<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
  +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life+
-half_fluid_metabolites_5y_prior_endpoint + lifelong_gastrointestinal + chronic_inflam_present
+use_incense_or_candles_study_years_whole_life+gastrointestinal + chronic_inflam_present.x
 
 , data = cohort_abr_sig)
 
@@ -2158,8 +2103,101 @@ half_fluid_metabolites_5y_prior_endpoint + lifelong_gastrointestinal + chronic_i
 analyse_model(cox_model_44,cohort_abr_sig,cox_model_40a)
 ```
 
+### Cancer counts and YN
+
+-   benign, malig, all - all cancer count and malig count is sig but malig lower AIC/BIC
+
+-   benign, malig, all YN - malig and all are sig but count malig is lowest AIC
+
 ```{r}
-explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles","neutered_reason","lifelong_gastrointestinal")
+cox_model_45a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
+ +avg_activity_duration_sy1_2_quartiles +neutered_reason+
+use_incense_or_candles_study_years_whole_life+gastrointestinal + benign_cancers_count
+
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_45a,cohort_abr_sig,cox_model_40a)
+
+
+cox_model_45b<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
+ +avg_activity_duration_sy1_2_quartiles +neutered_reason+
+use_incense_or_candles_study_years_whole_life+gastrointestinal + all_cancers_count
+
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_45b,cohort_abr_sig,cox_model_40a)
+
+
+cox_model_45c<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
+ +avg_activity_duration_sy1_2_quartiles +neutered_reason+
+use_incense_or_candles_study_years_whole_life+gastrointestinal + malig_cancers_count
+
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_45c,cohort_abr_sig,cox_model_40a)
+
+#check if YN is better than count malig cancers
+
+
+cox_model_45d<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
+ +avg_activity_duration_sy1_2_quartiles +neutered_reason+
+use_incense_or_candles_study_years_whole_life+gastrointestinal + malig_cancers_YN
+
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_45d,cohort_abr_sig,cox_model_40a)
+
+```
+
+### Medication specific drugs 5y or ever
+
+NSAID ever, fenbendazole 5y or ever
+
+-   non sig
+
+```{r}
+#NSAID ever
+cox_model_46<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
+ +avg_activity_duration_sy1_2_quartiles +neutered_reason+
+use_incense_or_candles_study_years_whole_life+gastrointestinal + malig_cancers_count
++ NSAID_ever
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_46,cohort_abr_sig,cox_model_45c)
+#fenbendazole ever or 5y
+cox_model_47a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
+ +avg_activity_duration_sy1_2_quartiles +neutered_reason+
+use_incense_or_candles_study_years_whole_life+gastrointestinal + malig_cancers_count
++ fenbendazole_ever
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_47a,cohort_abr_sig,cox_model_45c)
+
+cox_model_47b<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
+ +avg_activity_duration_sy1_2_quartiles +neutered_reason+
+use_incense_or_candles_study_years_whole_life+gastrointestinal + malig_cancers_count
++ fenbendazole_5y
+, data = cohort_abr_sig)
+
+
+analyse_model(cox_model_47b,cohort_abr_sig,cox_model_45c)
+```
+
+#reset malig cancer levels
+
+```{r}
+cohort_abr_sig$malig_cancers_count_new <- factor(cohort_abr_sig$malig_cancers_count, levels = c(2, 0, 1, 3))
+
+```
+
+```{r}
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_purina_BCS_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex", "use_incense_or_candles_study_years_whole_life","avg_activity_duration_sy1_2_quartiles","neutered_reason","gastrointestinal","malig_cancers_count_new")
 dependent = 'Surv(survival_time_days,status)'
 # Summarize the Cox model output in a table
 mod <- cohort_abr_sig %>%
@@ -2172,7 +2210,7 @@ mod
 Remove neuter and activity duration and BCS and incense and lifelong gastrointestinal as nonsig in final model
 
 ```{r}
-explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex")
+explanatory <- c("avg_weight_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles","quartile_anti_parasites_5y_prior_endpoint", "sex","malig_cancers_count")
 dependent = 'Surv(survival_time_days,status)'
 # Summarize the Cox model output in a table
 mod <- cohort_abr_sig %>%

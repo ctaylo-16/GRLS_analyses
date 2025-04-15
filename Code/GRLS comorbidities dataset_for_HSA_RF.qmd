@@ -524,6 +524,8 @@ benign_cancers <- c("adrenal_tumor", "basal_cell_tumor", "bile_duct_tumor", "bla
 HSA_comorbs_unique4$all_cancers_count <- 0
 HSA_comorbs_unique4$malig_cancers_count <- 0
 HSA_comorbs_unique4$benign_cancers_count <- 0
+HSA_comorbs_unique4$all_cancers_count_no_HSA <- 0
+HSA_comorbs_unique4$malig_cancers_count_no_HSA <- 0
 
 # Define the cancer columns indices (from index 2 to the last column)
 cancer_columns <- 199:232
@@ -531,6 +533,9 @@ cancer_columns <- 199:232
 # Loop through the cancer columns by index
 for (col_index in cancer_columns) {
   col_name <- colnames(HSA_comorbs_unique4)[col_index]  # Get column name
+  
+  # Count for all cancers
+  HSA_comorbs_unique4$all_cancers_count <- HSA_comorbs_unique4$all_cancers_count + (HSA_comorbs_unique4[[col_name]] == 1)
   
   # Count for all cancers
   HSA_comorbs_unique4$all_cancers_count <- HSA_comorbs_unique4$all_cancers_count + (HSA_comorbs_unique4[[col_name]] == 1)
@@ -551,11 +556,15 @@ HSA_comorbs_unique4 <- HSA_comorbs_unique4 %>%
   mutate(
     all_cancers_YN = ifelse(all_cancers_count >= 1, 1, 0),
     malig_cancers_YN = ifelse(malig_cancers_count >= 1, 1, 0),
-    benign_cancers_YN = ifelse(benign_cancers_count >= 1, 1, 0)
+    benign_cancers_YN = ifelse(benign_cancers_count >= 1, 1, 0),
+    all_cancers_YN_no_HSA = ifelse(all_cancers_count>=1,1,0),
+    malig_cancers_YN_no_HSA= ifelse(malig_cancers_count >=1,1,0)
   )
 ```
 
 Endpoints dataset:
+
+-   have also added in an additional variable/s to exclude HSA from the all_cancer and malig_cancer counts as there are no Cases with no malig cancer by definition which means not a useful variable
 
 ```{r}
 head(endpoints_abr)
@@ -590,14 +599,42 @@ malig_cancers_endpoint<-c(
 benign_cancers_endpoint <- c("meningioma", "meibomian gland epithelioma", "choroid plexus papilloma", "apocrine gland ductal adenoma",
   "pituitary adenoma", "acanthomatous ameloblastoma", "soft tissue sarcoma - benign fibrosarcoma",
   "trichoepithelioma", "melanocytic neoplasm")
-
+all_cancers_endpoint_no_HSA<-c("carcinoma - mammary","soft tissue sarcoma - other/not specified","lymphoma - multicentric","adenocarcinoma - mammary","osteosarcoma - appendicular","adenocarcinoma - other/not specified","carcinoma - neuroendocrine","carcinoma - squamous cell","cutaneous melanoma","carcinoma - other/not specified","mast cell tumor - cutaneous","malignant melanoma","lymphoma - other/not specified","meningioma","unknown neoplasia","leukemia","undifferentiated malignant neoplasm","soft tissue sarcoma - peripheral nerve sheath tumor","histiocytic sarcoma","brain tumor","carcinoma - thyroid", "malignant pilomatricoma","osteosarcoma - other/unspecified","malignant trichoepithelioma","mast cell tumor - other/not specified","nasal sarcoma","carcinoma - pulmonary","lymphoma - gastrointestinal","mast cell tumor - subcutaneous","round cell tumor","oral tumor","seminoma","testicular tumor", "leiomyosarcoma","oral melanoma","osteosarcoma - axial","carcinoma - transitional cell","liver tumor","carcinoma - ovarian","adenocarcinoma - exocrine pancreatic","pheochromocytoma","carcinoma - nasal", "anaplastic sarcoma","carcinoma - hepatocellular","soft tissue sarcoma - spindle cell sarcoma","gastrointestinal stromal tumor","lymphoma - cutaneous","cns tumor","acanthomatous ameloblastoma","sarcoma","soft tissue sarcoma - fibrosarcoma","chondrosarcoma","carcinoma - apocrine ductal","adenocarcinoma - apocrine gland anal sac","carcinosarcoma - thyroid","carcinoma - gastric","nephroblastoma","splenic stromal sarcoma","thymoma","soft tissue sarcoma - myxosarcoma","trichoepithelioma","melanocytic neoplasm","soft tissue sarcoma - synovial cell sarcoma","multiple myeloma", "hemangioendothelioma","malignant insulinoma","meibomian gland epithelioma","choroid plexus papilloma","soft tissue sarcoma - perivascular wall tumor", "carcinoma - cerumin gland" ,"carcinoma - choroid plexus", "apocrine gland ductal adenoma","stomach tumor","pituitary adenoma","soft tissue sarcoma - rhabdomyosarcoma","spleen tumor","carcinoma - basal cell","carcinoma - basosquamous cell" ,"soft tissue sarcoma - keloidal", "adenocarcinoma - perianal","metastatic sarcoma", "soft tissue sarcoma - benign fibrosarcoma","soft tissue sarcoma - giant cell tumor","neuroendocrine tumor" )
+malig_cancers_endpoint_no_HSA<-c(
+  "carcinoma - mammary", "soft tissue sarcoma - other/not specified", "lymphoma - multicentric",
+  "adenocarcinoma - mammary", "osteosarcoma - appendicular",
+  "adenocarcinoma - other/not specified", "carcinoma - neuroendocrine",  "carcinoma - squamous cell", "malignant melanoma",
+  "carcinoma - other/not specified",  "lymphoma - other/not specified",
+  "leukemia", "undifferentiated malignant neoplasm", "soft tissue sarcoma - peripheral nerve sheath tumor",
+  "histiocytic sarcoma", "carcinoma - thyroid", "malignant pilomatricoma", "osteosarcoma - other/unspecified",
+  "malignant trichoepithelioma", "nasal sarcoma", "carcinoma - pulmonary", "lymphoma - gastrointestinal",
+  "mast cell tumor - cutaneous", "mast cell tumor - subcutaneous", "round cell tumor", "oral tumor",
+  "seminoma", "testicular tumor", "leiomyosarcoma", "oral melanoma", "osteosarcoma - axial",
+  "carcinoma - transitional cell", "carcinoma - ovarian", "adenocarcinoma - exocrine pancreatic",
+  "pheochromocytoma", "carcinoma - nasal", "anaplastic sarcoma", "carcinoma - hepatocellular",
+  "soft tissue sarcoma - spindle cell sarcoma", "gastrointestinal stromal tumor", "lymphoma - cutaneous",
+  "sarcoma", "soft tissue sarcoma - fibrosarcoma", "chondrosarcoma", 
+  "carcinoma - apocrine ductal", "adenocarcinoma - apocrine gland anal sac", "carcinosarcoma - thyroid",
+  "carcinoma - gastric", "nephroblastoma", "splenic stromal sarcoma", "soft tissue sarcoma - myxosarcoma",
+  "soft tissue sarcoma - synovial cell sarcoma", "multiple myeloma", "hemangioendothelioma",
+  "malignant insulinoma", "soft tissue sarcoma - rhabdomyosarcoma", "carcinoma - basal cell",
+  "carcinoma - basosquamous cell", "adenocarcinoma - perianal", "metastatic sarcoma",
+  "soft tissue sarcoma - keloidal", "neuroendocrine tumor", "soft tissue sarcoma - giant cell tumor","carcinoma - cerumin gland", "carcinoma - choroid plexus"
+) 
 
 #join up these endpoints to the HSA_comorbs that have already been filtered to 5y prior to endpoint diagnosis 
 HSA_comorbs_unique5 <- HSA_comorbs_unique4 %>%
   left_join(endpoints_abr,by="subject_id")
 
-#now in tracked conidtions column if all, benign or malig are present then add a 1 into the all_cancers_YN, benign_cancers_YN, malig_cancers_YN
+
+#keep only the relevant columns
 HSA_comorbs_unique5 <- HSA_comorbs_unique5 %>%
+  dplyr::select(c(subject_id,had_HSA,tracked_condition,all_cancers_count,malig_cancers_count,benign_cancers_count))
+#now in tracked conidtions column if all, benign or malig are present then add a 1 into the all_cancers_YN, benign_cancers_YN, malig_cancers_YN
+
+
+
+HSA_comorbs_unique5_removerows<- HSA_comorbs_unique5 %>%
   mutate(
     malig_cancers_YN = if_else(
       str_detect(tracked_condition, str_c(malig_cancers_endpoint, collapse = "|")),
@@ -610,39 +647,61 @@ HSA_comorbs_unique5 <- HSA_comorbs_unique5 %>%
     all_cancers_YN = if_else(
       str_detect(tracked_condition, str_c(all_cancers_endpoint, collapse = "|")),
       1, 0
-    )
-  )
-
-#counts of cancer from this endpoints df then add onto comorbs df next step
-
-#add on comorbs counts to this
-HSA_comorbs_unique5 <- HSA_comorbs_unique5 %>%
-  mutate(
+    ),
     malig_cancers_count = malig_cancers_count + str_count(tracked_condition, str_c(malig_cancers_endpoint, collapse = "|")),
     benign_cancers_count = benign_cancers_count + str_count(tracked_condition, str_c(benign_cancers_endpoint, collapse = "|")),
     all_cancers_count = all_cancers_count + str_count(tracked_condition, str_c(all_cancers_endpoint, collapse = "|"))
-  )
+  ) %>%
+  # Remove rows with 'hemangio' in tracked_condition (case-insensitive) and make sure not losing all the NA tracked_condition rows for dogs without an endpoint (ie. our control pop)
+  filter(is.na(tracked_condition) | !str_detect(tolower(tracked_condition), "hemangio"))
+
+
+HSA_comorbs_unique5_removerows<- HSA_comorbs_unique5_removerows %>%
+  mutate(
+    malig_cancers_YN_no_HSA = if_else(
+      str_detect(tracked_condition, str_c(malig_cancers_endpoint_no_HSA, collapse = "|")),
+      1, 0
+    ),
+    all_cancers_YN_no_HSA = if_else(
+      str_detect(tracked_condition, str_c(all_cancers_endpoint_no_HSA, collapse = "|")),
+      1, 0
+    ),
+    malig_cancers_count_no_HSA =  str_count(tracked_condition, str_c(malig_cancers_endpoint_no_HSA, collapse = "|")),
+    all_cancers_count_no_HSA =  str_count(tracked_condition, str_c(all_cancers_endpoint_no_HSA, collapse = "|"))
+  ) 
+#counts of cancer from this endpoints df then add onto comorbs df next step
+
 #get the max count value for each of the counts for each dog 
-cancer_count_summary <- HSA_comorbs_unique5 %>%
+cancer_count_summary <- HSA_comorbs_unique5_removerows %>%
   group_by(subject_id) %>%
   summarise(
     malig_cancers_count = if_else(all(is.na(malig_cancers_count)), 0, max(malig_cancers_count, na.rm = TRUE)),
     benign_cancers_count = if_else(all(is.na(benign_cancers_count)), 0, max(benign_cancers_count, na.rm = TRUE)),
     all_cancers_count = if_else(all(is.na(all_cancers_count)), 0, max(all_cancers_count, na.rm = TRUE)),
-    #keep max value for each dog ie. 1 if present 
-    malig_cancers_count = max(malig_cancers_count, na.rm = TRUE),
-    benign_cancers_count = max(benign_cancers_count, na.rm = TRUE),
-    all_cancers_count = max(all_cancers_count, na.rm = TRUE),
-    malig_cancers_YN = max(malig_cancers_YN, na.rm = TRUE),
-    benign_cancers_YN = max(benign_cancers_YN, na.rm = TRUE),
-    all_cancers_YN = max(all_cancers_YN, na.rm = TRUE),
+    malig_cancers_count_no_HSA = if_else(all(is.na(malig_cancers_count_no_HSA)), 0, max(malig_cancers_count_no_HSA, na.rm = TRUE)),
+    all_cancers_count_no_HSA = if_else(all(is.na(all_cancers_count_no_HSA)), 0, max(all_cancers_count_no_HSA, na.rm = TRUE)),
+
+    malig_cancers_YN = if_else(all(is.na(malig_cancers_YN)), 0, max(malig_cancers_YN, na.rm = TRUE)),
+    benign_cancers_YN = if_else(all(is.na(benign_cancers_YN)), 0, max(benign_cancers_YN, na.rm = TRUE)),
+    all_cancers_YN = if_else(all(is.na(all_cancers_YN)), 0, max(all_cancers_YN, na.rm = TRUE)),
+    malig_cancers_YN_no_HSA = if_else(all(is.na(malig_cancers_YN_no_HSA)), 0, max(malig_cancers_YN_no_HSA, na.rm = TRUE)),
+    all_cancers_YN_no_HSA = if_else(all(is.na(all_cancers_YN_no_HSA)), 0, max(all_cancers_YN_no_HSA, na.rm = TRUE)),
+    
     .groups = "drop"
   )
-#replace -Inf with 0
-cancer_count_summary[cancer_count_summary == -Inf] <- 0
+
+#rejoin the removed rows back to main df with full 3000 dogs as with remove rows we removed ~1000 rows to ignore the HSA tracked conditions
+HSA_comorbs_unique5_combine <- HSA_comorbs_unique5 %>%
+  left_join(HSA_comorbs_unique5_removerows,by="subject_id")
+
+
 #now remove the cancer cols from the df so that they dont mess up at next step joining / distinct
-HSA_comorbs_unique5_no_cancer <- HSA_comorbs_unique5 %>%
-  dplyr::select(-c(malig_cancers_count,malig_cancers_YN,benign_cancers_count,benign_cancers_YN,all_cancers_count,all_cancers_YN))
+HSA_comorbs_unique5_no_cancer <- HSA_comorbs_unique5_combine %>%
+  dplyr::select(-c(had_HSA.y,malig_cancers_count.y,malig_cancers_count.x,all_cancers_count.x,benign_cancers_count.x,all_cancers_count.y,benign_cancers_count.y,malig_cancers_YN,benign_cancers_YN,all_cancers_YN, malig_cancers_count_no_HSA,malig_cancers_YN_no_HSA,all_cancers_count_no_HSA,all_cancers_YN_no_HSA,tracked_condition.y))
+
+HSA_comorbs_unique5_no_cancer <- HSA_comorbs_unique5_no_cancer %>%
+  rename(had_HSA = had_HSA.x,
+         tracked_condition = tracked_condition.x)
 ```
 
 Adding in lifetime data
@@ -655,11 +714,20 @@ HSA_comorbs_unique4_distinct <- HSA_comorbs_unique5_no_cancer %>%
 HSA_comorbs_unique4_distinct_cancer <- HSA_comorbs_unique4_distinct %>%
   left_join(cancer_count_summary,by="subject_id")
 
-
+#replace NAs across columns of cancer counts with 0
+HSA_comorbs_unique4_distinct_cancer <- HSA_comorbs_unique4_distinct_cancer %>%
+  mutate(across(4:13, ~ ifelse(is.na(.x), 0, .x)))
+#add in other comorb calcs
+HSA_comorbs_unique4_distinct_rows <- HSA_comorbs_unique4 %>%
+  distinct(subject_id,.keep_all = TRUE)%>%
+  #remove confusing previous cancer columns
+  dplyr::select(-c(all_cancers_count,malig_cancers_count,benign_cancers_count,all_cancers_YN,malig_cancers_YN,benign_cancers_YN,all_cancers_count_no_HSA,malig_cancers_count_no_HSA,all_cancers_YN_no_HSA,malig_cancers_YN_no_HSA))
+HSA_comorbs_unique4_distinct_cancer_all_comorbs <- HSA_comorbs_unique4_distinct_rows %>%
+  left_join(HSA_comorbs_unique4_distinct_cancer,by="subject_id")
 #join in other df with further lifetime calcs
 df_result7_distinct <- df_result7 %>%
   distinct(subject_id,.keep_all = TRUE)
-HSA_comorbs_unique4_df7_distinct <- HSA_comorbs_unique4_distinct_cancer %>%
+HSA_comorbs_unique4_df7_distinct <- HSA_comorbs_unique4_distinct_cancer_all_comorbs %>%
   left_join(df_result7_distinct,by="subject_id")
 ```
 
@@ -675,9 +743,11 @@ write.csv(HSA_comorbs_unique4_df7_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analy
 #abridge df for use in diagnosis modelling (so get rid of the original MAF GRLS conditiosn collumns and just keep the grouped ones)
 
 HSA_comorbs_unique4_df7_distinct_abr <- HSA_comorbs_unique4_df7_distinct %>%
-  dplyr::select(c(1,273:303))
+  dplyr::select(c(1,273:306))
 
-write.csv(HSA_comorbs_unique4_df7_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer.csv")
+write.csv(HSA_comorbs_unique4_df7_distinct_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer.csv")
+
+write.csv(HSA_comorbs_unique4_df7_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer_all_cols.csv")
 ```
 
 Rerun this singular comorbs list for whole cohort ever:
