@@ -217,8 +217,6 @@ creating-HSA-RF-dataset
 
 ## Cohort plus RF data added in
 
--   still missing medication usage but that needs sorting later
-
 ```{r}
 #MDI
 MDI_dogs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
@@ -229,11 +227,15 @@ enviro<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_hous
 enviro <- enviro %>%
   dplyr::select(-c("X.1","year_in_study_diagnosis_or_final_record_year.x","record_date.y.x",14:28))
 #comorb
-comorb<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
+comorb<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer.csv")
 comorb <- comorb %>%
-  dplyr::select(-c("X.1","X","chronic_inflam_present.y"))
-comorb <- comorb %>%
-  rename(chronic_inflam_present = chronic_inflam_present.x)
+  dplyr::select(-c("X"))
+#lifetime comorbs data made in another script for comorb creating
+comorbs_lifetime <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
+comorb_all <- comorb %>% left_join(comorbs_lifetime,by="subject_id")
+#remove extra cols:
+comorb_all <- comorb_all %>%
+  dplyr::select(-c(had_HSA.y,X.1,X,final_date.y))
 #activity
 activity <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_activity_classification.csv")
 activity <-activity %>%
@@ -252,7 +254,7 @@ neut <- neut %>%
   mutate(ever_bred_from = if_any(c(neutered_ever_bred,spayed_while_pregnant,intact_sired_litters_natural_ever,neutered_females_bred_with_count_ever,neutered_sired_litters_natural_ever,preg_pre_neuter,num_bred_before_neutering,num_breeding_before_neutering),~ . >= 1) * 1)
 
 #combine all
-dfs <- list(MDI_dogs, enviro, comorb, activity, lifestyle, neut)
+dfs <- list(MDI_dogs, enviro, comorb_all, activity, lifestyle, neut)
 
 
 
@@ -264,8 +266,8 @@ merged_HSA_data <- reduce(dfs, full_join, by = "subject_id")
 
 #remove messy extra cols eg. X.x
 merged_HSA_data <- merged_HSA_data %>%
-  dplyr::select(-c(had_HSA.y,had_HSA.x,had_HSA.y.y,
-                   final_date.x,final_date.x.x,final_date.y.y,
+  dplyr::select(-c(had_HSA.y,had_HSA.x,had_HSA.x.x,
+                   final_date.x,final_date.x.x,
                    record_date.y.y))
 
 ### add in age at final date
@@ -300,7 +302,7 @@ get_mode <- function(x) {
 # Modify  pipeline to include mode calculation for purina_BCS
 dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
-  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
+  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year.x - 5)) %>%
   summarise(
     avg_weight_5y_prior_endpoint = mean(weight),
     avg_height_5y_prior_endpoint = mean(height),
@@ -326,7 +328,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(c(203:262), ~ replace(., is.na(.), "medication_use_not_recorded")))
+  mutate(across(c(237:302), ~ replace(., is.na(.), "medication_use_not_recorded")))
 
 merged_HSA_data <- merged_HSA_data %>%
   dplyr::select(-c(X.y,X.x))
