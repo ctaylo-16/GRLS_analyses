@@ -387,7 +387,7 @@ lifetime_meds_wide_quart <- lifetime_meds_wide_quart %>%
 
 ```
 
-### Examine for specific potential RF medications: 
+### Examine for specific potential RF medications:
 
 -   NSAIDs exposure
 
@@ -560,7 +560,7 @@ fenbendazole_ever <- HSA_medications %>%
   select(subject_id, fenbendazole_ever)
 ```
 
-5 y prior  - apply to the previously generated 5y filtered HSA dogs data
+5 y prior - apply to the previously generated 5y filtered HSA dogs data
 
 ```{r}
 
@@ -627,7 +627,8 @@ HSA_5y_and_lifetime_all_dogs <- HSA_cohort %>%
 
 
 #add the combined df of the specific extra drugds
-
+HSA_5y_and_lifetime_all_dogs <- HSA_5y_and_lifetime_all_dogs %>%
+  left_join(combined_df,by="subject_id")
 #now replace NA with not recorded
 HSA_5y_and_lifetime_all_dogs <- HSA_5y_and_lifetime_all_dogs %>%
   mutate_all(~ replace(., is.na(.), "drug_not_administered"))
