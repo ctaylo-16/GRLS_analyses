@@ -58,24 +58,6 @@ cohort_abr$status <-as.numeric(cohort_abr$had_HSA)
 cohort_abr$survival_time_months <- as.numeric(cohort_abr$survival_time_months)
 
 
-#manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
-#height
-cohort_abr <- cohort_abr%>%
-  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
-#weight
-cohort_abr <- cohort_abr%>%
-  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("9.75-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
-#bcs
-cohort_abr <- cohort_abr%>%
-  mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
-#neut age
-
-cohort_abr <- cohort_abr%>%
-  mutate(age_at_neuter_years_quartiles = factor(age_at_neuter_years_quartiles, levels = c("0.15-<0.52y", ">=0.52-<0.83y", ">=0.83-2.44y", ">=2.44-9.59y","Entire","not_recorded")))
-#diagnosis age
-cohort_abr <- cohort_abr%>%
-  mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years","not_recorded")))
-
 #change spayed while in heat to account for males and entire females
 cohort_abr <- cohort_abr %>%
   mutate(spayed_while_in_heat = case_when(
@@ -133,6 +115,34 @@ cohort_abr <- cohort_abr %>%
     heats_before_neutering == "12" ~">4-12"
   ))
 
+
+#create combined sex neuter variable
+cohort_abr <- cohort_abr %>%
+  mutate(sex_neuter = paste(sex, neuter, sep = " "))
+
+
+
+#ensure not_recorded is default not baseline
+convert_and_relevel <- function(df) {
+  df <- df %>%
+    mutate(across(where(is.character), ~ factor(.))) %>%  # Convert all character columns to factors
+    mutate(across(where(is.factor), ~ fct_relevel(., "not_recorded", after = Inf)))  # Move "not_recorded" to last place
+  return(df)
+}
+
+# Apply to your dataset
+cohort_abr <- convert_and_relevel(cohort_abr)
+
+
+#swap not_recorded for NA and exclude from univar this way
+cohort_no_not_rec <- cohort_abr %>%
+  mutate(across(
+    where(~ is.character(.) | is.factor(.)),
+    ~ factor(na_if(as.character(.), "not_recorded"))
+  ))
+
+
+
 cohort_abr <- cohort_abr%>%
   mutate(heats_before_neutering_terciles = factor(heats_before_neutering_terciles, levels = c("0", "1-<=2", ">2-<=4", ">4-12","Intact Female","Male","not_recorded")))
 
@@ -159,27 +169,36 @@ cohort_abr <- cohort_abr %>%
     mode_purina_BCS_5y_prior_endpoint == "9" ~"overweight",
   ))
 
+#set age levels
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years")))
+
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_final_date_bio = factor(age_at_final_date_bio, levels = c(">5-<8y","<5y",  ">8-<11y", ">11-<13y",">13y")))
+
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_final_date_GB = factor(age_at_final_date_GB, levels = c(">7-<9y","<5y", ">5-<7y",  ">9-<11y",">11-<13y",">13y")))
 
 
+#manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
+#height
+cohort_abr <- cohort_abr%>%
+  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
+#weight
+cohort_abr <- cohort_abr%>%
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("9.75-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
+#bcs
+cohort_abr <- cohort_abr%>%
+  mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
+#neut age
 
-#ensure not_recorded is default not baseline
-convert_and_relevel <- function(df) {
-  df <- df %>%
-    mutate(across(where(is.character), ~ factor(.))) %>%  # Convert all character columns to factors
-    mutate(across(where(is.factor), ~ fct_relevel(., "not_recorded", after = Inf)))  # Move "not_recorded" to last place
-  return(df)
-}
-
-# Apply to your dataset
-cohort_abr <- convert_and_relevel(cohort_abr)
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_neuter_years_quartiles = factor(age_at_neuter_years_quartiles, levels = c("0.15-<0.52y", ">=0.52-<0.83y", ">=0.83-2.44y", ">=2.44-9.59y","Entire","not_recorded")))
+#diagnosis age
+cohort_abr <- cohort_abr%>%
+  mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years","not_recorded")))
 
 
-#swap not_recorded for NA and exclude from univar this way
-cohort_no_not_rec <- cohort_abr %>%
-  mutate(across(
-    where(~ is.character(.) | is.factor(.)),
-    ~ factor(na_if(as.character(.), "not_recorded"))
-  ))
 ```
 
 ## Univariable logstic regression
@@ -190,97 +209,98 @@ cohort_no_not_rec <- cohort_abr %>%
 dependent <- "had_HSA"
 
 # All other variables as explanatory variables
-explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
+explanatory = c(
+  #demog
+  "age_at_final_date_GB","age_at_final_date_bio", "age_at_final_date_quartiles","age_at_neuter_years_quartiles","sex_neuter",
+   "sex", "neuter", "mismating_ever",
+             "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
+             "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
+             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
+             "preg_pre_neuter",
+ "num_breeding_before_neutering_terciles", "ever_bred_from", 
+              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify",
+  #lifestyle/activity
+  "main_lifestyle_category", 
+ "main_lifestyle_category_mode_5yrs_prior", "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
+             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",
+ "avg_activity_freq_sy1_2_terciles", 
+             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles",
+  #home/environmental
+  "MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior"
-            ,"chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",
-            "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
-             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
- "avg_activity_freq_sy1_2_terciles", 
-             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
-             "use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
-             "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life", 
-       #      "any_treated_weeds_study_years_early_life", "any_treated_insects_study_years_early_life", #"any_treated_fertilizer_study_years_early_life", 
-         #    "use_aerosol_sum_early_life", "use_air_cleaner_sum_early_life", "use_hepa_filter_sum_early_life", "use_moth_balls_sum_early_life", 
-          #   "use_incense_or_candles_sum_early_life", 
- #"smoke_exposure_sum_early_life",
- #"any_treated_weeds_sum_early_life", 
-    #         "any_treated_insects_sum_early_life", #"any_treated_fertilizer_sum_early_life", 
- "use_aerosol_study_years_rest_of_life", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior","use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
+             "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life",  "use_aerosol_study_years_rest_of_life", 
              "use_air_cleaner_study_years_rest_of_life", "use_hepa_filter_study_years_rest_of_life", "use_moth_balls_study_years_rest_of_life", 
              "use_incense_or_candles_study_years_rest_of_life", "smoke_exposure_study_years_rest_of_life", "any_treated_weeds_study_years_rest_of_life", 
-             "any_treated_insects_study_years_rest_of_life", "any_treated_fertilizer_study_years_rest_of_life", #"use_aerosol_sum_rest_of_life", 
- #            "use_air_cleaner_sum_rest_of_life", "use_hepa_filter_sum_rest_of_life", "use_moth_balls_sum_rest_of_life", 
-          #   "use_incense_or_candles_sum_rest_of_life", 
-# "smoke_exposure_sum_rest_of_life", 
-# "any_treated_weeds_sum_rest_of_life", 
-            # "any_treated_insects_sum_rest_of_life", "any_treated_fertilizer_sum_rest_of_life", 
-"use_aerosol_study_years_whole_life", 
+             "any_treated_insects_study_years_rest_of_life", "any_treated_fertilizer_study_years_rest_of_life","use_aerosol_study_years_whole_life", 
              "use_air_cleaner_study_years_whole_life", "use_hepa_filter_study_years_whole_life", "use_moth_balls_study_years_whole_life", 
              "use_incense_or_candles_study_years_whole_life", "smoke_exposure_study_years_whole_life", "any_treated_weeds_study_years_whole_life", 
-             "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life",# "use_aerosol_sum_whole_life", 
-           #  "use_air_cleaner_sum_whole_life", "use_hepa_filter_sum_whole_life", "use_moth_balls_sum_whole_life",# "use_incense_or_candles_sum_whole_life", 
-            # "smoke_exposure_sum_whole_life", 
- #"any_treated_weeds_sum_whole_life", "any_treated_insects_sum_whole_life", 
-            # "any_treated_fertilizer_sum_whole_life",
- "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
+             "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life", "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
              "hours_of_smoke_whole_life_total_dosage_terciles", "in.the.garage_YN_study_years_early_life", "in.the.house_YN_study_years_early_life", 
              "outside_YN_study_years_early_life",  "in.the.house_YN_sum_early_life_terciles", 
              "in.the.garage_YN_study_years_rest_of_life", "in.the.house_YN_study_years_rest_of_life", "outside_YN_study_years_rest_of_life", 
               "in.the.house_YN_sum_rest_of_life_quartiles",  
              "in.the.garage_YN_study_years_whole_life", "in.the.house_YN_study_years_whole_life", "outside_YN_study_years_whole_life", 
              "in.the.house_YN_sum_whole_life_quartiles",  
-             "majority_sleep_location_lifetime",  "main_lifestyle_category", 
- "main_lifestyle_category_mode_5yrs_prior", "sleep_location_mode_5yrs_prior", 
+             "majority_sleep_location_lifetime","sleep_location_mode_5yrs_prior", 
              "use_aerosol_exposed_5yrs_prior", "use_air_cleaner_exposed_5yrs_prior", "use_hepa_filter_exposed_5yrs_prior", 
              "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
              "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
-             "hours_of_smoke_exposure_hours_5yrs_prior_terciles", "sex", "neuter", "mismating_ever",
-             "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
-             "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
-             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
-             "preg_pre_neuter",# "mated_pre_neuter",
- "num_breeding_before_neutering_terciles", "ever_bred_from", 
-              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
-             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "hours_of_smoke_exposure_hours_5yrs_prior_terciles",
+  #comorbidities
+  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA",
+  #medications
+  "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
              "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
              "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
              "quartile_anti_inflam_lifetime", "quartile_anti_microbials_lifetime", "quartile_dietary_supplements_lifetime", 
-            #not enough data for quartiles "quartile_enteric_lifetime", "quartile_fluid_metabolites_lifetime", 
  "quartile_hormones_and_related_lifetime", 
              "quartile_immunologicals_lifetime", "quartile_misc_lifetime", "quartile_neurological_lifetime", 
              "quartile_anti_parasites_lifetime", 
- #not enough data for quartiles "quartile_anti_septics_lifetime", "quartile_cardio_respiratory_lifetime",   "quartile_diuretics_lifetime", "quartile_anti_hist_lifetime", 
              "half_anti_inflam_5y_prior_endpoint", "half_anti_microbials_5y_prior_endpoint", "half_enteric_5y_prior_endpoint", 
              "half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint", "half_neurological_5y_prior_endpoint", 
              "half_anti_parasites_5y_prior_endpoint", "half_dietary_supplements_5y_prior_endpoint", 
              "half_anti_septics_5y_prior_endpoint", "half_hormones_and_related_5y_prior_endpoint", 
              "half_cardio_respiratory_5y_prior_endpoint", "half_fluid_metabolites_5y_prior_endpoint", 
              "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", 
-             "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint", 
-            # "quartile_enteric_5y_prior_endpoint",
- "quartile_immunologicals_5y_prior_endpoint", 
+             "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint",  "quartile_immunologicals_5y_prior_endpoint", 
              "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
              "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
-       #      "quartile_anti_septics_5y_prior_endpoint", 
- "quartile_hormones_and_related_5y_prior_endpoint", 
-          #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
-         #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
-             #"quartile_anti_viral_5y_prior_endpoint",
- "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
-"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever")
+ "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"
+)
 
 # Create a univariable logistic regression table
 univar_table <- cohort_abr %>%summary_factorlist(dependent, explanatory, 
-  p=TRUE,  add_dependent_label=TRUE)
-
+  p=TRUE,  add_dependent_label=TRUE,column = TRUE)
+#column = TRUE does case and contorl counts for each variable category rather than rowise
 
 univar_table2 <- cohort_abr %>%summary_factorlist(dependent, explanatory, 
-  p=TRUE,  add_dependent_label=TRUE,na_include = TRUE)
+  p=TRUE,  add_dependent_label=TRUE,na_include = TRUE,column=TRUE)
 # View the results
 print(univar_table)
+
+
+#save as worddoc
+# Install and load the required packages
+library(officer)
+library(flextable)
+
+# Create a Word document
+doc <- read_docx()
+
+# Convert finalfit output to a flextable
+results_flextable <- flextable(univar_table)
+
+# Add the flextable to the Word document
+doc <- doc %>%
+  body_add_flextable(results_flextable) %>%
+  body_add_par("Finalfit Regression Results", style = "heading 1")
+
+# Save the Word document
+print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.docx")
 ```
 
 -   Univar log reg with ORs
@@ -293,92 +313,177 @@ cohort_abr$had_HSA <- as.factor(cohort_abr$had_HSA)
 #leaving out the continuous variables as missing data causing issues
 #"max_tumour_cm_value" "age_at_diagnosis_cont"
 cohort_abr2 <- cohort_abr %>%
-  dplyr::select("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
+  dplyr::select(#demog
+  "age_at_final_date_GB","age_at_final_date_bio", "age_at_final_date_quartiles","age_at_neuter_years_quartiles","sex_neuter",
+   "sex", "neuter", "mismating_ever",
+             "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
+             "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
+             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
+             "preg_pre_neuter",
+ "num_breeding_before_neutering_terciles", "ever_bred_from", 
+              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify",
+  #lifestyle/activity
+  "main_lifestyle_category", 
+ "main_lifestyle_category_mode_5yrs_prior", "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
+             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",
+ "avg_activity_freq_sy1_2_terciles", 
+             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles",
+  #home/environmental
+  "MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior","house_type_mode_5yrs_prior", 
              "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior", "pipes_plastic_any_mode_5yrs_prior", 
              "heating_fuel_primary_mode_5yrs_prior", "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior", 
-             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior"
-            ,"chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",
-            "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
-             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
- "avg_activity_freq_sy1_2_terciles", 
-             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
-             "use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
-             "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life", 
-       #      "any_treated_weeds_study_years_early_life", "any_treated_insects_study_years_early_life", #"any_treated_fertilizer_study_years_early_life", 
-         #    "use_aerosol_sum_early_life", "use_air_cleaner_sum_early_life", "use_hepa_filter_sum_early_life", "use_moth_balls_sum_early_life", 
-          #   "use_incense_or_candles_sum_early_life", 
- #"smoke_exposure_sum_early_life",
- #"any_treated_weeds_sum_early_life", 
-    #         "any_treated_insects_sum_early_life", #"any_treated_fertilizer_sum_early_life", 
- "use_aerosol_study_years_rest_of_life", 
+             "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior","use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
+             "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life",  "use_aerosol_study_years_rest_of_life", 
              "use_air_cleaner_study_years_rest_of_life", "use_hepa_filter_study_years_rest_of_life", "use_moth_balls_study_years_rest_of_life", 
              "use_incense_or_candles_study_years_rest_of_life", "smoke_exposure_study_years_rest_of_life", "any_treated_weeds_study_years_rest_of_life", 
-             "any_treated_insects_study_years_rest_of_life", "any_treated_fertilizer_study_years_rest_of_life", #"use_aerosol_sum_rest_of_life", 
- #            "use_air_cleaner_sum_rest_of_life", "use_hepa_filter_sum_rest_of_life", "use_moth_balls_sum_rest_of_life", 
-          #   "use_incense_or_candles_sum_rest_of_life", 
-# "smoke_exposure_sum_rest_of_life", 
-# "any_treated_weeds_sum_rest_of_life", 
-            # "any_treated_insects_sum_rest_of_life", "any_treated_fertilizer_sum_rest_of_life", 
-"use_aerosol_study_years_whole_life", 
+             "any_treated_insects_study_years_rest_of_life", "any_treated_fertilizer_study_years_rest_of_life","use_aerosol_study_years_whole_life", 
              "use_air_cleaner_study_years_whole_life", "use_hepa_filter_study_years_whole_life", "use_moth_balls_study_years_whole_life", 
              "use_incense_or_candles_study_years_whole_life", "smoke_exposure_study_years_whole_life", "any_treated_weeds_study_years_whole_life", 
-             "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life",# "use_aerosol_sum_whole_life", 
-           #  "use_air_cleaner_sum_whole_life", "use_hepa_filter_sum_whole_life", "use_moth_balls_sum_whole_life",# "use_incense_or_candles_sum_whole_life", 
-            # "smoke_exposure_sum_whole_life", 
- #"any_treated_weeds_sum_whole_life", "any_treated_insects_sum_whole_life", 
-            # "any_treated_fertilizer_sum_whole_life",
- "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
+             "any_treated_insects_study_years_whole_life", "any_treated_fertilizer_study_years_whole_life", "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
              "hours_of_smoke_whole_life_total_dosage_terciles", "in.the.garage_YN_study_years_early_life", "in.the.house_YN_study_years_early_life", 
              "outside_YN_study_years_early_life",  "in.the.house_YN_sum_early_life_terciles", 
              "in.the.garage_YN_study_years_rest_of_life", "in.the.house_YN_study_years_rest_of_life", "outside_YN_study_years_rest_of_life", 
               "in.the.house_YN_sum_rest_of_life_quartiles",  
              "in.the.garage_YN_study_years_whole_life", "in.the.house_YN_study_years_whole_life", "outside_YN_study_years_whole_life", 
              "in.the.house_YN_sum_whole_life_quartiles",  
-             "majority_sleep_location_lifetime",  "main_lifestyle_category", 
- "main_lifestyle_category_mode_5yrs_prior", "sleep_location_mode_5yrs_prior", 
+             "majority_sleep_location_lifetime","sleep_location_mode_5yrs_prior", 
              "use_aerosol_exposed_5yrs_prior", "use_air_cleaner_exposed_5yrs_prior", "use_hepa_filter_exposed_5yrs_prior", 
              "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
              "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
-             "hours_of_smoke_exposure_hours_5yrs_prior_terciles", "sex", "neuter", "mismating_ever",
-             "neutered_reason", "neutered_ever_bred", "spayed_while_in_heat", "spayed_while_pregnant", "prevent_heat_ever", 
-             "no_pregnancy_ever", "intact_sired_litters_natural_ever", "neutered_females_bred_with_count_ever", 
-             "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
-             "preg_pre_neuter",# "mated_pre_neuter",
- "num_breeding_before_neutering_terciles", "ever_bred_from", 
-              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
-             "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify", "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
+             "hours_of_smoke_exposure_hours_5yrs_prior_terciles",
+  #comorbidities
+  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA",
+  #medications
+  "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
              "half_misc_lifetime", "half_neurological_lifetime", "half_anti_parasites_lifetime", "half_anti_septics_lifetime", 
              "half_cardio_respiratory_lifetime", "half_diuretics_lifetime", "half_anti_hist_lifetime", 
              "quartile_anti_inflam_lifetime", "quartile_anti_microbials_lifetime", "quartile_dietary_supplements_lifetime", 
-            #not enough data for quartiles "quartile_enteric_lifetime", "quartile_fluid_metabolites_lifetime", 
  "quartile_hormones_and_related_lifetime", 
              "quartile_immunologicals_lifetime", "quartile_misc_lifetime", "quartile_neurological_lifetime", 
              "quartile_anti_parasites_lifetime", 
- #not enough data for quartiles "quartile_anti_septics_lifetime", "quartile_cardio_respiratory_lifetime",   "quartile_diuretics_lifetime", "quartile_anti_hist_lifetime", 
              "half_anti_inflam_5y_prior_endpoint", "half_anti_microbials_5y_prior_endpoint", "half_enteric_5y_prior_endpoint", 
              "half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint", "half_neurological_5y_prior_endpoint", 
              "half_anti_parasites_5y_prior_endpoint", "half_dietary_supplements_5y_prior_endpoint", 
              "half_anti_septics_5y_prior_endpoint", "half_hormones_and_related_5y_prior_endpoint", 
              "half_cardio_respiratory_5y_prior_endpoint", "half_fluid_metabolites_5y_prior_endpoint", 
              "half_diuretics_5y_prior_endpoint", "half_anti_hist_5y_prior_endpoint", 
-             "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint", 
-            # "quartile_enteric_5y_prior_endpoint",
- "quartile_immunologicals_5y_prior_endpoint", 
+             "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint",  "quartile_immunologicals_5y_prior_endpoint", 
              "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
              "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
-       #      "quartile_anti_septics_5y_prior_endpoint", 
- "quartile_hormones_and_related_5y_prior_endpoint", 
-          #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
-         #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
-             #"quartile_anti_viral_5y_prior_endpoint",
- "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
-"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","had_HSA")
+ "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","had_HSA")
 
 cohort_abr2<- cohort_abr2%>%
   mutate_all(~factor(ifelse(is.na(.), "not_recorded", as.character(.))))
+
+
+
+cohort_abr2 <- cohort_abr2%>%
+  mutate(heats_before_neutering_terciles = factor(heats_before_neutering_terciles, levels = c("0", "1-<=2", ">2-<=4", ">4-12","Intact Female","Male","not_recorded")))
+
+
+#neuter reason levels
+cohort_abr2<- cohort_abr2%>%
+  mutate(neutered_reason = factor(neutered_reason, levels = c("Elective",  "Medical Reason", "Entire","Unknown","not_recorded")))
+
+
+cohort_abr2 <- cohort_abr2%>%
+  mutate(mode_purina_BCS_5y_prior_endpoint = factor(mode_purina_BCS_5y_prior_endpoint, levels = c("5", "3", "4", "6","7","8","9","not_recorded")))
+
+#change BCS to be over underweight
+cohort_abr2 <- cohort_abr2 %>%
+  mutate(mode_BCS_classify = case_when(
+    mode_purina_BCS_5y_prior_endpoint == "1" ~"underweight",
+    mode_purina_BCS_5y_prior_endpoint == "2" ~"underweight",
+    mode_purina_BCS_5y_prior_endpoint == "3" ~"underweight",
+    mode_purina_BCS_5y_prior_endpoint == "4" ~"ideal",
+    mode_purina_BCS_5y_prior_endpoint == "5" ~"ideal",
+    mode_purina_BCS_5y_prior_endpoint == "6" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "7" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "8" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "9" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "not_recorded" ~"not_recorded",
+  ))
+
+#set age levels
+cohort_abr2 <- cohort_abr2%>%
+  mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years")))
+
+cohort_abr2 <- cohort_abr2%>%
+  mutate(age_at_final_date_bio = factor(age_at_final_date_bio, levels = c(">5-<8y","<5y",  ">8-<11y", ">11-<13y",">13y")))
+
+cohort_abr2 <- cohort_abr2%>%
+  mutate(age_at_final_date_GB = factor(age_at_final_date_GB, levels = c(">7-<9y","<5y", ">5-<7y",  ">9-<11y",">11-<13y",">13y")))
+
+
+#manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
+#height
+cohort_abr2 <- cohort_abr2%>%
+  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
+#weight
+cohort_abr2 <- cohort_abr2%>%
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("9.75-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
+#bcs
+cohort_abr2 <- cohort_abr2%>%
+  mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
+#neut age
+
+cohort_abr2<- cohort_abr2 %>%
+  mutate(age_at_neuter_years_quartiles = factor(age_at_neuter_years_quartiles, levels = c("0.15-<0.52y", ">=0.52-<0.83y", ">=0.83-2.44y", ">=2.44-9.59y","Entire","not_recorded")))
+#diagnosis age
+cohort_abr2 <- cohort_abr2%>%
+  mutate(age_at_final_date_quartiles = factor(age_at_final_date_quartiles, levels = c("0.74-<8.47 years", ">=8.47-<10.68 years", ">=10.68-<11.64 years", ">=11.64-14.51 years","not_recorded")))
+
+
+
 univar_logistic_regression(cohort_abr2, "had_HSA", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
+
+
+
 ```
+
+Tidy up csv of univar log reg into more readable format:
+```{r}
+#create tidy table from univar output
+source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/univar_log_reg_table.R")
+#read in data
+univar <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
+
+#function to tidy data and write to csv in a table ready to use for univar
+table <- univar_logistic_regression_table(univar,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table.csv")
+
+#crop table to keep relevant cols
+table_2 <- table %>%
+  dplyr::select(c(Variable,term,OR_CI,p.value,LR_T_pvalue,Case_summary,Control_summary))
+print(table_2)
+
+print(knitr::kable(table_2, row.names=FALSE, 
+    align=c("l", "l", "r", "r", "r")))
+
+write.csv(table_2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table2.csv")
+
+#save table_2 as a word doc file too
+doc <- read_docx()
+
+# Convert finalfit output to a flextable
+results_flextable_2 <- flextable(table_2)
+
+# Add the flextable to the Word document
+doc <- doc %>%
+  body_add_flextable(results_flextable_2) %>%
+  body_add_par("Finalfit Regression Results", style = "heading 1")
+
+# Save the Word document
+print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table2.docx")
+```
+
+
+
+Combine the final fit chi sq table with counts with the univar logistic regression table
+
+
+
 
 Run univar log reg to only retain variables where they are sig not just due to NA/not recorded variable
 
@@ -482,13 +587,13 @@ cohort_no_not_rec<- cohort_no_not_rec %>%
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
-"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","had_HSA")
+"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","had_HSA","age_at_final_date_bio","age_at_final_date_GB","sex_neuter")
 
 
 univar_logistic_regression(cohort_no_not_rec, "had_HSA", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_no_missing.csv")
 
 univar_table_no_missing <- cohort_no_not_rec %>%summary_factorlist(dependent, explanatory, 
-  add_dependent_label=TRUE,na_include = FALSE, p=TRUE)
+  add_dependent_label=TRUE,na_include = FALSE, p=TRUE,column=TRUE)
 # View the results
 print(univar_table_no_missing)
 
@@ -496,7 +601,7 @@ write.csv(univar_table_no_missing,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Outpu
 
 ```
 
-Potentially significant univariable variables (with NA included as "not_recorded" level:
+Potentially significant univariable variables (with NA included as "not_recorded" level)
 
 ```{r}
 lrt_pvalues <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
@@ -535,7 +640,7 @@ Assessing collinearity of potentially sig univariable variables:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:111), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.png")
+create_corr_matrix(cohort_abr_sig,c(1:100), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg.png")
 ```
 
 Correlated variables
@@ -561,7 +666,7 @@ print(corr_values3)
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig2,c(1:97), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_no_missing.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_no_missing.png")
+create_corr_matrix(cohort_abr_sig2,c(1:100), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_no_missing.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg2_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_corrvalue_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_logreg_no_missing.png")
 
 
 
@@ -694,17 +799,6 @@ knitr::kable(t2[[1]], row.names=FALSE, align=c("l", "l", "r", "r", "r", "r"))
 knitr::kable(t2[[2]], row.names=FALSE, col.names="")
 ```
 
-### Model build with only 5y prior or no time point variables
-
-```{r}
-cols_to_keep_5y_or_no_time <- c("heating_fuel_primary_mode_5yrs_prior","cooking_fuel_secondary_mode_5yrs_prior",
-                              "region_mode_5y_prior","number_comorbs_present_5y","all_parasitism","gastrointestinal","inflammatory_other","chronic_inflammatory","avg_intensity_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","main_lifestyle_category_mode_5yrs_prior","use_hepa_filter_exposed_5yrs_prior","any_treated_weeds_exposed_5yrs_prior","any_treated_insects_exposed_5yrs_prior","any_treated_fertilizer_exposed_5yrs_prior","sex","neuter","spayed_while_in_heat","avg_weight_5y_prior_endpoint_quartiles","avg_height_5y_prior_endpoint_quartiles","avg_purina_BCS_5y_prior_endpoint_quartiles","mode_purina_BCS_5y_prior_endpoint","half_anti_inflam_5y_prior_endpoint","half_anti_microbials_5y_prior_endpoint","half_enteric_5y_prior_endpoint","half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint","half_anti_parasites_5y_prior_endpoint","half_dietary_supplements_5y_prior_endpoint","half_fluid_metabolites_5y_prior_endpoint","quartile_anti_inflam_5y_prior_endpoint","quartile_anti_microbials_5y_prior_endpoint","quartile_immunologicals_5y_prior_endpoint","quartile_misc_5y_prior_endpoint","quartile_anti_parasites_5y_prior_endpoint","quartile_dietary_supplements_5y_prior_endpoint","age_at_final_date_quartiles","age_at_neuter_years_quartiles","malig_cancers_count_no_HSA","all_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","steroid_5y","fenbendazole_5y","had_HSA")
-
-
-cohort_abr_sig_5y <- cohort_abr_sig[,cols_to_keep_5y_or_no_time]
-
-```
-
 ### Manual multivariable model building
 
 from most significant to least (p\<0.2) :
@@ -717,25 +811,40 @@ null_model <- glm(had_HSA ~ 1, data = cohort_abr_sig, family = binomial)
 -   age
 
 ```{r}
+#age quartiles
 age_model <- glm(had_HSA ~ age_at_final_date_quartiles, data = cohort_abr_sig, family = binomial)
 
 summary(age_model)
 logistic.display(age_model)
 lrtest(null_model,age_model)
 
+
+#age bio
+age_model2 <- glm(had_HSA ~ age_at_final_date_bio, data = cohort_abr_sig, family = binomial)
+
+summary(age_model2)
+logistic.display(age_model2)
+lrtest(null_model,age_model2)
+
+#age GB
+age_model3 <- glm(had_HSA ~ age_at_final_date_GB, data = cohort_abr_sig, family = binomial)
+
+summary(age_model3)
+logistic.display(age_model3)
+lrtest(null_model,age_model3)
 ```
 
 -   in house rest of life YN, whole life quartiles
 
 ```{r}
-model_2a <- glm(had_HSA ~ age_at_final_date_quartiles + in.the.house_YN_sum_rest_of_life_quartiles, data = cohort_abr_sig, family = binomial)
+model_2a <- glm(had_HSA ~ age_at_final_date_GB + in.the.house_YN_sum_rest_of_life_quartiles, data = cohort_abr_sig, family = binomial)
 
 summary(model_2a)
 logistic.display(model_2a)
 lrtest(age_model,model_2a)
 
 
-model_2b <- glm(had_HSA ~ age_at_final_date_quartiles + in.the.house_YN_sum_whole_life_quartiles, data = cohort_abr_sig, family = binomial)
+model_2b <- glm(had_HSA ~ age_at_final_date_GB + in.the.house_YN_sum_whole_life_quartiles, data = cohort_abr_sig, family = binomial)
 
 summary(model_2b)
 logistic.display(model_2b)
@@ -745,7 +854,7 @@ lrtest(age_model,model_2b)
 -   all cancers count and YN
 
 ```{r}
-model_4a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA, data = cohort_abr_sig, family = binomial)
+model_4a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA, data = cohort_abr_sig, family = binomial)
 
 summary(model_4a)
 logistic.display(model_4a)
@@ -753,7 +862,7 @@ lrtest(age_model,model_4a)
 car::vif(model_4a)
 
 
-model_4b<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_YN_no_HSA, data = cohort_abr_sig, family = binomial)
+model_4b<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_YN_no_HSA, data = cohort_abr_sig, family = binomial)
 
 summary(model_4b)
 logistic.display(model_4b)
@@ -764,7 +873,7 @@ car::vif(model_4b)
 -   freq and intensity 5y quartiles
 
 ```{r}
-model_5a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
+model_5a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
 
 #freq non sig
 summary(model_5a)
@@ -773,8 +882,8 @@ lrtest(model_4a,model_5a)
 car::vif(model_5a)
 
 
-model_5b<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_intensity_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
-model_5c<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA  , data = cohort_abr_sig, family = binomial)
+model_5b<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_intensity_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
+model_5c<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA  , data = cohort_abr_sig, family = binomial)
 summary(model_5b)
 lrtest(model_4a,model_5b)
 summary(model_5c)
@@ -787,7 +896,7 @@ logistic.display(model_5b)
 
 ```{r}
 
-model_6b<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_intensity_5y_prior_endpoint_quartiles + mode_purina_BCS_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_6b<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_intensity_5y_prior_endpoint_quartiles + mode_purina_BCS_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_6b)
 logistic.display(model_6b)
 car::vif(model_6b)
@@ -799,7 +908,7 @@ lrtest(model_5a,model_6b)
     -   doesnt improve
 
 ```{r}
-model_7<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life, data = cohort_abr_sig, family = binomial)
+model_7<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life, data = cohort_abr_sig, family = binomial)
 summary(model_7)
 logistic.display(model_7)
 car::vif(model_7)
@@ -809,7 +918,7 @@ lrtest(model_5a,model_7)
 -   quartile antiparasites 5y prior, half antiparasites lifetime, quartile antiparasites lifetime
 
 ```{r}
-model_8a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_8a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 
 summary(model_8a)
 logistic.display(model_8a)
@@ -822,7 +931,7 @@ lrtest(model_7,model_8a)
     -   no levels significant exc not_recorded
 
 ```{r}
-model_9<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint+ main_lifestyle_category_mode_5yrs_prior, data = cohort_abr_sig, family = binomial)
+model_9<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint+ main_lifestyle_category_mode_5yrs_prior, data = cohort_abr_sig, family = binomial)
 summary(model_9)
 logistic.display(model_9)
 car::vif(model_9)
@@ -832,7 +941,7 @@ lrtest(model_8a,model_9)
 -   malig cancer YN, malig cancer count cant keep in two cancer variables so assess if YN or all cancer count is better
 
 ```{r}
-model_10a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint + malig_cancers_YN_no_HSA, data = cohort_abr_sig, family = binomial)
+model_10a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint + malig_cancers_YN_no_HSA, data = cohort_abr_sig, family = binomial)
 summary(model_10a)
 logistic.display(model_10a)
 car::vif(model_10a)
@@ -840,16 +949,16 @@ lrtest(model_8a,model_10a)
 
 
 
-model_10b<- glm(had_HSA ~ age_at_final_date_quartiles  + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint + malig_cancers_YN_no_HSA, data = cohort_abr_sig, family = binomial)
+model_10b<- glm(had_HSA ~ age_at_final_date_GB  + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint + malig_cancers_YN_no_HSA, data = cohort_abr_sig, family = binomial)
 summary(model_10b)
 logistic.display(model_10b)
 
-model_10c<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint , data = cohort_abr_sig, family = binomial)
+model_10c<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint , data = cohort_abr_sig, family = binomial)
 summary(model_10c)
 logistic.display(model_10c)
 
 
-model_10d<- glm(had_HSA ~ age_at_final_date_quartiles  +malig_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint , data = cohort_abr_sig, family = binomial)
+model_10d<- glm(had_HSA ~ age_at_final_date_GB  +malig_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint , data = cohort_abr_sig, family = binomial)
 summary(model_10d)
 logistic.display(model_10d)
 car::vif(model_10a)
@@ -860,7 +969,7 @@ car::vif(model_10a)
 -   fenbendazole ever
 
 ```{r}
-model_11<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint + fenbendazole_ever, data = cohort_abr_sig, family = binomial)
+model_11<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint + fenbendazole_ever, data = cohort_abr_sig, family = binomial)
 
 summary(model_11)
 logistic.display(model_11)
@@ -872,7 +981,7 @@ lrtest(model_8a,model_11)
 -   aliased with fenbendazole_ever
 
 ```{r}
-model_12<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever, data = cohort_abr_sig, family = binomial)
+model_12<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever, data = cohort_abr_sig, family = binomial)
 
 summary(model_12)
 summary(model_11)
@@ -885,7 +994,7 @@ lrtest(model_8a,model_12)
     -   only not recorded is sig = not retain
 
 ```{r}
-model_13<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + cooking_fuel_secondary_mode_5yrs_prior, data = cohort_abr_sig, family = binomial)
+model_13<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + cooking_fuel_secondary_mode_5yrs_prior, data = cohort_abr_sig, family = binomial)
 
 summary(model_13)
 logistic.display(model_13)
@@ -896,7 +1005,7 @@ lrtest(model_12,model_13)
 -   heats_before_neutering_terciles
 
 ```{r}
-model_13<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles, data = cohort_abr_sig, family = binomial)
+model_13<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles, data = cohort_abr_sig, family = binomial)
 
 summary(model_13)
 logistic.display(model_13)
@@ -908,7 +1017,7 @@ lrtest(model_12,model_13)
 -   only not recorded category sig =not retain variable
 
 ```{r}
-model_14<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + heating_fuel_primary_mode_5yrs_prior, data = cohort_abr_sig, family = binomial)
+model_14<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + heating_fuel_primary_mode_5yrs_prior, data = cohort_abr_sig, family = binomial)
 
 summary(model_14)
 logistic.display(model_14)
@@ -919,7 +1028,7 @@ lrtest(model_13,model_14)
 -   insect treatment rest of life
 
 ```{r}
-model_15<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life, data = cohort_abr_sig, family = binomial)
+model_15<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life, data = cohort_abr_sig, family = binomial)
 
 summary(model_15)
 logistic.display(model_15)
@@ -931,7 +1040,7 @@ lrtest(model_13,model_15)
     -   non sig
 
 ```{r}
-model_16a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + half_anti_microbials_lifetime, data = cohort_abr_sig, family = binomial)
+model_16a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + half_anti_microbials_lifetime, data = cohort_abr_sig, family = binomial)
 
 summary(model_16a)
 logistic.display(model_16a)
@@ -940,7 +1049,7 @@ lrtest(model_15,model_16a)
 
 
 
-model_16b<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + quartile_anti_microbials_lifetime, data = cohort_abr_sig, family = binomial)
+model_16b<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + quartile_anti_microbials_lifetime, data = cohort_abr_sig, family = binomial)
 
 summary(model_16b)
 logistic.display(model_16b)
@@ -952,7 +1061,7 @@ lrtest(model_15,model_16b)
     -   NSAID ever preffered
 
 ```{r}
-model_17<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + steroid_ever, data = cohort_abr_sig, family = binomial)
+model_17<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + steroid_ever, data = cohort_abr_sig, family = binomial)
 
 summary(model_17)
 logistic.display(model_17)
@@ -960,7 +1069,7 @@ car::vif(model_17)
 #steroid ever and nsaid ever aliased coeffs - assess which is better
 #nsaid model
 summary(model_12) 
-model_17a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + steroid_ever, data = cohort_abr_sig, family = binomial)
+model_17a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + steroid_ever, data = cohort_abr_sig, family = binomial)
 
 summary(model_17a)
 logistic.display(model_17a)
@@ -970,7 +1079,7 @@ lrtest(model_15,model_17)
 -   GI comorb 5y
 
 ```{r}
-model_18<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal, data = cohort_abr_sig, family = binomial)
+model_18<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal, data = cohort_abr_sig, family = binomial)
 
 summary(model_18)
 logistic.display(model_18)
@@ -982,7 +1091,7 @@ lrtest(model_15,model_18)
     -   non sig
 
 ```{r}
-model_19<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + age_at_neuter_years_quartiles, data = cohort_abr_sig, family = binomial)
+model_19<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + age_at_neuter_years_quartiles, data = cohort_abr_sig, family = binomial)
 
 summary(model_19)
 logistic.display(model_19)
@@ -994,7 +1103,7 @@ lrtest(model_18,model_19)
     -   non sig
 
 ```{r}
-model_20<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + quartile_anti_inflam_lifetime, data = cohort_abr_sig, family = binomial)
+model_20<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + quartile_anti_inflam_lifetime, data = cohort_abr_sig, family = binomial)
 
 summary(model_20)
 logistic.display(model_20)
@@ -1005,7 +1114,7 @@ lrtest(model_18,model_20)
 -   weight 5y prior
 
 ```{r}
-model_21<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles, data = cohort_abr_sig, family = binomial)
+model_21<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles, data = cohort_abr_sig, family = binomial)
 
 summary(model_21)
 logistic.display(model_21)
@@ -1017,12 +1126,12 @@ lrtest(model_18,model_21)
     -   non sig
 
 ```{r}
-model_22a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + half_immunologicals_lifetime, data = cohort_abr_sig, family = binomial)
+model_22a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + half_immunologicals_lifetime, data = cohort_abr_sig, family = binomial)
 
 summary(model_22a)
 
 
-model_22b<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + quartile_immunologicals_lifetime, data = cohort_abr_sig, family = binomial)
+model_22b<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + quartile_immunologicals_lifetime, data = cohort_abr_sig, family = binomial)
 
 summary(model_22b)
 logistic.display(model_22a)
@@ -1035,10 +1144,10 @@ lrtest(model_21,model_22a)
 
 ```{r}
 #ever
-model_23a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
+model_23a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
 summary(model_23a)
 #5y
-model_23b<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_5y + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
+model_23b<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_5y + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles , data = cohort_abr_sig, family = binomial)
 summary(model_23b)
 ```
 
@@ -1047,13 +1156,13 @@ summary(model_23b)
 
 ```{r}
 #half
-model_24a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + half_anti_inflam_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_24a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + half_anti_inflam_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_24a)
 car::vif(model_24a)
 logistic.display(model_24a)
 lrtest(model_21,model_24a)
 #quartiles
-model_24b<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_5y + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + quartile_anti_inflam_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_24b<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_5y + heats_before_neutering_terciles + any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + quartile_anti_inflam_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_24b)
 ```
 
@@ -1061,10 +1170,10 @@ summary(model_24b)
     -   cant keep heats before neutering and sex in together so select which is better - keep sex
 
 ```{r}
-model_25<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex, data = cohort_abr_sig, family = binomial)
+model_25<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex, data = cohort_abr_sig, family = binomial)
 summary(model_25)
 logistic.display(model_25)
-model_25a<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + heats_before_neutering_terciles, data = cohort_abr_sig, family = binomial)
+model_25a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + heats_before_neutering_terciles, data = cohort_abr_sig, family = binomial)
 logistic.display(model_25a)
 summary(model_25a)
 car::vif(model_25)
@@ -1076,7 +1185,7 @@ lrtest(model_21,model_25)
     -   non sig
 
 ```{r}
-model_26<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + quartile_immunologicals_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_26<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + quartile_immunologicals_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_26)
 logistic.display(model_26)
 car::vif(model_26)
@@ -1086,7 +1195,7 @@ lrtest(model_25,model_26)
 -   neuter
 
 ```{r}
-model_27<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter, data = cohort_abr_sig, family = binomial)
+model_27<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter, data = cohort_abr_sig, family = binomial)
 summary(model_27)
 logistic.display(model_27)
 car::vif(model_27)
@@ -1097,13 +1206,13 @@ lrtest(model_25,model_27)
     -   non sig
 
 ```{r}
-model_28<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_enteric_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_28<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_enteric_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_28)
 logistic.display(model_28)
 car::vif(model_28)
 lrtest(model_27,model_28)
 
-model_28<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_enteric_lifetime, data = cohort_abr_sig, family = binomial)
+model_28<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_enteric_lifetime, data = cohort_abr_sig, family = binomial)
 summary(model_28)
 logistic.display(model_28)
 car::vif(model_28)
@@ -1114,7 +1223,7 @@ lrtest(model_27,model_28)
     -   non sig
 
 ```{r}
-model_29<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + avg_height_5y_prior_endpoint_quartiles, data = cohort_abr_sig, family = binomial)
+model_29<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + avg_height_5y_prior_endpoint_quartiles, data = cohort_abr_sig, family = binomial)
 summary(model_29)
 logistic.display(model_29)
 car::vif(model_29)
@@ -1125,7 +1234,7 @@ lrtest(model_27,model_29)
     -   non sig
 
 ```{r}
-model_30<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + region_mode_5y_prior, data = cohort_abr_sig, family = binomial)
+model_30<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + region_mode_5y_prior, data = cohort_abr_sig, family = binomial)
 summary(model_30)
 logistic.display(model_30)
 car::vif(model_30)
@@ -1135,7 +1244,7 @@ lrtest(model_27,model_30)
 -   number comorbs present lfietime - 2 levels have no variables , not include
 
 ```{r}
-model_31<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + number_comorbs_present_lifetime, data = cohort_abr_sig, family = binomial)
+model_31<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + number_comorbs_present_lifetime, data = cohort_abr_sig, family = binomial)
 summary(model_31)
 logistic.display(model_31)
 car::vif(model_31)
@@ -1146,7 +1255,7 @@ lrtest(model_27,model_31)
     -   non sig
 
 ```{r}
-model_32<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + outside_YN_study_years_early_life, data = cohort_abr_sig, family = binomial)
+model_32<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + outside_YN_study_years_early_life, data = cohort_abr_sig, family = binomial)
 summary(model_32)
 logistic.display(model_32)
 car::vif(model_32)
@@ -1157,7 +1266,7 @@ lrtest(model_27,model_32)
     -   non sig
 
 ```{r}
-model_33<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + fenbendazole_5y, data = cohort_abr_sig, family = binomial)
+model_33<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + fenbendazole_5y, data = cohort_abr_sig, family = binomial)
 summary(model_33)
 logistic.display(model_33)
 car::vif(model_33)
@@ -1168,7 +1277,7 @@ lrtest(model_27,model_33)
     -   non sig
 
 ```{r}
-model_34<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_anti_microbials_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_34<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_anti_microbials_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_34)
 logistic.display(model_34)
 car::vif(model_34)
@@ -1179,7 +1288,7 @@ lrtest(model_27,model_34)
     -   non sig
 
 ```{r}
-model_35<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + number_comorbs_present_5y, data = cohort_abr_sig, family = binomial)
+model_35<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + number_comorbs_present_5y, data = cohort_abr_sig, family = binomial)
 summary(model_35)
 logistic.display(model_35)
 car::vif(model_35)
@@ -1190,12 +1299,12 @@ lrtest(model_27,model_35)
     -   non sig
 
 ```{r}
-model_36<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + quartile_dietary_supplements_lifetime, data = cohort_abr_sig, family = binomial)
+model_36<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + quartile_dietary_supplements_lifetime, data = cohort_abr_sig, family = binomial)
 summary(model_36)
 logistic.display(model_36)
 car::vif(model_36)
 lrtest(model_27,model_36)
-model_36<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_dietary_supplements_lifetime, data = cohort_abr_sig, family = binomial)
+model_36<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_dietary_supplements_lifetime, data = cohort_abr_sig, family = binomial)
 summary(model_36)
 logistic.display(model_36)
 car::vif(model_36)
@@ -1206,7 +1315,7 @@ lrtest(model_27,model_36)
     -   non sig
 
 ```{r}
-model_37<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + use_incense_or_candles_study_years_rest_of_life, data = cohort_abr_sig, family = binomial)
+model_37<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + use_incense_or_candles_study_years_rest_of_life, data = cohort_abr_sig, family = binomial)
 summary(model_37)
 logistic.display(model_37)
 car::vif(model_37)
@@ -1217,7 +1326,7 @@ lrtest(model_27,model_37)
     -   non sig
 
 ```{r}
-model_38<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + chronic_inflammatory, data = cohort_abr_sig, family = binomial)
+model_38<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + chronic_inflammatory, data = cohort_abr_sig, family = binomial)
 summary(model_38)
 logistic.display(model_38)
 car::vif(model_38)
@@ -1228,7 +1337,7 @@ lrtest(model_27,model_38)
     -   non sig
 
 ```{r}
-model_39<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + avg_purina_BCS_5y_prior_endpoint_quartiles, data = cohort_abr_sig, family = binomial)
+model_39<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + avg_purina_BCS_5y_prior_endpoint_quartiles, data = cohort_abr_sig, family = binomial)
 summary(model_39)
 logistic.display(model_39)
 car::vif(model_39)
@@ -1239,9 +1348,9 @@ lrtest(model_27,model_39)
     -   non sig
 
 ```{r}
-model_40<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + lifelong_chronic_inflammatory, data = cohort_abr_sig, family = binomial)
+model_40<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + lifelong_chronic_inflammatory, data = cohort_abr_sig, family = binomial)
 summary(model_40)
-model_40<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + lifelong_comorb_present.x, data = cohort_abr_sig, family = binomial)
+model_40<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + lifelong_comorb_present.x, data = cohort_abr_sig, family = binomial)
 summary(model_40)
 logistic.display(model_40)
 car::vif(model_40)
@@ -1252,7 +1361,7 @@ lrtest(model_27,model_40)
     -   non sig
 
 ```{r}
-model_41<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + chronic_inflam_present.x, data = cohort_abr_sig, family = binomial)
+model_41<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + chronic_inflam_present.x, data = cohort_abr_sig, family = binomial)
 summary(model_41)
 logistic.display(model_41)
 car::vif(model_41)
@@ -1263,7 +1372,7 @@ lrtest(model_27,model_41)
     -   non sig
 
 ```{r}
-model_42<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + smoke_exposure_study_years_early_life, data = cohort_abr_sig, family = binomial)
+model_42<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + smoke_exposure_study_years_early_life, data = cohort_abr_sig, family = binomial)
 summary(model_42)
 logistic.display(model_42)
 car::vif(model_42)
@@ -1274,7 +1383,7 @@ lrtest(model_27,model_42)
     -   non sig
 
 ```{r}
-model_43<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + all_parasitism, data = cohort_abr_sig, family = binomial)
+model_43<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + all_parasitism, data = cohort_abr_sig, family = binomial)
 summary(model_43)
 logistic.display(model_43)
 car::vif(model_43)
@@ -1285,7 +1394,7 @@ lrtest(model_27,model_43)
     -   non sig
 
 ```{r}
-model_44<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_dietary_supplements_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_44<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + half_dietary_supplements_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_44)
 logistic.display(model_44)
 car::vif(model_44)
@@ -1296,7 +1405,7 @@ lrtest(model_27,model_44)
     -   non sig
 
 ```{r}
-model_45<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + majority_sleep_location_lifetime, data = cohort_abr_sig, family = binomial)
+model_45<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + majority_sleep_location_lifetime, data = cohort_abr_sig, family = binomial)
 summary(model_45)
 logistic.display(model_45)
 car::vif(model_45)
@@ -1307,7 +1416,7 @@ lrtest(model_27,model_45)
     -   not sig
 
 ```{r}
-model_46<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + steroid_5y, data = cohort_abr_sig, family = binomial)
+model_46<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + steroid_5y, data = cohort_abr_sig, family = binomial)
 summary(model_46)
 logistic.display(model_46)
 car::vif(model_46)
@@ -1318,7 +1427,7 @@ lrtest(model_27,model_46)
     -   not sig
 
 ```{r}
-model_47<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + quartile_anti_microbials_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
+model_47<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + quartile_anti_microbials_5y_prior_endpoint, data = cohort_abr_sig, family = binomial)
 summary(model_47)
 logistic.display(model_47)
 car::vif(model_47)
@@ -1328,7 +1437,7 @@ lrtest(model_27,model_47)
 Final model
 
 ```{r}
-model_f<- glm(had_HSA ~ age_at_final_date_quartiles  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter, data = cohort_abr_sig, family = binomial)
+model_f<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  any_treated_insects_study_years_rest_of_life + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter, data = cohort_abr_sig, family = binomial)
 summary(model_f)
 logistic.display(model_f)
 car::vif(model_f)
@@ -1336,16 +1445,16 @@ car::vif(model_f)
 
 ```{r}
 dependent <- "had_HSA"
-explanatory <- c("age_at_final_date_quartiles","all_cancers_YN_no_HSA","avg_frequency_5y_prior_endpoint_quartiles","any_treated_fertilizer_study_years_whole_life","quartile_anti_parasites_5y_prior_endpoint","NSAID_ever","any_treated_insects_study_years_rest_of_life","gastrointestinal","avg_weight_5y_prior_endpoint_quartiles","sex","neuter")
+explanatory <- c("age_at_final_date_GB","all_cancers_YN_no_HSA","avg_frequency_5y_prior_endpoint_quartiles","any_treated_fertilizer_study_years_whole_life","quartile_anti_parasites_5y_prior_endpoint","NSAID_ever","any_treated_insects_study_years_rest_of_life","gastrointestinal","avg_weight_5y_prior_endpoint_quartiles","sex","neuter")
 final_model_table <-cohort_abr_sig %>% 
-  finalfit(dependent, explanatory, metrics = TRUE) %>%
+  finalfit(dependent, explanatory, metrics = TRUE,column=TRUE) %>%
   kable(format = "html", digits = 2, escape = FALSE) %>%
   kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
 
 final_model_table
 
 final_model_table2<- cohort_abr_sig %>% 
-  finalfit(dependent, explanatory, metrics = TRUE) 
+  finalfit(dependent, explanatory, metrics = TRUE,column = TRUE) 
 final_model_table2_df <- as.data.frame(final_model_table2)
 
 doc <- read_docx() %>%
@@ -1356,8 +1465,6 @@ results_flextable <-flextable(final_model_table2_df)
 # Create a Word document
 doc <- read_docx()
 
-# Convert finalfit output to a flextable
-results_flextable <- flextable(results_df)
 
 # Add the flextable to the Word document
 doc <- doc %>%
@@ -1367,6 +1474,557 @@ print(results_flextable, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Outpu
 
 ```
 
-To-do:
+```{r}
+cohort_abr_sig %>%
+  finalfit(dependent, explanatory, method = "glm", family = "binomial") -> logreg_model
 
--   switch
+plot <- or_plot(.data = cohort_abr_sig,
+                 dependent = "had_HSA", 
+                 explanatory = c("age_at_final_date_GB",
+                                 "all_cancers_YN_no_HSA",
+                                 "avg_frequency_5y_prior_endpoint_quartiles",
+                                 "any_treated_fertilizer_study_years_whole_life",
+                                 "quartile_anti_parasites_5y_prior_endpoint",
+                                 "NSAID_ever",
+                                 "any_treated_insects_study_years_rest_of_life",
+                                 "gastrointestinal",
+                                 "avg_weight_5y_prior_endpoint_quartiles",
+                                 "sex"))
+
+
+plot2 <-cohort_abr_sig %>%
+  or_plot(dependent, explanatory,column_space = c(-0.5, -0.1, 0.5),table_text_size = 3, plot_opts = list(xlim(0.1, 40)))
+plot2
+print(plot2)
+```
+
+### Model build with only 5y prior or no time point variables
+
+```{r}
+cols_to_keep_5y_or_no_time <- c("heating_fuel_primary_mode_5yrs_prior","cooking_fuel_secondary_mode_5yrs_prior",
+                              "region_mode_5y_prior","number_comorbs_present_5y","all_parasitism","gastrointestinal","inflammatory_other","chronic_inflammatory","avg_intensity_5y_prior_endpoint_quartiles","avg_frequency_5y_prior_endpoint_quartiles","main_lifestyle_category_mode_5yrs_prior","use_hepa_filter_exposed_5yrs_prior","any_treated_weeds_exposed_5yrs_prior","any_treated_insects_exposed_5yrs_prior","any_treated_fertilizer_exposed_5yrs_prior","sex","neuter","spayed_while_in_heat","avg_weight_5y_prior_endpoint_quartiles","avg_height_5y_prior_endpoint_quartiles","avg_purina_BCS_5y_prior_endpoint_quartiles","mode_purina_BCS_5y_prior_endpoint","half_anti_inflam_5y_prior_endpoint","half_anti_microbials_5y_prior_endpoint","half_enteric_5y_prior_endpoint","half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint","half_anti_parasites_5y_prior_endpoint","half_dietary_supplements_5y_prior_endpoint","half_fluid_metabolites_5y_prior_endpoint","quartile_anti_inflam_5y_prior_endpoint","quartile_anti_microbials_5y_prior_endpoint","quartile_immunologicals_5y_prior_endpoint","quartile_misc_5y_prior_endpoint","quartile_anti_parasites_5y_prior_endpoint","quartile_dietary_supplements_5y_prior_endpoint","age_at_final_date_GB","age_at_neuter_years_quartiles","malig_cancers_count_no_HSA","all_cancers_count_no_HSA","all_cancers_count","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","steroid_5y","fenbendazole_5y","age_at_final_date_quartiles","age_at_final_date_bio","sex_neuter","lifelong_comorb_present.x","had_HSA")
+
+
+#set levels for purina BCS mode
+cohort_abr_sig_5y <- cohort_abr_sig_5y%>%
+  mutate(mode_purina_BCS_5y_prior_endpoint = factor(mode_purina_BCS_5y_prior_endpoint, levels = c("5", "3", "4", "6","7","8","9","not_recorded")))
+
+
+
+cohort_abr_sig_5y <- cohort_abr_sig_5y%>%
+  mutate(age_at_final_date_GB = factor(age_at_final_date_GB, levels = c(">7-<9y","<5y", ">5-<7y",  ">9-<11y",">11-<13y",">13y")))
+cohort_abr_sig_5y <- cohort_abr2[,cols_to_keep_5y_or_no_time]
+
+```
+
+Null model
+
+```{r}
+null_model <- glm(had_HSA ~ 1, data = cohort_abr_sig_5y, family = binomial)
+
+```
+
+Age
+
+```{r}
+model_age1 <- glm(had_HSA ~ age_at_final_date_quartiles, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_age1)
+logistic.display(model_age1)
+#car::vif(model_a)
+lrtest(null_model,model_age1)
+
+model_age2 <- glm(had_HSA ~ age_at_final_date_bio, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_age2)
+logistic.display(model_age2)
+#car::vif(model_a)
+lrtest(null_model,model_age2)
+
+
+model_age3 <- glm(had_HSA ~ age_at_final_date_GB, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_age3)
+logistic.display(model_age3)
+#car::vif(model_a)
+lrtest(null_model,model_age3)
+```
+
+Cancer counts and YN
+
+-   all cancer YN has lowest AIC but all are sig, elect to take forward only malig_cancers_YN variable as removes poss issues with benign masses
+
+```{r}
+model_cancer1 <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_cancer1)
+logistic.display(model_cancer1)
+car::vif(model_cancer1)
+lrtest(model_age3,model_cancer1)
+
+
+model_cancer2<- glm(had_HSA ~ age_at_final_date_GB + all_cancers_count_no_HSA, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_cancer2)
+logistic.display(model_cancer2)
+car::vif(model_cancer2)
+lrtest(model_age3,model_cancer2)
+
+
+
+
+model_cancer3<- glm(had_HSA ~ age_at_final_date_GB + malig_cancers_count_no_HSA, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_cancer3)
+logistic.display(model_cancer3)
+car::vif(model_cancer3)
+lrtest(model_age3,model_cancer3)
+
+
+
+
+model_cancer4<- glm(had_HSA ~ age_at_final_date_GB + malig_cancers_YN_no_HSA, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_cancer4)
+logistic.display(model_cancer4)
+car::vif(model_cancer4)
+lrtest(model_age3,model_cancer4)
+```
+
+Frequency and intensity 5y prior
+
+-   keep freq
+
+```{r}
+model_freq<- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_freq)
+logistic.display(model_freq)
+car::vif(model_freq)
+lrtest(model_cancer1,model_freq)
+
+model_int<- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA +  avg_intensity_5y_prior_endpoint_quartiles, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_int)
+logistic.display(model_int)
+car::vif(model_int)
+lrtest(model_cancer1,model_int)
+```
+
+Weeds 5y
+
+```{r}
+model_weed<- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles +any_treated_weeds_exposed_5yrs_prior, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_weed)
+logistic.display(model_weed)
+car::vif(model_weed)
+lrtest(model_weed,model_freq)
+```
+
+Fertiliser 5y
+
+-   non sig
+
+```{r}
+model_fert<- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles +any_treated_weeds_exposed_5yrs_prior + any_treated_fertilizer_exposed_5yrs_prior, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_fert)
+logistic.display(model_fert)
+car::vif(model_fert)
+lrtest(model_weed,model_fert)
+```
+
+NSAID 5y
+
+-   sig but weed no longer
+
+```{r}
+model_a<- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles +any_treated_weeds_exposed_5yrs_prior + NSAID_5y, data=cohort_abr_sig_5y,family=binomial)
+
+
+
+summary(model_a)
+logistic.display(model_a)
+car::vif(model_a)
+lrtest(model_weed,model_a)
+
+model_a1<- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles + NSAID_5y, data=cohort_abr_sig_5y,family=binomial)
+```
+
+Half anti-inflam 5y/quartile anti-inflam
+
+-   both non sig in model (and not collinear with VIF)
+
+```{r}
+model_b1 <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y + half_anti_inflam_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_b1)
+logistic.display(model_b1)
+car::vif(model_b1)
+lrtest(model_a1,model_b1)
+
+model_b2 <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y +  quartile_anti_inflam_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_b2)
+logistic.display(model_b2)
+car::vif(model_b2)
+lrtest(model_a1,model_b2)
+```
+
+Half immunologicals 5y/quartiles
+
+-   non sig
+
+```{r}
+model_c1 <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + half_immunologicals_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_c1)
+logistic.display(model_c1)
+car::vif(model_c1)
+lrtest(model_a1,model_c1)
+
+model_c2 <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y + quartile_immunologicals_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_c2)
+logistic.display(model_c2)
+car::vif(model_c2)
+lrtest(model_a1,model_c2)
+```
+
+Half antiparasites 5y
+
+-   not sig
+
+```{r}
+model_d <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y + half_anti_parasites_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_d)
+logistic.display(model_d)
+car::vif(model_d)
+lrtest(model_a1,model_d)
+```
+
+sex-neuter, sex, neuter
+
+-   sex-neuter lowestAIC
+
+```{r}
+#sex
+model_e1 <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_e1)
+logistic.display(model_e1)
+car::vif(model_e1)
+lrtest(model_a1,model_e1)
+#sex neut
+model_e2 <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_e2)
+logistic.display(model_e2)
+car::vif(model_e2)
+lrtest(model_a1,model_e2)
+#neut
+
+model_e3 <- glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + neuter, data=cohort_abr_sig_5y,family=binomial)
+
+
+summary(model_e3)
+logistic.display(model_e3)
+car::vif(model_e3)
+lrtest(model_a1,model_e3)
+```
+
+region mode 5y
+
+-non sig
+
+```{r}
+
+model_f <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + region_mode_5y_prior, data=cohort_abr_sig_5y,family=binomial)
+summary(model_f)
+logistic.display(model_f)
+car::vif(model_f)
+lrtest(model_e2,model_f)
+```
+
+age at neuter quartiles
+
+-   cant have with age at final date variable
+
+```{r}
+
+model_g <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + age_at_neuter_years_quartiles, data=cohort_abr_sig_5y,family=binomial)
+summary(model_g)
+logistic.display(model_g)
+car::vif(model_g)
+lrtest(model_e2,model_g)
+```
+
+half dietary supp 5y
+
+-   not sig
+
+```{r}
+model_h <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + half_dietary_supplements_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+summary(model_h)
+logistic.display(model_h)
+car::vif(model_h)
+lrtest(model_e2,model_h)
+```
+
+fenbendazole 5y
+
+-   collinear with NSAID_5y
+
+-   NSAID lower AIC so keep instead
+
+```{r}
+model_i <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + fenbendazole_5y, data=cohort_abr_sig_5y,family=binomial)
+summary(model_i)
+logistic.display(model_i)
+car::vif(model_i)
+lrtest(model_e2,model_i)
+
+
+model_i2 <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles   + sex_neuter + fenbendazole_5y, data=cohort_abr_sig_5y,family=binomial)
+summary(model_i2)
+logistic.display(model_i2)
+car::vif(model_i2)
+lrtest(model_e2,model_i2)
+```
+
+main lifestyle category 5y
+
+-   only not recorded var csategory is sig= not retain
+
+```{r}
+model_j <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + main_lifestyle_category_mode_5yrs_prior, data=cohort_abr_sig_5y,family=binomial)
+summary(model_j)
+logistic.display(model_j)
+car::vif(model_j)
+lrtest(model_e2,model_j)
+```
+
+half antimicrobials 5y
+
+-   noyt sig
+
+```{r}
+model_k <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + half_anti_microbials_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+summary(model_k)
+logistic.display(model_k)
+car::vif(model_k)
+lrtest(model_e2,model_k)
+```
+
+avg purina BCS 5y
+
+-   not sig
+
+```{r}
+model_l <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + avg_purina_BCS_5y_prior_endpoint_quartiles, data=cohort_abr_sig_5y,family=binomial)
+summary(model_l)
+logistic.display(model_l)
+car::vif(model_l)
+lrtest(model_e2,model_l)
+```
+
+lifelong comorb present
+
+-   not sig
+
+```{r}
+model_m <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + lifelong_comorb_present.x, data=cohort_abr_sig_5y,family=binomial)
+summary(model_m)
+logistic.display(model_m)
+car::vif(model_m)
+lrtest(model_e2,model_m)
+
+```
+
+chronic inflam 5y
+
+-   not sig
+
+```{r}
+model_n <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + chronic_inflammatory, data=cohort_abr_sig_5y,family=binomial)
+summary(model_n)
+logistic.display(model_n)
+car::vif(model_n)
+lrtest(model_e2,model_n)
+```
+
+inflammatory other
+
+-   not sig
+
+```{r}
+model_o <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + inflammatory_other, data=cohort_abr_sig_5y,family=binomial)
+summary(model_o)
+logistic.display(model_o)
+car::vif(model_o)
+lrtest(model_e2,model_o)
+```
+
+all parasitism
+
+-   not sig
+
+```{r}
+model_p <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + all_parasitism, data=cohort_abr_sig_5y,family=binomial)
+summary(model_p)
+logistic.display(model_p)
+car::vif(model_p)
+lrtest(model_e2,model_p)
+```
+
+steroid 5y
+
+-   collinear with NSAID 5y, NSAID better fit
+
+```{r}
+model_q <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + steroid_5y, data=cohort_abr_sig_5y,family=binomial)
+summary(model_q)
+logistic.display(model_q)
+car::vif(model_q)
+lrtest(model_e2,model_q)
+```
+
+number comorbs present 5y
+
+-   not sig
+
+```{r}
+model_r <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + number_comorbs_present_5y, data=cohort_abr_sig_5y,family=binomial)
+summary(model_r)
+logistic.display(model_r)
+car::vif(model_r)
+lrtest(model_e2,model_r)
+```
+
+hepa filter 5y
+
+-not sig
+
+```{r}
+model_s <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + use_hepa_filter_exposed_5yrs_prior, data=cohort_abr_sig_5y,family=binomial)
+summary(model_s)
+logistic.display(model_s)
+car::vif(model_s)
+lrtest(model_e2,model_s)
+```
+
+quartile antimicrobials 5y
+
+-   not isg
+
+```{r}
+model_t <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + use_hepa_filter_exposed_5yrs_prior, data=cohort_abr_sig_5y,family=binomial)
+summary(model_t)
+logistic.display(model_t)
+car::vif(model_t)
+lrtest(model_e2,model_t)
+```
+
+mode purina BCS 5y
+
+-   sig although only for not recorded catregory
+
+```{r}
+model_u <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + mode_purina_BCS_5y_prior_endpoint, data=cohort_abr_sig_5y,family=binomial)
+summary(model_u)
+logistic.display(model_u)
+car::vif(model_u)
+lrtest(model_e2,model_u)
+```
+
+height 5y
+
+-   not sig
+
+```{r}
+model_v<- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + avg_height_5y_prior_endpoint_quartiles, data=cohort_abr_sig_5y,family=binomial)
+summary(model_v)
+logistic.display(model_v)
+car::vif(model_v)
+lrtest(model_e2,model_v)
+```
+
+heating fuel primary 5y
+
+```{r}
+model_w <- glm(had_HSA ~age_at_final_date_GB + all_cancers_YN_no_HSA + avg_frequency_5y_prior_endpoint_quartiles  + NSAID_5y  + sex_neuter + heating_fuel_primary_mode_5yrs_prior, data=cohort_abr_sig_5y,family=binomial)
+summary(model_w)
+logistic.display(model_w)
+car::vif(model_w)
+lrtest(model_e2,model_w)
+```
+
+Final model output with time restricted variables:
+H&L p=0.07 Cstatistics 0.78
+
+
+```{r}
+dependent <- "had_HSA"
+explanatory <- c("age_at_final_date_GB","sex_neuter","all_cancers_YN_no_HSA","avg_frequency_5y_prior_endpoint_quartiles","NSAID_5y","heating_fuel_primary_mode_5yrs_prior")
+final_model_table <-cohort_abr_sig_5y %>% 
+  finalfit(dependent, explanatory, metrics = TRUE,column=TRUE) %>%
+  kable(format = "html", digits = 2, escape = FALSE) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+
+final_model_table
+
+final_model_table2<- cohort_abr_sig_5y %>% 
+  finalfit(dependent, explanatory, metrics = FALSE) 
+final_model_table2_df <- as.data.frame(final_model_table2)
+
+results_flextable <-flextable(final_model_table2_df)
+
+
+
+# Create a Word document
+doc <- read_docx()
+
+
+# Add the flextable to the Word document
+doc <- doc %>%
+  body_add_flextable(results_flextable) %>%
+  body_add_par("Finalfit Regression Results", style = "heading 1")
+print(results_flextable, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/finalfit_logreg_table_5y_restricted_variables.docx")
+
+```
+
+```{r}
+cohort_abr_sig_5y %>%
+  finalfit(dependent, explanatory, method = "glm", family = "binomial") -> logreg_model
+
+plot <- or_plot(.data = cohort_abr_sig,
+                 dependent = "had_HSA", 
+                 explanatory = c("age_at_final_date_GB","sex_neuter","all_cancers_YN_no_HSA","avg_frequency_5y_prior_endpoint_quartiles","NSAID_5y","heating_fuel_primary_mode_5yrs_prior"))
+
+
+plot2 <-cohort_abr_sig_5y %>%
+  or_plot(dependent, explanatory,column_space = c(-0.5, -0.1, 0.5),table_text_size = 3, plot_opts = list(xlim(0, 8)))
+plot2
+print(plot2)
+```
+

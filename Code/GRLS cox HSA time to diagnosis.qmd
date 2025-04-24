@@ -89,6 +89,39 @@ cohort <- cohort %>%
   )
 ```
 
+Age as biological variable
+
+```{r}
+cohort <- cohort %>%
+  mutate(
+    age_at_final_date_bio = case_when(
+      (age_at_final_date < 5) ~ "<5y",
+      (age_at_final_date >= 5 & age_at_final_date < 8) ~ ">5-<8y",
+      (age_at_final_date >= 8 & age_at_final_date < 11) ~ ">8-<11y",
+      (age_at_final_date >= 11 & age_at_final_date < 13) ~ ">11-<13y",
+      (age_at_final_date >= 13 & age_at_final_date < 15) ~ ">13y"
+    )
+  )
+```
+
+Age same as GB paper categories
+
+(GB had 5-7,7-9,9-11,11-13,13,15,15+)
+
+```{r}
+cohort <- cohort %>%
+  mutate(
+    age_at_final_date_GB = case_when(
+      (age_at_final_date < 5) ~ "<5y",
+      (age_at_final_date >= 5 & age_at_final_date < 7) ~ ">5-<7y",
+      (age_at_final_date >= 7 & age_at_final_date < 9) ~ ">7-<9y",
+      (age_at_final_date >= 9 & age_at_final_date < 11) ~ ">9-<11y",
+      (age_at_final_date >= 11 & age_at_final_date < 13) ~ ">11-<13y",
+      (age_at_final_date >= 13 & age_at_final_date < 15) ~ ">13y"
+    )
+  )
+```
+
 ```{r}
 cross_table <- table(cohort$had_HSA,cohort$age_at_final_date_quartiles)
 cross_table_percent <- prop.table(cross_table) * 100
@@ -221,7 +254,7 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "quartile_anti_septics_5y_prior_endpoint", "quartile_hormones_and_related_5y_prior_endpoint",
   "quartile_cardio_respiratory_5y_prior_endpoint", "quartile_fluid_metabolites_5y_prior_endpoint",
   "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint",
-  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles", "NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"
+  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles", "NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever", "age_at_final_date_GB","age_at_final_date_bio"
 )
 
 
@@ -1116,7 +1149,7 @@ perform_univariable_analysis(
           #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
- "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
 "malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"  ),
   output_csv = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv",
   output_doc = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx"
@@ -1208,7 +1241,7 @@ explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior",
           #   "quartile_cardio_respiratory_5y_prior_endpoint", #"quartile_fluid_metabolites_5y_prior_endpoint", 
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
- "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
+ "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
 "malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever" )
 dependent = "status_factor" # had HSA or no
 results <- cohort_abr %>%
@@ -1269,7 +1302,7 @@ Assess which variables are correlated:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:80), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
+create_corr_matrix(cohort_abr_sig,c(1:82), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
 ```
 
 ### Correlated variables:
