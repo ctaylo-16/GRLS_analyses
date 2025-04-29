@@ -401,6 +401,44 @@ print(int)
 
 
 
+# Function to add quotes around each element in a list
+quote_drugs <- function(drug_list) {
+  # Use `paste()` to add quotes around each drug and combine them into a single string
+  return(paste(sprintf('"%s"', drug_list), collapse = ", "))
+}
+
+# Create a data frame with two columns: "Drug_Group" and "Drug"
+combined_df <- data.frame(
+  Drug_Group = c("Anti-Histamine", "Anti-Inflammatory", "Anti-Microbials", "Anti-Parasites", 
+                 "Anti-Septics", "Anti-Viral", "Cardio-Respiratory", "Dietary Supplements",
+                 "Diuretics", "Enteric", "Fluid Metabolites", "Hormones and Related", 
+                 "Immunologicals", "Misc","Neurological"),
+  Drugs = c(
+    quote_drugs(anti_histamine),   # Apply function to each list
+    quote_drugs(anti_inflam),
+    quote_drugs(anti_microbials),
+    quote_drugs(anti_parasites),
+    quote_drugs(anti_septics),
+    quote_drugs(anti_viral),
+    quote_drugs(cardio_respiratory),
+    quote_drugs(dietary_supplements),
+    quote_drugs(diuretics),
+    quote_drugs(enteric),
+    quote_drugs(fluid_metabolites),
+    quote_drugs(hormones_and_related),
+    quote_drugs(immunologicals),
+    quote_drugs(misc),
+    quote_drugs(neurological)
+  ),
+  stringsAsFactors = FALSE
+)
+
+
+
+
+write.csv(combined_df, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/med_groups_table.csv", row.names = FALSE, quote = TRUE)
+
+
 ```
 
 Group according to these in new column:
@@ -1522,7 +1560,6 @@ There is a few papers defining this usage:
 
 -   exclude drug usage for the year prior to diagnosis (recognised that increased prescribing in year prior to diagnosis possibly due to cancer diagnosing issues PLUS likely wont be involved in cancer diagnosis
 
-
 ## Medications dosage calculations
 
 Want to determine:
@@ -1675,7 +1712,6 @@ Split the 36 vaccine types into groupings
 
 -   core vs non-core vaccines? - https://www.aaha.org/resources/2022-aaha-canine-vaccination-guidelines/recommendations-for-core-and-noncore-canine-vaccines/
 
-
 ```{r}
 core_only <- c("canine distemper, adenovirus type 2, parainfluenza, parvovirus","rabies (3 year)", "leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","rabies (1 year)","canine distemper, adenovirus type 2", "canine distemper, adenovirus type 2, parvovirus","canine distemper"  ,"canine coronavirus, parvovirus","canine distemper, adenovirus type 2, coronavirus, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" , "leptospirosis 2 (canicola, icterohaemorrhagiae)") 
           
@@ -1684,7 +1720,6 @@ non_core_only <- c("borrelia burgdorferi","canine influenza (unspecified)","bord
 both_core_non_core <- c("adenovirus type 2, bordetella bronchiseptica, parainfluenza", "borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)",      "canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  , "canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus","canine parvovirus","canine distemper, adenovirus type 2, measles, parainfluenza","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)" ,,"canine distemper, adenovirus type 2, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,   "canine distemper, adenovirus type 2, coronavirus, parvovirus" ,"canine coronavirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine coronavirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,"canine distemper, adenovirus type 2, coronavirus, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"
 
 ```
-
 
 ## Flea-worming Tx
 

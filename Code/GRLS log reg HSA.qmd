@@ -281,7 +281,7 @@ univar_table2 <- cohort_abr %>%summary_factorlist(dependent, explanatory,
   p=TRUE,  add_dependent_label=TRUE,na_include = TRUE,column=TRUE)
 # View the results
 print(univar_table)
-
+write.csv(univar_table,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.csv")
 
 #save as worddoc
 # Install and load the required packages
@@ -437,7 +437,12 @@ cohort_abr2 <- cohort_abr2%>%
 
 
 
-univar_logistic_regression(cohort_abr2, "had_HSA", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
+
+# Now run the function
+univar_results <- univar_logistic_regression(cohort_abr2, "had_HSA", explanatory)
+
+# If you want to write the output to CSV after running:
+write.csv(univar_results, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv", row.names = FALSE)
 
 
 
@@ -453,9 +458,18 @@ univar <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_
 #function to tidy data and write to csv in a table ready to use for univar
 table <- univar_logistic_regression_table(univar,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table.csv")
 
+#remove all the redunt variable name bits of table so just one row per variable 
+blank_repeated_variable <- function(df, fill = ""){
+  df$Variable <- ifelse(duplicated(df$Variable), fill, df$Variable)
+  return(df)
+}
+
+
+table <- blank_repeated_variable(table, fill = " ") 
+
 #crop table to keep relevant cols
 table_2 <- table %>%
-  dplyr::select(c(Variable,term,OR_CI,p.value,LR_T_pvalue,Case_summary,Control_summary))
+  dplyr::select(c(Variable,term,Case_summary,Control_summary,OR_CI,p.value,LR_T_pvalue,))
 print(table_2)
 
 print(knitr::kable(table_2, row.names=FALSE, 
