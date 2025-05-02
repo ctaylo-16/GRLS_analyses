@@ -310,13 +310,13 @@ activity_sy1_2 <- activity_sy1_2 %>%
 #duration recoding
   
 less_than_30min <- c("_10-30 minutes", "10-30 minutes_","Less than 10 minutes_","Less than 10 minutes_Less than 10 minutes","_Less than 10 minutes","10-30 minutes_Less than 10 minutes")
-#cardiac CS
+#
 between_31_60min <-c("_30-60 minutes","10-30 minutes_30-60 minutes","30-60 minutes_","Less than 10 minutes_10-30 minutes","10-30 minutes_10-30 minutes","30-60 minutes_Less than 10 minutes","Less than 10 minutes_30-60 minutes","30-60 minutes_10-30 minutes")
-#respiratory CS
+#
 between_61_90min<- c("Greater than 60 minutes_","_Greater than 60 minute","10-30 minutes_Greater than 60 minutes","Greater than 60 minutes_10-30 minutes","_Greater than 60 minutes","Greater than 60 minutes_Less than 10 minutes","Greater than 60 minutes_Less than 10 minutes","Less than 10 minutes_Greater than 60 minutes")
-# GI CS
+#
 between_91_120min <- c("Greater than 60 minutes_30-60 minutes","30-60 minutes_Greater than 60 minutes","30-60 minutes_30-60 minutes")
-# urinary
+#
 more_than_120min<- c("Greater than 60 minutes_Greater than 60 minutes")
 
 all_groups <- c(less_than_30min,between_31_60min,between_61_90min,

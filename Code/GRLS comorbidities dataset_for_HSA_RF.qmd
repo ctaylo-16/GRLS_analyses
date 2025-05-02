@@ -731,23 +731,104 @@ HSA_comorbs_unique4_df7_distinct <- HSA_comorbs_unique4_distinct_cancer_all_como
   left_join(df_result7_distinct,by="subject_id")
 ```
 
+Further specific cancer counts:
+
+-   lymphoma
+
+-   carcinoma
+
+-   sarcoma
+
+-   melanoma
+
+-   adenocarcinoma
+
+```{r}
+# Define your vector of cancer types
+cancer_types <- c("lymphoma", "carcinoma", "sarcoma", "melanoma", "adenocarcinoma","mast cell tumor")
+
+# Create a regex pattern to search for any of the cancer types
+main_pattern <- str_c(cancer_types, collapse = "|")
+
+#group all the other non-main cancers so that can code as "other cancer"
+other_cancers<-c("meningioma","unknown neoplasia","leukemia","undifferentiated malignant neoplasm","brain tumor", "malignant pilomatricoma","osteosarcoma - other/unspecified","malignant trichoepithelioma","round cell tumor","oral tumor","seminoma","testicular tumor", "leiomyosarcoma","oral melanoma","osteosarcoma - axial","liver tumor","pheochromocytoma","gastrointestinal stromal tumor","cns tumor","acanthomatous ameloblastoma","nephroblastoma","thymoma","trichoepithelioma","melanocytic neoplasm","multiple myeloma", "hemangioendothelioma","malignant insulinoma","meibomian gland epithelioma","choroid plexus papilloma",  "apocrine gland ductal adenoma","stomach tumor","pituitary adenoma","spleen tumor","neuroendocrine tumor" )
+other_pattern <- str_c(other_cancers, collapse = "|")
+
+
+#main cancers code as cancer type, rest as other cancer and if no cancer, then "no cancer" and also code HSA seperately to remove later
+HSA_comorbs_unique5_main_cancers <- HSA_comorbs_unique5 %>%
+  #filter out the HSA rows in DF, NB. end numbers for DF will be lower as plenty of HSA dogs only had HSA as endpoint cancer
+  filter(!str_detect(str_to_lower(tracked_condition), "hemangiosarc"))%>%
+  mutate(
+    diagnosis_lower = str_to_lower(tracked_condition),
+    main_cancer_type = case_when(
+      str_detect(diagnosis_lower %>% replace_na(""), main_pattern) ~ str_extract(diagnosis_lower, main_pattern),
+      str_detect(diagnosis_lower %>% replace_na(""), other_pattern) ~ "other cancer",
+      TRUE ~ "no cancer"
+    )
+  ) %>%
+  select(-diagnosis_lower)
+
+
+
+
+#create 0 and 1 columns for each of the "lymphoma", "carcinoma", "sarcoma", "melanoma", "adenocarcinoma","mast cell tumor" cancer types
+HSA_comorbs_unique5_main_cancers <- HSA_comorbs_unique5_main_cancers %>%
+  mutate(
+    lymphoma_present = if_else(main_cancer_type == "lymphoma", 1, 0),
+    carcinoma_present = if_else(main_cancer_type == "carcinoma", 1, 0),
+    sarcoma_present = if_else(main_cancer_type == "sarcoma", 1, 0),
+    melanoma_present = if_else(main_cancer_type == "melanoma", 1, 0),
+    adenocarcinoma_present = if_else(main_cancer_type == "adenocarcinoma", 1, 0),
+    mast_cell_tumor_present = if_else(main_cancer_type == "mast cell tumor", 1, 0)
+  )
+
+#keep 1 row for each patient where if has multiple 1s for different 0 1 cancer present cols keep both into one row and for main cancer type if has multiple main cancers than recode that dog as "multi_main_cancers"
+HSA_comorbs_main_cancer_summary <- HSA_comorbs_unique5_main_cancers %>%
+  group_by(subject_id) %>%
+  summarise(
+    lymphoma_present = max(lymphoma_present, na.rm = TRUE),
+    carcinoma_present = max(carcinoma_present, na.rm = TRUE),
+    sarcoma_present = max(sarcoma_present, na.rm = TRUE),
+    melanoma_present = max(melanoma_present, na.rm = TRUE),
+    adenocarcinoma_present = max(adenocarcinoma_present, na.rm = TRUE),
+    mast_cell_tumor_present = max(mast_cell_tumor_present, na.rm = TRUE)
+  )  %>%
+  distinct(subject_id,  .keep_all = TRUE)
+
+
+
+```
+
 Output to csv
 
 ```{r}
 #remove some random colnames not needed
 HSA_comorbs_unique4_df7_distinct <- HSA_comorbs_unique4_df7_distinct %>%
   dplyr::select(-c(year_in_study_comorb.x,year_in_study_comorb.y,record_date.x,record_date,record_date.y))
-write.csv(HSA_comorbs_unique4_df7_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_with_HSA_final_date_calculations.csv")
+
+
+## add in the counts of main cancer types from above
+HSA_comorbs_unique4_df7_distinct_main_cancer_counts <-HSA_comorbs_unique4_df7_distinct  %>% left_join(HSA_comorbs_main_cancer_summary, by = "subject_id")
+
+# for all the ~2000 dogs that did not have one of the main endpoint cancers recorded, put that as a value for them "did_not_have_endpoint_data"
+HSA_comorbs_unique4_df7_distinct_main_cancer_counts <- HSA_comorbs_unique4_df7_distinct_main_cancer_counts %>%
+  mutate(across(307:312, ~ replace(., is.na(.), "did_not_have_endpoint_data")))
+
+
+
+
+write.csv(HSA_comorbs_unique4_df7_distinct_main_cancer_counts,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_with_HSA_final_date_calculations.csv")
 
 
 #abridge df for use in diagnosis modelling (so get rid of the original MAF GRLS conditiosn collumns and just keep the grouped ones)
 
-HSA_comorbs_unique4_df7_distinct_abr <- HSA_comorbs_unique4_df7_distinct %>%
-  dplyr::select(c(1,273:306))
+HSA_comorbs_unique4_df7_distinct_main_cancer_counts_abr <- HSA_comorbs_unique4_df7_distinct_main_cancer_counts %>%
+  dplyr::select(c(1,273:312))
 
-write.csv(HSA_comorbs_unique4_df7_distinct_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer.csv")
+write.csv(HSA_comorbs_unique4_df7_distinct_main_cancer_counts_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer.csv")
 
-write.csv(HSA_comorbs_unique4_df7_distinct,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer_all_cols.csv")
+write.csv(HSA_comorbs_unique4_df7_distinct_main_cancer_counts,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbs_incl_cancer_all_cols.csv")
 ```
 
 Rerun this singular comorbs list for whole cohort ever:

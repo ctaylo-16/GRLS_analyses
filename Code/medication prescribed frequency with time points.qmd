@@ -279,10 +279,12 @@ meds_per_dog <- HSA_medication_5y_filt %>%
 medication_summary <- meds_per_dog %>%
   group_by(active_ingredient_groups) %>%
   summarise(
+    min=min(count),
     Q1 = quantile(count, 0.25, na.rm = TRUE),
     median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
     Q3 = quantile(count, 0.75, na.rm = TRUE),
-    .groups = "drop"
+    .groups = "drop",
+    max = max(count)
   )
 
 
@@ -344,9 +346,11 @@ lifetime_meds_per_dog <- HSA_medications %>%
 lifetime_meds_summary <- lifetime_meds_per_dog %>%
   group_by(active_ingredient_groups) %>%
   summarise(
+    min=min(count),
     Q1 = quantile(count, 0.25, na.rm = TRUE),
     median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
     Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
     .groups = "drop"
   )
 

@@ -266,7 +266,7 @@ merged_HSA_data <- reduce(dfs, full_join, by = "subject_id")
 
 #remove messy extra cols eg. X.x
 merged_HSA_data <- merged_HSA_data %>%
-  dplyr::select(-c(had_HSA.y,had_HSA.x,had_HSA.x.x,
+  dplyr::select(-c(had_HSA.y,had_HSA.x.x,
                    final_date.x,final_date.x.x,
                    record_date.y.y))
 
@@ -328,7 +328,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(c(237:302), ~ replace(., is.na(.), "medication_use_not_recorded")))
+  mutate(across(c(244:309), ~ replace(., is.na(.), "medication_use_not_recorded")))
 
 merged_HSA_data <- merged_HSA_data %>%
   dplyr::select(-c(X.y,X.x))

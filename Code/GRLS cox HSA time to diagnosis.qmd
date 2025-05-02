@@ -166,7 +166,7 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior",
   "cooking_fuel_secondary_mode_5yrs_prior", "year_in_study_diagnosis_or_final_record_year",
   "region_name_mode_5yrs_prior", "state_mode_5yrs_prior", 
-  "final_date.y", "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","comorbidities_lifetime","study_year_first_chronic_inflam.x","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","comorbidities_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","comorbidities_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","orthopaedic","inflammatory_other","chronic_inflammatory","lifelong_comorb_present.x","lifelong_comorbidities","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present", "malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","had_HSA",
+  "final_date.y", "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","comorbidities_lifetime","study_year_first_chronic_inflam.x","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","comorbidities_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","comorbidities_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","orthopaedic","inflammatory_other","chronic_inflammatory","lifelong_comorb_present.x","lifelong_comorbidities","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present", "malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","had_HSA",
   "mean_activity_level_overview", "USDA_30min_sy1_2", "activity_1h_min_sy1_2",
   "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2",
   "avg_activity_intensity_sy1_2", "avg_activity_freq_sy1_2",
@@ -299,6 +299,10 @@ cohort_abr$had_HSA <-as.numeric(cohort_abr$had_HSA)
 cohort_abr<- cohort_abr %>%
   mutate(avg_weight_5y_prior_endpoint_kg = avg_weight_5y_prior_endpoint * 0.453)
 
+#### remove weight values for dogs that have their age at final date as <18m (ie. non adult weights) = 6 dogs
+cohort_abr <- cohort_abr %>%
+  mutate(avg_weight_5y_prior_endpoint_kg = if_else(age_at_final_date < 1.5, NA_real_, avg_weight_5y_prior_endpoint_kg))
+
 
 #how does data look now
 cohort_abr %>%
@@ -311,20 +315,32 @@ cohort_abr %>%
     n = n(),
     n_missing = sum(is.na(avg_weight_5y_prior_endpoint_kg))
   )
-#remove outliers >1.5X above IQR
+#remove outliers >1.5X above IQR and also anything <10kg as clearly is wrong
 
 Q1 <- quantile(cohort_abr$avg_weight_5y_prior_endpoint_kg, 0.25, na.rm = TRUE)
 Q3 <- quantile(cohort_abr$avg_weight_5y_prior_endpoint_kg, 0.75, na.rm = TRUE)
 IQR <- Q3 - Q1
 
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
 cohort_abr <- cohort_abr %>%
-  mutate(avg_weight_5y_prior_endpoint_kg_outliers_removed= ifelse(avg_weight_5y_prior_endpoint_kg < (Q1 - 1.5 * IQR) | avg_weight_5y_prior_endpoint_kg > (Q3 + 1.5 * IQR), NA, avg_weight_5y_prior_endpoint_kg))
+  mutate(avg_weight_5y_prior_endpoint_kg_outliers_removed = ifelse(
+    avg_weight_5y_prior_endpoint_kg < lower_bound | avg_weight_5y_prior_endpoint_kg > upper_bound |
+      avg_weight_5y_prior_endpoint_kg < 10,
+    NA,
+    avg_weight_5y_prior_endpoint_kg
+  ))
+
 
 
 #height
 cohort_abr<- cohort_abr%>%
   mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
 
+#### remove height values for dogs that have their age at final date as <18m (ie. non adult heights)
+cohort_abr <- cohort_abr %>%
+  mutate(avg_height_5y_prior_endpoint_cm = if_else(age_at_final_date < 1.5, NA_real_, avg_height_5y_prior_endpoint_cm))
 
 #how does data look now
 cohort_abr %>%
@@ -390,7 +406,7 @@ weight_summary
 cohort_abr <- cohort_abr %>%
   mutate(
     avg_weight_5y_prior_endpoint_quartiles = case_when(
-      (avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$LQ) ~ "9.75-<21.31kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$LQ) ~ "11.15-<21.31kg",
       (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$LQ & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$Median) ~ ">=21.31-<24.66kg",
       (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$Median & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$UQ) ~ ">=24.66-<29.37kg",
       (avg_weight_5y_prior_endpoint_kg_outliers_removed>= weight_summary$UQ) ~ ">=29.37-41.52kg",
@@ -571,9 +587,9 @@ cohort_abr <- cohort_abr %>%
   mutate(
     num_breeding_before_neutering_terciles = case_when(
       num_breeding_before_neutering == 0 ~ "not_bred",
-      num_breeding_before_neutering >= num_breed_summary$Min & num_breeding_before_neutering < num_breed_summary$T1 ~ ">0-<3h",
-      num_breeding_before_neutering >= num_breed_summary$T1 & num_breeding_before_neutering < num_breed_summary$T2 ~ ">=3-<9h",
-      num_breeding_before_neutering >= num_breed_summary$T2 ~ ">=9-142h",
+      num_breeding_before_neutering >= num_breed_summary$Min & num_breeding_before_neutering < num_breed_summary$T1 ~ ">0-<3",
+      num_breeding_before_neutering >= num_breed_summary$T1 & num_breeding_before_neutering < num_breed_summary$T2 ~ ">=3-<9",
+      num_breeding_before_neutering >= num_breed_summary$T2 ~ ">=9-142",
       TRUE ~ NA_character_  # Handles any unexpected values
     )
   )
@@ -885,7 +901,7 @@ cohort_abr <- cohort_abr%>%
   mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
 #weight
 cohort_abr <- cohort_abr%>%
-  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("9.75-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("11.15-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
 #bcs
 cohort_abr <- cohort_abr%>%
   mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
@@ -1150,7 +1166,7 @@ perform_univariable_analysis(
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
-"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"  ),
+"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present" ),
   output_csv = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv",
   output_doc = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx"
 )
