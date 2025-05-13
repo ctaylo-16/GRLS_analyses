@@ -19,3 +19,11 @@ finalfit_logreg_table_all_variables.docx
 *.docx
 *.docx
 Output/HSA_cross_table_case_control_output.docx
+Output/logreg_forestplot.pdf
+Output/logreg_forestplot.svg
+Output/logreg_forestplot_casecontrol_numbers.pdf
+Output/logreg_forestplot.tif
+Output/HSA_cross_table_case_control_output.docx
+Output/logreg_forestplot_casecontrol_numbers.svg
+Output/logreg_forestplot_casecontrol_numbers.tif
+Output/HSA_cross_table_case_control_output.docx

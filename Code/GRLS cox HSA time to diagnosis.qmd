@@ -632,7 +632,7 @@ Quartiles splits of scores for activity variables and the house scores
 
 ```{r}
 #columns to do this to:
-columns <- c("avg_intensity_5y_prior_endpoint","avg_activity_freq_sy1_2","avg_activity_freq_sy3","avg_activity_intensity_sy3","avg_frequency_5y_prior_endpoint","avg_activity_freq_sy1_2","in.the.house_YN_sum_whole_life" , "in.the.house_YN_sum_rest_of_life" , "in.the.house_YN_sum_early_life")
+columns <- c("avg_intensity_5y_prior_endpoint","avg_activity_freq_sy1_2","avg_activity_duration_sy1_2","avg_activity_freq_sy3","avg_activity_intensity_sy3","avg_frequency_5y_prior_endpoint","in.the.house_YN_sum_whole_life" , "in.the.house_YN_sum_rest_of_life" , "in.the.house_YN_sum_early_life")
 #function to do this:
 # Function to apply quartile categorization to multiple columns
 assign_quartiles <- function(df, columns) {
