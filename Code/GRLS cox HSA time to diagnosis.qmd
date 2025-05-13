@@ -296,6 +296,20 @@ cohort_abr$had_HSA <-as.numeric(cohort_abr$had_HSA)
 ```
 
 ```{r}
+
+
+# Function to calculate quartiles or terciles dynamically
+get_breaks <- function(x, probs) {
+  breaks <- quantile(x, probs = probs, na.rm = TRUE)
+  
+  # If breaks are not unique, switch to terciles
+  if (length(unique(breaks)) < length(probs)) {
+    message("Quartiles not unique, switching to terciles.")
+    breaks <- quantile(x, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE)
+  }
+  
+  return(breaks)
+}
 cohort_abr<- cohort_abr %>%
   mutate(avg_weight_5y_prior_endpoint_kg = avg_weight_5y_prior_endpoint * 0.453)
 
@@ -612,181 +626,57 @@ cohort_abr <- cohort_abr %>%
   ))
 
 
-# exercise intensity
-#5y prior to endpoint
-cohort_abr$avg_intensity_5y_prior_endpoint <-as.numeric(cohort_abr$avg_intensity_5y_prior_endpoint)
-int_summary <- cohort_abr %>%
-  summarise(
-      Mean  = mean(avg_intensity_5y_prior_endpoint,na.rm=T),
-      SD = sd(avg_intensity_5y_prior_endpoint,na.rm=T),
-      Median = median(avg_intensity_5y_prior_endpoint,na.rm=T),
-      LQ = quantile(avg_intensity_5y_prior_endpoint, 0.25,na.rm=T),
-      UQ = quantile(avg_intensity_5y_prior_endpoint, 0.75,na.rm=T),
-      Min = min(avg_intensity_5y_prior_endpoint,na.rm=T),
-      Max = max(avg_intensity_5y_prior_endpoint,na.rm=T)
-    )
-int_summary
+```
 
+Quartiles splits of scores for activity variables and the house scores
 
-cohort_abr <- cohort_abr %>%
-  mutate(
-    avg_intensity_5y_prior_endpoint_quartiles = case_when(
-      (avg_intensity_5y_prior_endpoint< int_summary$LQ) ~ "0-<50",
-      (avg_intensity_5y_prior_endpoint >= int_summary$LQ & avg_intensity_5y_prior_endpoint < int_summary$Median) ~ ">=50-<61",
-      (avg_intensity_5y_prior_endpoint>= int_summary$Median & avg_intensity_5y_prior_endpoint < int_summary$UQ) ~ ">=61-<68.9",
-      (avg_intensity_5y_prior_endpoint>= int_summary$UQ) ~ ">=68.9-100",
-    )
-  )
-
-# activity frequency
-#early
-#attempting dynamic labelling for these quartiles
-# Compute quartiles dynamically
-
-
-# Function to calculate quartiles or terciles dynamically
-get_breaks <- function(x, probs) {
-  breaks <- quantile(x, probs = probs, na.rm = TRUE)
+```{r}
+#columns to do this to:
+columns <- c("avg_intensity_5y_prior_endpoint","avg_activity_freq_sy1_2","avg_activity_freq_sy3","avg_activity_intensity_sy3","avg_frequency_5y_prior_endpoint","avg_activity_freq_sy1_2","in.the.house_YN_sum_whole_life" , "in.the.house_YN_sum_rest_of_life" , "in.the.house_YN_sum_early_life")
+#function to do this:
+# Function to apply quartile categorization to multiple columns
+assign_quartiles <- function(df, columns) {
   
-  # If breaks are not unique, switch to terciles
-  if (length(unique(breaks)) < length(probs)) {
-    message("Quartiles not unique, switching to terciles.")
-    breaks <- quantile(x, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE)
+  # Loop through each column specified
+  for (col in columns) {
+    
+    # Ensure the column is numeric
+    df[[col]] <- as.numeric(df[[col]])
+    
+    # Create a temporary column for quartile ranks (based on count, not value)
+    df[[paste0(col, "_n")]] <- ntile(df[[col]], 4)
+    
+    # Get the actual cutoff values for the quartiles
+    quartile_values <- quantile(df[[col]], probs = seq(0, 1, 0.25), na.rm = TRUE)
+    
+    # Create the quartile labels
+    quartile_labels <- paste0(
+      "≥", round(head(quartile_values, -1), 2),
+      " - <", round(tail(quartile_values, -1), 2)
+    )
+    
+    # Assign the quartile labels as factor labels
+    df[[paste0(col, "_quartile")]] <- factor(
+      df[[paste0(col, "_n")]],
+      levels = 1:4,
+      labels = quartile_labels
+    )
+    
+    # Replace NA values with "not_recorded"
+    df[[paste0(col, "_quartile")]] <- as.character(df[[paste0(col, "_quartile")]])
+    df[[paste0(col, "_quartile")]][is.na(df[[col]])] <- "not_recorded"
+    df[[paste0(col, "_quartile")]] <- factor(df[[paste0(col, "_quartile")]], levels = c(quartile_labels, "not_recorded"))
+    
+    # Drop the temporary rank column
+    df <- df %>% select(-paste0(col, "_n"))
   }
   
-  return(breaks)
+  return(df)
 }
 
-# Calculate quartiles first, switch to terciles if needed
-breaks <- get_breaks(cohort_abr$avg_activity_freq_sy1_2, c(0, 0.25, 0.5, 0.75, 1))
 
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
+cohort_abr <- assign_quartiles(cohort_abr, columns)
 
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(avg_activity_freq_sy1_2_terciles = cut(avg_activity_freq_sy1_2, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-
-# Check output
-table(cohort_abr$avg_activity_freq_sy1_2_terciles)
-
-#rest
-# Calculate quartiles first, switch to terciles if needed
-cohort_abr$avg_activity_freq_sy3 <- as.numeric(cohort_abr$avg_activity_freq_sy3)
-breaks <- get_breaks(cohort_abr$avg_activity_freq_sy3, c(0, 0.25, 0.5, 0.75, 1))
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(avg_activity_freq_sy3_terciles = cut(avg_activity_freq_sy3, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-
-# Check output
-table(cohort_abr$avg_activity_freq_sy3_terciles)
-
-
-## intensity
-#sy1_2
-# Calculate quartiles first, switch to terciles if needed - not enough breaks for this one
-#cohort_abr$avg_activity_intensity_sy1_2 <- as.numeric(cohort_abr$avg_activity_intensity_sy1_2)
-#breaks <- get_breaks(cohort_abr$avg_activity_intensity_sy1_2, c(0, 0.25, 0.5, 0.75, 1))
-
-# Assign labels dynamically
-#labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-#cohort_abr <- cohort_abr %>%
-#  mutate(avg_activity_intensity_sy1_2_terciles = cut(avg_activity_intensity_sy1_2, 
-                               #                 breaks = breaks, 
-                               #                 include.lowest = TRUE, 
-                                #                labels = labels))
-
-# Check output
-#table(cohort_abr$avg_activity_intensity_sy1_2_terciles)
-#sy3+
-cohort_abr$avg_activity_intensity_sy3 <- as.numeric(cohort_abr$avg_activity_intensity_sy3)
-breaks <- get_breaks(cohort_abr$avg_activity_intensity_sy3, c(0, 0.25, 0.5, 0.75, 1))
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(avg_activity_intensity_sy3_quartiles = cut(avg_activity_freq_sy3, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-
-#frequency
-#SY1-2
-cohort_abr$avg_activity_freq_sy1_2 <- as.numeric(cohort_abr$avg_activity_freq_sy1_2)
-breaks <- get_breaks(cohort_abr$avg_activity_freq_sy1_2, c(0, 0.25, 0.5, 0.75, 1))
-
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(avg_activity_freq_sy1_2_quartiles = cut(avg_activity_freq_sy1_2, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-
-cohort_abr$avg_frequency_5y_prior_endpoint <- as.numeric(cohort_abr$avg_frequency_5y_prior_endpoint)
-breaks <- get_breaks(cohort_abr$avg_frequency_5y_prior_endpoint, c(0, 0.25, 0.5, 0.75, 1))
-
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(avg_frequency_5y_prior_endpoint_quartiles = cut(avg_frequency_5y_prior_endpoint, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-
-
-#duration
-cohort_abr$avg_activity_duration_sy1_2 <- as.numeric(cohort_abr$avg_activity_duration_sy1_2)
-breaks <- get_breaks(cohort_abr$avg_activity_duration_sy1_2, c(0, 0.25, 0.5, 0.75, 1))
-
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(avg_activity_duration_sy1_2_quartiles = cut(avg_activity_duration_sy1_2, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-
-
-#incense - early life and rest of life not enough breaks to do terciles
-#whole of life
-
-cohort_abr$use_incense_or_candles_sum_whole_life <- as.numeric(cohort_abr$use_incense_or_candles_sum_whole_life)
-breaks <- get_breaks(cohort_abr$use_incense_or_candles_sum_whole_life, c(0, 0.25, 0.5, 0.75, 1))
-
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(use_incense_or_candles_sum_whole_life_terciles = cut(use_incense_or_candles_sum_whole_life, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
 
 
 #weeds - all 0s - not quartiles/terciles
@@ -798,55 +688,6 @@ cohort_abr <- cohort_abr %>%
 #hepa - not enough var
 
 
-###household
-#whole
-cohort_abr$in.the.house_YN_sum_whole_life <- as.numeric(cohort_abr$in.the.house_YN_sum_whole_life)
-breaks <- get_breaks(cohort_abr$in.the.house_YN_sum_whole_life, c(0, 0.25, 0.5, 0.75, 1))
-
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(in.the.house_YN_sum_whole_life_quartiles = cut(in.the.house_YN_sum_whole_life, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-#rest
-cohort_abr$in.the.house_YN_sum_rest_of_life <- as.numeric(cohort_abr$in.the.house_YN_sum_rest_of_life)
-breaks <- get_breaks(cohort_abr$in.the.house_YN_sum_rest_of_life, c(0, 0.25, 0.5, 0.75, 1))
-
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(in.the.house_YN_sum_rest_of_life_quartiles = cut(in.the.house_YN_sum_rest_of_life, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-#early
-cohort_abr$in.the.house_YN_sum_early_life <- as.numeric(cohort_abr$in.the.house_YN_sum_early_life)
-breaks <- get_breaks(cohort_abr$in.the.house_YN_sum_early_life, c(0, 0.25, 0.5, 0.75, 1))
-
-
-# Assign labels dynamically
-labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
-
-# Apply the breaks using `cut()`
-cohort_abr <- cohort_abr %>%
-  mutate(in.the.house_YN_sum_early_life_terciles = cut(in.the.house_YN_sum_early_life, 
-                                                breaks = breaks, 
-                                                include.lowest = TRUE, 
-                                                labels = labels))
-
-
-
-#outside - not enough var
-
-#garage - not enough var
 
 
 ```
@@ -921,7 +762,10 @@ cohort_abr <- cohort_abr %>%
     spayed_while_in_heat == "0" ~ "0",
     spayed_while_in_heat == "1" ~"1"
   ))
-#same as above account for unnetered and males 
+#same as above account for unneutered and males 
+
+
+
 heats <- cohort_abr %>%
 # Convert to numeric
   filter(heats_before_neutering != 0) %>% 
@@ -935,6 +779,7 @@ breaks <- get_breaks(heats, c(0, 0.25, 0.5, 0.75, 1))
 
 # Assign labels dynamically
 labels <- paste0("≥", round(head(breaks, -1), 2), " - <", round(tail(breaks, -1), 2))
+
 cohort_abr <- cohort_abr %>%
   mutate(heats_before_neutering_terciles = case_when(
     sex== "M" ~ "Male",
@@ -982,9 +827,10 @@ Combine the lifelong comorbidity and 5y prior t endpoint comorbidities for cardi
 
 ```{r}
 #replace Y and N with 0 and 1
+#5y variables
 cohort_abr <- cohort_abr %>%
   mutate(across(c(cardiovascular, orthopaedic,immune_mediated,gastrointestinal,chronic_inflammatory), ~ ifelse(. == "Y", 1, 0)))
-
+#lifelong
 cohort_abr <- cohort_abr %>%
   mutate(across(c(lifelong_cardiovascular,lifelong_orthopaedic,lifelong_immune_mediated,lifelong_gastrointestinal,lifelong_chronic_inflammatory), as.numeric))
 cohort_abr <- cohort_abr %>%
