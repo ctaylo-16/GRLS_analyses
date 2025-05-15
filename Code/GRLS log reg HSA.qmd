@@ -2223,7 +2223,7 @@ plot2
 print(plot2)
 ```
 
-## Forest plots of final models 
+## Forest plots of final models
 
 Make nice and labelled forestplots of final model with correct levels of variables: - using code in this for HSA VC Cox model figures C:/Users/ctaylor18/GitHub/HSA-VC-survival-analyses/HSA-VC-survival-analyses/code/Figures for survival analyses of haemangiosarcoma cases in VC.qmd All years
 
