@@ -304,14 +304,13 @@ dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year.x - 5)) %>%
   summarise(
-    avg_weight_5y_prior_endpoint = mean(weight),
-    avg_height_5y_prior_endpoint = mean(height),
-    avg_purina_BCS_5y_prior_endpoint = mean(purina_body_condition_score),
-    mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score), # Mode calculation
-
+    count_rows = n(),
+    avg_weight_5y_prior_endpoint = if (count_rows >= 5) mean(weight, na.rm = TRUE) else NA_real_,
+    avg_height_5y_prior_endpoint = if (count_rows >= 5) mean(height, na.rm = TRUE) else NA_real_,
+    avg_purina_BCS_5y_prior_endpoint = if (count_rows >= 5) mean(purina_body_condition_score, na.rm = TRUE) else NA_real_,
+    mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score),  # Keep mode even if <5 rows
     .groups = "drop"
   )
-  
 #remove extra columns before join
 
 #rejoin back to merged HSA data

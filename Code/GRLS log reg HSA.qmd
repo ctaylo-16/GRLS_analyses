@@ -174,11 +174,13 @@ cohort_abr <- cohort_abr%>%
 #manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
 #height
 cohort_abr <- cohort_abr%>%
-  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
+  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.80-<56.30cm", ">=56.30-<58.29cm", ">=58.29-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
 #weight
 cohort_abr <- cohort_abr%>%
-  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("11.15-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
-#bcs
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("12.47-<20.83kg", ">=20.83-<23.23kg", ">=23.23-26.98kg", ">=26.98-37.01","not_recorded")))
+
+cohort_abr <- cohort_abr%>%
+  mutate(avg_weight_5y_prior_endpoint_kg_biological = factor(avg_weight_5y_prior_endpoint_kg_biological, levels = c(">15-<=25kg","<15kg",">25-<=35kg",">35","not_recorded")))
 cohort_abr <- cohort_abr%>%
   mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
 #neut age
@@ -315,7 +317,7 @@ explanatory = c(
              "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
              "preg_pre_neuter",
  "num_breeding_before_neutering_terciles", "ever_bred_from", 
-              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+              "avg_weight_5y_prior_endpoint_quartiles","avg_weight_5y_prior_endpoint_kg_biological", "avg_height_5y_prior_endpoint_quartiles", 
              "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify",
   #lifestyle/activity
   "main_lifestyle_category", 
@@ -407,6 +409,8 @@ source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/univar_log_re
 
 cohort_abr$had_HSA <- as.factor(cohort_abr$had_HSA)
 
+
+
 #leaving out the continuous variables as missing data causing issues
 #"max_tumour_cm_value" "age_at_diagnosis_cont"
 cohort_abr2 <- cohort_abr %>%
@@ -418,7 +422,7 @@ cohort_abr2 <- cohort_abr %>%
              "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
              "preg_pre_neuter",
  "num_breeding_before_neutering_terciles", "ever_bred_from", 
-              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+              "avg_weight_5y_prior_endpoint_quartiles","avg_weight_5y_prior_endpoint_kg_biological", "avg_height_5y_prior_endpoint_quartiles", 
              "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify",
   #lifestyle/activity
   "main_lifestyle_category", 
@@ -517,10 +521,11 @@ cohort_abr2 <- cohort_abr2%>%
 #manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
 #height
 cohort_abr2 <- cohort_abr2%>%
-  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
-#weight
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("12.47-<20.83kg", ">=20.83-<23.23kg", ">=23.23-26.98kg", ">=26.98-37.01","not_recorded")))
+
 cohort_abr2 <- cohort_abr2%>%
-  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("11.15-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
+  mutate(avg_weight_5y_prior_endpoint_kg_biological = factor(avg_weight_5y_prior_endpoint_kg_biological, levels = c(">15-<=25kg","<15kg",">25-<=35kg",">35","not_recorded")))
+
 #bcs
 cohort_abr2 <- cohort_abr2%>%
   mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
@@ -536,7 +541,7 @@ cohort_abr2 <- cohort_abr2%>%
 cohort_abr2 <- cohort_abr2%>%
   mutate(num_breeding_before_neutering_terciles = factor(num_breeding_before_neutering_terciles, levels = c(">0-<3",">=3-<9",">=9-142","not_bred","not_recorded")))
 
-cols_to_modify <- 145:193 # replace with your actual column indices
+cols_to_modify <- 146:195 # replace with your actual column indices
 
 for (i in cols_to_modify) {
   current_levels <- levels(cohort_abr2[[i]])
@@ -758,7 +763,7 @@ cohort_no_not_rec<- cohort_no_not_rec %>%
              "neutered_sired_litters_natural_ever", "heats_before_neutering", "heats_before_neutering_terciles",
              "preg_pre_neuter",
  "num_breeding_before_neutering_terciles", "ever_bred_from", 
-              "avg_weight_5y_prior_endpoint_quartiles", "avg_height_5y_prior_endpoint_quartiles", 
+              "avg_weight_5y_prior_endpoint_quartiles","avg_weight_5y_prior_endpoint_kg_biological", "avg_height_5y_prior_endpoint_quartiles", 
              "avg_purina_BCS_5y_prior_endpoint_quartiles", "mode_purina_BCS_5y_prior_endpoint", "mode_BCS_classify",
   #lifestyle/activity
   "main_lifestyle_category", 
@@ -1541,6 +1546,8 @@ Assess type of cancer present variables in model: -melanoma, lymphoma, MCT
 
 -   cant keep melanoma AND MCT in same model as VIF issues - AIC v minimally different so choose which preferred to keep in - MCT
 
+DISCUSSSED 15/5/25 - not keeping these in as variables as incr likelohood of endpoint dataset anything for HSA cases
+
 ```{r}
 #melanoma
 model_48a<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_count_no_HSA + avg_frequency_5y_prior_endpoint_quartile + any_treated_fertilizer_study_years_whole_life + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever + gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex + neuter + smoke_exposure_study_years_early_life + melanoma_present, data = cohort_abr_sig, family = binomial)
@@ -1579,6 +1586,18 @@ summary(model_melanoma)
 car::vif(model_melanoma)
 ```
 
+Explore if can put splits of activity freq in instead of quartiles:
+
+```{r}
+
+```
+
+Explore if can put weight biological in instead quartiles:
+
+```{r}
+
+```
+
 Final model
 
 ```{r}
@@ -1591,7 +1610,8 @@ car::vif(model_f)
 Removing variables non sig when in final model:
 
 ```{r}
-model_f<- glm(had_HSA ~ age_at_final_date_GB  + avg_frequency_5y_prior_endpoint_quartile + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex_neuter + smoke_exposure_study_years_early_life + mast_cell_tumor_present, data = cohort_abr_sig, family = binomial)
+model_f<- glm(had_HSA ~ age_at_final_date_GB  + avg_frequency_5y_prior_endpoint_splits + quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  gastrointestinal + avg_weight_5y_prior_endpoint_quartiles + sex_neuter + smoke_exposure_study_years_early_life
+              , data = cohort_abr_sig, family = binomial)
 summary(model_f)
 logistic.display(model_f)
 car::vif(model_f)
@@ -1599,7 +1619,7 @@ car::vif(model_f)
 
 ```{r}
 dependent <- "had_HSA"
-explanatory <- c("age_at_final_date_GB","avg_frequency_5y_prior_endpoint_quartile","quartile_anti_parasites_5y_prior_endpoint","NSAID_ever","gastrointestinal","avg_weight_5y_prior_endpoint_quartiles","sex_neuter","smoke_exposure_study_years_early_life","mast_cell_tumor_present")
+explanatory <- c("age_at_final_date_GB","avg_frequency_5y_prior_endpoint_quartile","quartile_anti_parasites_5y_prior_endpoint","NSAID_ever","gastrointestinal","avg_weight_5y_prior_endpoint_quartiles","sex_neuter","smoke_exposure_study_years_early_life")
 final_model_table <-cohort_abr_sig %>% 
   finalfit(dependent, explanatory, metrics = TRUE,column=TRUE) %>%
   kable(format = "html", digits = 2, escape = FALSE) %>%
@@ -1646,7 +1666,7 @@ print(plot2)
 
 ```{r}
 cols_to_keep_5y_or_no_time <- c("heating_fuel_primary_mode_5yrs_prior","cooking_fuel_secondary_mode_5yrs_prior",
-                              "region_mode_5y_prior","number_comorbs_present_5y","all_parasitism","gastrointestinal","inflammatory_other","chronic_inflammatory","avg_intensity_5y_prior_endpoint_quartile","avg_frequency_5y_prior_endpoint_quartile","main_lifestyle_category_mode_5yrs_prior","use_hepa_filter_exposed_5yrs_prior","any_treated_weeds_exposed_5yrs_prior","any_treated_insects_exposed_5yrs_prior","any_treated_fertilizer_exposed_5yrs_prior","sex","neuter","spayed_while_in_heat","avg_weight_5y_prior_endpoint_quartiles","avg_height_5y_prior_endpoint_quartiles","avg_purina_BCS_5y_prior_endpoint_quartiles","mode_purina_BCS_5y_prior_endpoint","half_anti_inflam_5y_prior_endpoint","half_anti_microbials_5y_prior_endpoint","half_enteric_5y_prior_endpoint","half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint","half_anti_parasites_5y_prior_endpoint","half_dietary_supplements_5y_prior_endpoint","half_fluid_metabolites_5y_prior_endpoint","quartile_anti_inflam_5y_prior_endpoint","quartile_anti_microbials_5y_prior_endpoint","quartile_immunologicals_5y_prior_endpoint","quartile_misc_5y_prior_endpoint","quartile_anti_parasites_5y_prior_endpoint","quartile_dietary_supplements_5y_prior_endpoint","age_at_final_date_GB","age_at_neuter_years_quartiles","malig_cancers_count_no_HSA","all_cancers_count_no_HSA","all_cancers_count","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","steroid_5y","fenbendazole_5y","age_at_final_date_quartiles","age_at_final_date_bio","sex_neuter","lifelong_comorb_present.x","avg_activity_duration_sy1_2_splits","avg_activity_freq_sy1_2_splits","avg_activity_freq_sy3_splits","avg_activity_intensity_sy3_splits","avg_frequency_5y_prior_endpoint_splits","lymphoma_present","melanoma_present","mast_cell_tumor_present","had_HSA")
+                              "region_mode_5y_prior","number_comorbs_present_5y","all_parasitism","gastrointestinal","inflammatory_other","chronic_inflammatory","avg_intensity_5y_prior_endpoint_quartile","avg_frequency_5y_prior_endpoint_quartile","main_lifestyle_category_mode_5yrs_prior","use_hepa_filter_exposed_5yrs_prior","any_treated_weeds_exposed_5yrs_prior","any_treated_insects_exposed_5yrs_prior","any_treated_fertilizer_exposed_5yrs_prior","sex","neuter","spayed_while_in_heat","avg_weight_5y_prior_endpoint_quartiles","avg_weight_5y_prior_endpoint_kg_biological","avg_height_5y_prior_endpoint_quartiles","avg_purina_BCS_5y_prior_endpoint_quartiles","mode_purina_BCS_5y_prior_endpoint","half_anti_inflam_5y_prior_endpoint","half_anti_microbials_5y_prior_endpoint","half_enteric_5y_prior_endpoint","half_immunologicals_5y_prior_endpoint", "half_misc_5y_prior_endpoint","half_anti_parasites_5y_prior_endpoint","half_dietary_supplements_5y_prior_endpoint","half_fluid_metabolites_5y_prior_endpoint","quartile_anti_inflam_5y_prior_endpoint","quartile_anti_microbials_5y_prior_endpoint","quartile_immunologicals_5y_prior_endpoint","quartile_misc_5y_prior_endpoint","quartile_anti_parasites_5y_prior_endpoint","quartile_dietary_supplements_5y_prior_endpoint","age_at_final_date_GB","age_at_neuter_years_quartiles","malig_cancers_count_no_HSA","all_cancers_count_no_HSA","all_cancers_count","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","steroid_5y","fenbendazole_5y","age_at_final_date_quartiles","age_at_final_date_bio","sex_neuter","lifelong_comorb_present.x","avg_activity_duration_sy1_2_splits","avg_activity_freq_sy1_2_splits","avg_activity_freq_sy3_splits","avg_activity_intensity_sy3_splits","avg_frequency_5y_prior_endpoint_splits","lymphoma_present","melanoma_present","mast_cell_tumor_present","had_HSA")
 
 cohort_abr_sig_5y <- cohort_abr2[,cols_to_keep_5y_or_no_time]
   

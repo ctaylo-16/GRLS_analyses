@@ -333,6 +333,8 @@ cohort_abr %>%
 
 Q1 <- quantile(cohort_abr$avg_weight_5y_prior_endpoint_kg, 0.25, na.rm = TRUE)
 Q3 <- quantile(cohort_abr$avg_weight_5y_prior_endpoint_kg, 0.75, na.rm = TRUE)
+Q1
+Q3
 IQR <- Q3 - Q1
 
 lower_bound <- Q1 - 1.5 * IQR
@@ -346,8 +348,15 @@ cohort_abr <- cohort_abr %>%
     avg_weight_5y_prior_endpoint_kg
   ))
 
-
-
+#check these weirdly low weight dogs elsewhere to see whats going on with them:
+low_weight <- cohort_abr %>%
+  filter(avg_weight_5y_prior_endpoint_kg <15)
+low_weight2 <- cohort_abr %>%
+  filter(avg_weight_5y_prior_endpoint_kg_outliers_removed <15)
+#keep rel cols
+low_weight <- low_weight %>%
+  dplyr::select(c(subject_id,avg_weight_5y_prior_endpoint_kg,avg_weight_5y_prior_endpoint_kg_outliers_removed,had_HSA))
+write.csv(low_weight,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/low_weightGRLScohort.csv")
 #height
 cohort_abr<- cohort_abr%>%
   mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
@@ -371,6 +380,8 @@ cohort_abr %>%
 
 Q1 <- quantile(cohort_abr$avg_height_5y_prior_endpoint_cm, 0.25, na.rm = TRUE)
 Q3 <- quantile(cohort_abr$avg_height_5y_prior_endpoint_cm, 0.75, na.rm = TRUE)
+Q1
+Q3
 IQR <- Q3 - Q1
 
 cohort_abr <- cohort_abr %>%
@@ -420,12 +431,22 @@ weight_summary
 cohort_abr <- cohort_abr %>%
   mutate(
     avg_weight_5y_prior_endpoint_quartiles = case_when(
-      (avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$LQ) ~ "11.15-<21.31kg",
-      (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$LQ & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$Median) ~ ">=21.31-<24.66kg",
-      (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$Median & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$UQ) ~ ">=24.66-<29.37kg",
-      (avg_weight_5y_prior_endpoint_kg_outliers_removed>= weight_summary$UQ) ~ ">=29.37-41.52kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$LQ) ~ "12.47-<20.83kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$LQ & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$Median) ~ ">=20.83-<23.23kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary$Median & avg_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary$UQ) ~ ">=23.23-26.98kg",
+      (avg_weight_5y_prior_endpoint_kg_outliers_removed>= weight_summary$UQ) ~ ">=26.98-37.01",
     )
   )
+
+#create biological weight variable - <15kg (v underweight/outlier) >15-<25kg (underweight), 25-35kg(normal), 35-45(overweight), 45+ (obese)
+cohort_abr <- cohort_abr %>%
+  mutate(avg_weight_5y_prior_endpoint_kg_biological = case_when(
+    (avg_weight_5y_prior_endpoint_kg_outliers_removed < 15)~ "<15kg",
+    (avg_weight_5y_prior_endpoint_kg_outliers_removed > 15 & avg_weight_5y_prior_endpoint_kg_outliers_removed <25 )~ ">15-<=25kg",
+    (avg_weight_5y_prior_endpoint_kg_outliers_removed > 25 & 
+       avg_weight_5y_prior_endpoint_kg_outliers_removed <35)~ ">25-<=35kg",
+    (avg_weight_5y_prior_endpoint_kg_outliers_removed > 35 )~ ">35",
+  ))
 #hieght quartiles
 height_summary <- cohort_abr %>%
   summarise(
@@ -441,9 +462,9 @@ height_summary
 cohort_abr <- cohort_abr %>%
   mutate(
     avg_height_5y_prior_endpoint_quartiles = case_when(
-      (avg_height_5y_prior_endpoint_cm_outliers_removed< height_summary$LQ) ~ "49.13-<56.07cm",
-      (avg_height_5y_prior_endpoint_cm_outliers_removed >= height_summary$LQ & avg_height_5y_prior_endpoint_cm_outliers_removed < height_summary$Median) ~ ">=56.07-<58.42cm",
-      (avg_height_5y_prior_endpoint_cm_outliers_removed >= height_summary$Median & avg_height_5y_prior_endpoint_cm_outliers_removed< height_summary$UQ) ~ ">=58.42-<60.32cm",
+      (avg_height_5y_prior_endpoint_cm_outliers_removed< height_summary$LQ) ~ "49.80-<56.30cm",
+      (avg_height_5y_prior_endpoint_cm_outliers_removed >= height_summary$LQ & avg_height_5y_prior_endpoint_cm_outliers_removed < height_summary$Median) ~ ">=56.30-<58.29cm",
+      (avg_height_5y_prior_endpoint_cm_outliers_removed >= height_summary$Median & avg_height_5y_prior_endpoint_cm_outliers_removed< height_summary$UQ) ~ ">=58.29-<60.32cm",
       (avg_height_5y_prior_endpoint_cm_outliers_removed>= height_summary$UQ) ~ ">=60.32cm-67.73cm",
     )
   )
@@ -739,10 +760,13 @@ cohort_abr$survival_time_months <- as.numeric(cohort_abr$survival_time_months)
 #manually assign height, weight, BCS factor levles and age at neuter and age at diagnosis 
 #height
 cohort_abr <- cohort_abr%>%
-  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.13-<56.07cm", ">=56.07-<58.42cm", ">=58.42-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
+  mutate(avg_height_5y_prior_endpoint_quartiles = factor(avg_height_5y_prior_endpoint_quartiles, levels = c("49.80-<56.30cm", ">=56.30-<58.29cm", ">=58.29-<60.32cm", ">=60.32cm-67.73cm","not_recorded")))
 #weight
 cohort_abr <- cohort_abr%>%
-  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("11.15-<21.31kg", ">=21.31-<24.66kg", ">=24.66-<29.37kg", ">=29.37-41.52kg","not_recorded")))
+  mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("12.47-<20.83kg", ">=20.83-<23.23kg", ">=23.23-26.98kg", ">=26.98-37.01","not_recorded")))
+
+cohort_abr <- cohort_abr%>%
+  mutate(avg_weight_5y_prior_endpoint_kg_biological = factor(avg_weight_5y_prior_endpoint_kg_biological, levels = c("<15kg",">15-<=25kg",">25-<=35kg",">35","not_recorded")))
 #bcs
 cohort_abr <- cohort_abr%>%
   mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
