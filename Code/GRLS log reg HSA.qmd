@@ -179,8 +179,15 @@ cohort_abr <- cohort_abr%>%
 cohort_abr <- cohort_abr%>%
   mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("12.47-<20.83kg", ">=20.83-<23.23kg", ">=23.23-26.98kg", ">=26.98-37.01","not_recorded")))
 
+
+#recoding weight levels here so the <15kg dogs are now "not_recorded"
+cohort_abr <- cohort_abr %>%
+  mutate(avg_weight_5y_prior_endpoint_kg_biological = case_when(
+    avg_weight_5y_prior_endpoint_kg_biological == "<15kg" ~ "not_recorded",
+    TRUE ~ avg_weight_5y_prior_endpoint_kg_biological
+  ))
 cohort_abr <- cohort_abr%>%
-  mutate(avg_weight_5y_prior_endpoint_kg_biological = factor(avg_weight_5y_prior_endpoint_kg_biological, levels = c(">15-<=25kg","<15kg",">25-<=35kg",">35","not_recorded")))
+  mutate(avg_weight_5y_prior_endpoint_kg_biological = factor(avg_weight_5y_prior_endpoint_kg_biological, levels = c(">15-<=25kg",">25-<=35kg",">35","not_recorded")))
 cohort_abr <- cohort_abr%>%
   mutate(avg_purina_BCS_5y_prior_endpoint_quartiles = factor(avg_purina_BCS_5y_prior_endpoint_quartiles, levels = c("3.3-<5", ">=5-<5.28", ">=5.28-<5.86", ">=5.86 - 9","not_recorded")))
 #neut age
@@ -574,7 +581,7 @@ cohort_abr2 <- cohort_abr2%>%
   mutate(avg_weight_5y_prior_endpoint_quartiles = factor(avg_weight_5y_prior_endpoint_quartiles, levels = c("12.47-<20.83kg", ">=20.83-<23.23kg", ">=23.23-26.98kg", ">=26.98-37.01","not_recorded")))
 
 cohort_abr2 <- cohort_abr2%>%
-  mutate(avg_weight_5y_prior_endpoint_kg_biological = factor(avg_weight_5y_prior_endpoint_kg_biological, levels = c(">15-<=25kg","<15kg",">25-<=35kg",">35","not_recorded")))
+  mutate(avg_weight_5y_prior_endpoint_kg_biological = factor(avg_weight_5y_prior_endpoint_kg_biological, levels = c(">15-<=25kg",">25-<=35kg",">35","not_recorded")))
 
 #bcs
 cohort_abr2 <- cohort_abr2%>%
@@ -991,6 +998,14 @@ corr_values3 <- corr_values2 %>%
 
 
 print(corr_values3)
+
+
+#get number of unique values in this corr values 3
+unique_var1 <- unique(corr_values3$Variable1)
+unique_var2<- unique(corr_values3$Variable2)
+
+all_unique_values <- union(unique_var1, unique_var2)
+
 ```
 
 Correlated variables (98):
@@ -1811,10 +1826,47 @@ logistic.display(model_f_int2)
 
 Sex-neuter not sig in final model but sex is = keep sex in
 
+Elect to swap cancer count for YN as so few values besides 0 and 1
+
 ```{r}
-model_f<- glm(had_HSA ~ age_at_final_date_GB  + avg_frequency_5y_prior_endpoint_splits_grouped + all_cancers_count_no_HSA +quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  gastrointestinal + avg_weight_5y_prior_endpoint_kg_biological + sex + smoke_exposure_study_years_early_life  , data = cohort_abr_sig, family = binomial)
+model_f<- glm(had_HSA ~ age_at_final_date_GB  + avg_frequency_5y_prior_endpoint_splits_grouped + all_cancers_YN_no_HSA +quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  gastrointestinal + avg_weight_5y_prior_endpoint_kg_biological + sex + smoke_exposure_study_years_early_life  , data = cohort_abr_sig, family = binomial)
 summary(model_f)
 logistic.display(model_f)
+```
+
+Double check that parasites and freq of activity truly improve model... - yes both although ? is it only for non recorded in freq?
+
+```{r}
+no_para<- glm(had_HSA ~ age_at_final_date_GB  + avg_frequency_5y_prior_endpoint_splits_grouped + all_cancers_YN_no_HSA   +NSAID_ever +  gastrointestinal + avg_weight_5y_prior_endpoint_kg_biological + sex + smoke_exposure_study_years_early_life  , data = cohort_abr_sig, family = binomial)
+summary(no_para)
+lrtest(no_para,model_f)
+
+no_freq<- glm(had_HSA ~ age_at_final_date_GB   + all_cancers_YN_no_HSA +quartile_anti_parasites_5y_prior_endpoint  +NSAID_ever +  gastrointestinal + avg_weight_5y_prior_endpoint_kg_biological + sex + smoke_exposure_study_years_early_life , data = cohort_abr_sig, family = binomial)
+summary(no_freq)
+lrtest(no_freq,model_f)
+```
+
+Model performance metrics:
+
+```{r}
+  library(pscl)
+
+# Calculate pseudo R^2
+pseudo_r2 <- pR2(model_f)
+print(pseudo_r2)
+
+library(pROC)
+
+# Generate predicted probabilities
+predicted_prob <- predict(model_f, type = "response")
+
+# Calculate the AUC
+roc_curve <- roc(cohort_abr_sig$had_HSA, predicted_prob)
+auc_value <- auc(roc_curve)
+print(auc_value)
+
+# Plot the ROC curve
+plot(roc_curve, main = "ROC Curve", col = "blue", lwd = 2)
 ```
 
 ```{r}
@@ -1825,7 +1877,7 @@ explanatory <- c(
   "sex",
   "avg_weight_5y_prior_endpoint_kg_biological",
   "avg_frequency_5y_prior_endpoint_splits_grouped",
-  "all_cancers_count_no_HSA",
+  "all_cancers_YN_no_HSA",
   "quartile_anti_parasites_5y_prior_endpoint",
   "NSAID_ever",
   "gastrointestinal",
@@ -1840,6 +1892,7 @@ final_model_table <- cohort_abr_sig %>%
 
 final_model_table
 
+
 ```
 
 ```{r}
@@ -1848,7 +1901,7 @@ explanatory <- c(  "age_at_final_date_GB",
   "sex",
   "avg_weight_5y_prior_endpoint_kg_biological",
   "avg_frequency_5y_prior_endpoint_splits_grouped",
-  "all_cancers_count_no_HSA",
+  "all_cancers_YN_no_HSA",
   "quartile_anti_parasites_5y_prior_endpoint",
   "NSAID_ever",
   "gastrointestinal",
@@ -1891,7 +1944,7 @@ plot <- or_plot(.data = cohort_abr_sig,
   "sex",
   "avg_weight_5y_prior_endpoint_kg_biological",
   "avg_frequency_5y_prior_endpoint_splits_grouped",
-  "all_cancers_count_no_HSA",
+  "all_cancers_YN_no_HSA",
   "quartile_anti_parasites_5y_prior_endpoint",
   "NSAID_ever",
   "gastrointestinal",
@@ -2436,7 +2489,7 @@ logistic.display(model_weight_kg)
 
 ```{r}
 dependent <- "had_HSA"
-explanatory <- c("age_at_final_date_GB","sex_neuter","all_cancers_count_no_HSA","avg_weight_5y_prior_endpoint_kg_biological","NSAID_5y","avg_frequency_5y_prior_endpoint_splits_grouped")
+explanatory <- c("age_at_final_date_GB","sex_neuter","all_cancers_YN_no_HSA","avg_weight_5y_prior_endpoint_kg_biological","NSAID_5y","avg_frequency_5y_prior_endpoint_splits_grouped")
 final_model_table5 <-cohort_abr_sig_5y %>% 
   finalfit(dependent, explanatory, metrics = TRUE,column=TRUE) %>%
   kable(format = "html", digits = 2, escape = FALSE) %>%
@@ -2470,7 +2523,7 @@ cohort_abr_sig_5y %>%
 
 plot <- or_plot(.data = cohort_abr_sig,
                  dependent = "had_HSA", 
-                 explanatory = c("age_at_final_date_GB","sex_neuter","mast_cell_tumor_present","avg_frequency_5y_prior_endpoint_quartile","NSAID_5y"))
+                 explanatory = c("age_at_final_date_GB","sex_neuter","all_cancers_YN_no_HSA","avg_frequency_5y_prior_endpoint_quartile","NSAID_5y"))
 
 
 plot2 <-cohort_abr_sig_5y %>%
@@ -2493,7 +2546,7 @@ dependent <- "had_HSA"
 explanatory <- c(  "age_at_final_date_GB",
   "sex",
   "avg_weight_5y_prior_endpoint_kg_biological",
-  "all_cancers_count_no_HSA",
+  "all_cancers_YN_no_HSA",
   "gastrointestinal",
     "quartile_anti_parasites_5y_prior_endpoint",
   "NSAID_ever",
@@ -2534,15 +2587,14 @@ df <- df %>%
 #mct
 df <- df %>%
 mutate(
-    all_cancers_count_no_HSA = recode(as.character(all_cancers_count_no_HSA),
+    all_cancers_YN_no_HSA= recode(as.character(all_cancers_YN_no_HSA),
                           "0" = "No other cancer reported",
-                          "1" = "1 other cancer reported",
-                          "2" = "2 other cancers reported")
+                          "1" = "Other cancer reported")
 )
     
 df <- df %>%   
-  mutate(all_cancers_count_no_HSA = factor(all_cancers_count_no_HSA,levels=c(
-    "No other cancer reported","1 other cancer reported","2 other cancers reported"
+  mutate(all_cancers_YN_no_HSA = factor(all_cancers_YN_no_HSA,levels=c(
+    "No other cancer reported","Other cancer reported"
   )))
   
 
@@ -2584,9 +2636,8 @@ df <- df %>%
     ),
     avg_frequency_5y_prior_endpoint_splits_grouped = factor(
       avg_frequency_5y_prior_endpoint_splits_grouped,
-      levels = c("Daily or more",
-                 "Weekly",
-                 "Rarely",
+      levels = c( 
+                 "Weekly","Daily or more","Rarely",
         "Activity freq. not recorded"
       )
     )
@@ -2640,34 +2691,29 @@ final_df$OR_CI == "1(1-1, p<0.001)"] <- "Reference"
 
 
 #renaming variables for figure
-final_df[13, 2] <- "Weight not recorded"
-final_df[12,2]<-">35kg"
+final_df[12, 2] <- "Weight not recorded"
+final_df[11,2]<-">35kg"
 final_df[7,2] <- "Female"
 final_df[8,2]<- "Male"
 final_df[1, 1] <- "Age at final date (Barry)"
 final_df[7, 1] <- "Sex"
-final_df[14,1] <- "Other cancer/s recorded count"
-final_df[9, 1] <- "Avg. adult weight 5y prior to endpoint (quartiles)"
-final_df[17, 1] <- "Gastrointestinal comorbidity 5y prior to endpoint"
-final_df[19, 1] <- "Anti-parasites - 5y prior to endpoint (quartiles)"
-final_df[24, 1] <- "NSAID used - whole life"
-final_df[27, 1] <- "Avg. activity freq. score– 5y prior to endpoint (grouped)"
-final_df[31, 1] <- "Smoke exposure- whole life"
-#replace the inf values from the not recorded category in activty freq with numeric values
-final_df[10,5] <-"0.00 (0-3886369.66, p=0.967)"
-final_df[10,6] <-"3886369.66"
-final_df[10,7]<-"0.967"
-#need to set inf as a number to make CI bar in forest plot - trialling with 50
-final_df[10,8] <- "50"
+final_df[13,1] <- "Cancer recorded 5y prior to endpoint"
+final_df[9, 1] <- "Avg. adult weight 5y prior to endpoint (biological)"
+final_df[15, 1] <- "Gastrointestinal comorbidity 5y prior to endpoint"
+final_df[17, 1] <- "Anti-parasites - 5y prior to endpoint (quartiles)"
+final_df[22, 1] <- "NSAID used - whole life"
+final_df[25, 1] <- "Avg. activity freq. score– 5y prior to endpoint (grouped)"
+final_df[29, 1] <- "Smoke exposure- early life"
+
 
 
 
 final_df$category <- factor(final_df$category, 
-                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg","<15kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","1 other cancer reported", "2 other cancers reported","GI comorb not present", "GI comorb present","1-2 times",">2-4 times",">4-6 times",">6-20 times","No medications records for this time period", "NSAID not administered", "NSAID administered", "No medications records for lifetime","Daily or more",
-                                   "Weekly","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
+                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","1-2 times",">2-4 times",">4-6 times",">6-20 times","No medications records for this time period", "NSAID not administered", "NSAID administered", "No medications records for lifetime",
+                                   "Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
 final_df$AutoNumber <- factor(final_df$AutoNumber, 
                         levels = c("1","2","3","4","5","6","7","8","9","10","11","12",
-                                   "13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32"))
+                                   "13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30"))
 
 
 
@@ -2693,7 +2739,7 @@ p_mid <-
   geom_point(aes(x = estimate), shape = 15, size = 5) +
   geom_linerange(aes(xmin = conf.low, xmax = conf.high)) +
   labs(x = "Odds Ratio") +
-  coord_cartesian(ylim = c(1, 32), xlim = c(0, 12)) +
+  coord_cartesian(ylim = c(1, 30), xlim = c(0, 5)) +
   geom_vline(xintercept = 1, linetype = "dashed") +
   theme(
     axis.line.y = element_blank(),
@@ -2748,16 +2794,12 @@ ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.tif", 
 
 5y/non time levels
 
-```{r}
-dependent <- "had_HSA"
-explanatory <- c("age_at_final_date_GB","sex_neuter","all_cancers_count_no_HSA","avg_weight_5y_prior_endpoint_kg_biological","NSAID_5y","avg_frequency_5y_prior_endpoint_splits_grouped")
-```
 
 ```{r}
 
 
 dependent <- "had_HSA"
-explanatory <- c("age_at_final_date_GB","sex_neuter","avg_weight_5y_prior_endpoint_kg_biological","all_cancers_count_no_HSA","NSAID_5y","avg_frequency_5y_prior_endpoint_splits_grouped")
+explanatory <- c("age_at_final_date_GB","sex_neuter","avg_weight_5y_prior_endpoint_kg_biological","all_cancers_YN_no_HSA","NSAID_5y","avg_frequency_5y_prior_endpoint_splits_grouped")
 final_model_table <-cohort_abr_sig_5y %>% 
   finalfit(dependent, explanatory, metrics = TRUE,column=TRUE) %>%
   kable(format = "html", digits = 2, escape = FALSE) %>%
@@ -2778,18 +2820,29 @@ df <-cohort_abr_sig_5y
 #relabel from 0/1 Q1-Q4 etc
 #parasites
 
-#mct
 df <- df %>%
 mutate(
-    all_cancers_count_no_HSA = recode(as.character(all_cancers_count_no_HSA),
+    quartile_anti_parasites_5y_prior_endpoint = recode(as.character(quartile_anti_parasites_5y_prior_endpoint),
+                          "Q1" = "1-2 times",
+                          "Q2" = ">2-4 times",
+                          "Q3" = ">4-6 times",
+                          "Q4" = ">6-20 times",
+                          "no_medication_records_for_this_time_period" = "No medications records for this time period")
+  )
+df <- df %>%   
+  mutate(quartile_anti_parasites_5y_prior_endpoint = factor(quartile_anti_parasites_5y_prior_endpoint,levels=c(
+    "1-2 times",">2-4 times",">4-6 times",">6-20 times","No medications records for this time period"
+  )))
+df <- df %>%
+mutate(
+    all_cancers_YN_no_HSA= recode(as.character(all_cancers_YN_no_HSA),
                           "0" = "No other cancer reported",
-                          "1" = "1 other cancer reported",
-                          "2" = "2 other cancers reported")
+                          "1" = "Other cancer reported")
 )
     
 df <- df %>%   
-  mutate(all_cancers_count_no_HSA = factor(all_cancers_count_no_HSA,levels=c(
-    "No other cancer reported","1 other cancer reported","2 other cancers reported"
+  mutate(all_cancers_YN_no_HSA = factor(all_cancers_YN_no_HSA,levels=c(
+    "No other cancer reported","Other cancer reported"
   )))
   
 
@@ -2887,30 +2940,23 @@ final_df$OR_CI == "1(1-1, p<0.001)"] <- "Reference"
 
 
 #renaming variables for figure
-final_df[15, 2] <- "Weight not recorded"
-final_df[14,2]<-">35kg"
+final_df[14, 2] <- "Weight not recorded"
+final_df[13,2]<-">35kg"
 final_df[1, 1] <- "Age at final date (Barry)"
 final_df[7, 1] <- "Sex-neuter status"
-final_df[16,1] <- "Other cancer/s recorded count"
-final_df[11, 1] <- "Avg. adult weight 5y prior to endpoint (quartiles)"
-final_df[19, 1] <- "NSAID used - 5y prior to endpoint"
-final_df[22, 1] <- "Avg. activity freq. score– 5y prior to endpoint (grouped)"
-#replace the inf values from the not recorded category in activty freq with numeric values
-final_df[12,5] <-"0.00 (0-6030770.80, p=0.967)"
-final_df[12,6]<-"0"
-final_df[12,7] <-"0"
-final_df[12,9]<-"0.967"
-#need to set inf as a number to make CI bar in forest plot - trialling with 50
-final_df[12,8] <- "50"
+final_df[15,1] <- "Cancer recorded 5y prior to endpoint"
+final_df[11, 1] <- "Avg. adult weight 5y prior to endpoint (biological)"
+final_df[17, 1] <- "NSAID used - 5y prior to endpoint"
+final_df[20, 1] <- "Avg. activity freq. score– 5y prior to endpoint (grouped)"
 
 
 
 final_df$category <- factor(final_df$category, 
-                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","F Entire","F Neutered","M Entire", "M Neutered",">15-<=25kg","<15kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","1 other cancer reported", "2 other cancers reported", "NSAID not administered", "NSAID administered", "No medications records for time period","Daily or more",
+                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","F Entire","F Neutered","M Entire", "M Neutered",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported",  "NSAID not administered", "NSAID administered", "No medications records for time period","Daily or more",
                                    "Weekly","Rarely","Activity freq. not recorded"))
 final_df$AutoNumber <- factor(final_df$AutoNumber, 
                         levels = c("1","2","3","4","5","6","7","8","9","10","11","12",
-                                   "13","14","15","16","17","18","19","20","21","22","23","24","25"))
+                                   "13","14","15","16","17","18","19","20","21","22","23"))
 
 
 
@@ -2937,7 +2983,7 @@ p_mid <-
   geom_point(aes(x = estimate), shape = 15, size = 5) +
   geom_linerange(aes(xmin = conf.low, xmax = conf.high)) +
   labs(x = "Odds Ratio") +
-  coord_cartesian(ylim = c(1, 25), xlim = c(0, 12)) +
+  coord_cartesian(ylim = c(1, 23), xlim = c(0, 10)) +
   geom_vline(xintercept = 1, linetype = "dashed") +
   theme(
     axis.line.y = element_blank(),

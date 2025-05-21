@@ -53,7 +53,7 @@ multi_HSA <- HSA_dogs2 %>%
 #incorp in survival time days - get date of diagnosis from endpoints and date of death from profile 
 profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
 profile <- profile %>%
-  dplyr::select(c(subject_id,death_date,is_euthanized))
+  dplyr::select(c(subject_id,enrolled_date,death_date,is_euthanized))
 
 HSA_dogs2 <- HSA_dogs2 %>%
   left_join(profile,by="subject_id")
@@ -63,10 +63,101 @@ HSA_dogs2 <- HSA_dogs2 %>%
 ## Haemangiosarcoma locations
 
 ```{r}
-locations <- HSA_dogs2 %>%
+#these are the broader locations -cardiac, splenic, visceral, cutaneous
+locations_main <- HSA_dogs2 %>%
   count(tracked_condition, name = "count") %>%
   mutate(percent = round(100 * count / sum(count), 1)) %>%
   arrange(desc(count))
+
+#create table count of ALL locations from locations column NB. more than one location per dog
+locations <- HSA_dogs2$location
+
+# Step 1: Replace " and " with commas to standardize delimiters
+locations_clean <- gsub(" and ", ", ", locations, ignore.case = TRUE)
+
+# Step 2: Remove unwanted strings (e.g., "suspect", "presum", "likely", directional terms)
+# Use regex and ignore case for better coverage
+locations_clean <- tolower(locations_clean)  # convert early for consistent matching
+locations_clean <- gsub("suspect[^,]*", "", locations_clean)
+locations_clean <- gsub("presum[^,]*", "", locations_clean)
+locations_clean <- gsub("likel[^,]*", "", locations_clean)
+locations_clean <- gsub("probable[^,]*", "", locations_clean)
+locations_clean <- gsub("\\bleft\\b", "", locations_clean)
+locations_clean <- gsub("\\bright\\b", "", locations_clean)
+
+# Optional: remove "mass on", "in the", etc. if those phrases occur
+locations_clean <- gsub("mass on ", "", locations_clean)
+locations_clean <- gsub("in the ", "", locations_clean)
+locations_clean <- gsub("area of ", "", locations_clean)
+locations_clean <- gsub("\\s+", " ", locations_clean)  # condense multiple spaces
+
+# Step 3: Split into individual locations by comma
+location_split <- strsplit(locations_clean, ",")
+
+# Step 4: Trim and flatten into a vector
+all_locations <- trimws(unlist(location_split))
+
+# Step 5: Standardize common synonyms (e.g., "cardiac", "ventricle" → "heart")
+all_locations[all_locations %in% c("heart", "cardiac", "right atrial cavity", "ventricle", "right atrium","atrium","atrium/auricle","atrial","heart (atrium)","heart (ventricular wall)","heart (auricle)","subtle infiltration in section of atrium)","heart (mass","heart ( auricle)","ventricular free wall)","heart ( atrium)","heart ( auricle)", "near heart base","heart (atrium","heart (atrial tissue)" ,"heart (","heart base","heart; atrium","heart (interventricular septum just under the annulus of the posterior tricuspid valve leaflet)","myocardium/heart","myocardium","atrial cavity","atrio-ventricular groove", "atrium (","atrium of the heart","heart ( aricular)","heart; atrium","heart base","myocardium)","ventricle","heart ( auricle","ventricle)","auricle")] <- "heart"
+all_locations[all_locations %in% c("skin (lower lip", "skin", "skin (abdomen)", "scrotum","dermal","haired skin")] <- "skin"
+all_locations[all_locations %in% c("lungs", "lung", "thoracic cavity", "thorax","all lung lobes","lung.","lungs (","lungs (")] <- "lung"
+all_locations[all_locations %in% c("liver", "hepatic","liver (","liver: disseminated hemangiosarcoma")] <- "liver"
+all_locations[all_locations %in% c("spleen", "splenic","spleen (")] <- "spleen"
+all_locations[all_locations %in% c("abdominal cavity", "abdomen")] <- "abdomen"
+all_locations[all_locations %in% c("jejunum", "small intestine","intestinal serosa","intestines","small intestine (muscular wall)","small intestine (muscularis mucosa)")] <- "intestine"
+all_locations[all_locations %in% c("kidneys", "kidney","kidney (possible)","bilateral kidneys"  )] <- "kidney"
+all_locations[all_locations %in% c("retroperitoneal mass", "retroperitoneum ("  ,"retroperitoneal cavity","retroperitoneal","retroperitoneal space")] <- "retroperitoneum"
+all_locations[all_locations %in% c("cerebellum","cerebreum","cerebrum","cerebellum)","brain (cerebrum","brain (cerebrum)")] <- "brain"
+all_locations[all_locations %in% c("mesenteric adipose tissue","peripancreatic adipose","adipose tissue; cranial thigh","fibroadipose tissue:","fibroadipose tissue (","fat (mesentery?)","fat (tibial area)","adipose")] <- "adipose tissue"
+all_locations[all_locations %in% c("gastric serosa","stomach (muscularis mucosa)")] <- "stomach"
+
+all_locations[all_locations %in% c("to the urinary bladder caudal aspect of the abdomen","bladder","urinary bladder")] <- "bladder"
+all_locations[all_locations %in% c("tricept","skeletal muscle/adipose tissue ","epaxial muscle","muscle","skeletal muscle/adipose tissue","muscle ( flank)","skeletal muscle")] <- "muscle"
+all_locations[all_locations %in% c("adrenal")] <- "adrenal gland"
+all_locations[all_locations %in% c("rib"," bone (proximal humerus)","bone (proximal humerus)","carpus","15 vertebral body","l5 vertebral body","tibial)","bone (proximal humerus)")] <- "bone"
+all_locations[all_locations %in% c("muscle (diaphragm")] <- "diaphragm"
+#NB skin techincally cutis
+all_locations[all_locations %in% c("subcutaneous","subcutaneous mass ( flank)","lateral mid thorax","subcutis")] <- "skin"
+all_locations[all_locations %in% c("adrenal glands")] <- "adrenal gland"
+all_locations[all_locations %in% c("mesentery/omentum","mesenetery")] <- "mesentery"
+#combine all the weird misc ones into "other" and "unknown"
+all_locations[all_locations %in% c("abdomen)","abdominal fluid","abdominal mass","body wall","caudal abdominal mass","hindlimb amputation site","leg mass","mid abdomen -","mouth","mucosal lined tissue","side","shoulder mass", "shoulder/scapula","shoulder","front leg","thoaracic inlet","thoracic deep to scapula","chest","digit","abdomen")] <- "other"
+all_locations[all_locations %in% c("(","masses","possibly spleen or liver","previously found in spleen","unspecified sites: tisse
+","spleen previously removed","unspecified sites: tisse")] <- "unknown"
+
+
+# Step 6: Remove empty strings (resulting from deleted words)
+all_locations <- all_locations[all_locations != ""]
+
+# Step 7: Create and print counts
+location_counts <- sort(table(all_locations), decreasing = TRUE)
+print(location_counts)
+
+
+
+# Step 7: Create table of counts and percentages
+location_counts <- sort(table(all_locations), decreasing = TRUE)
+
+# Convert to data.frame
+location_df <- as.data.frame(location_counts)
+colnames(location_df) <- c("location", "count")
+
+# Add percentage column
+location_df$percent <- round(100 * location_df$count / sum(location_df$count), 1)
+
+# View result
+print(location_df)
+
+# Combine count and percent into one column like "420 (80)"
+location_df$count_percent <- paste0(location_df$count, " (", location_df$percent, ")")
+
+# Optional: keep just location and the combined column
+location_summary <- location_df[, c("location","count","count_percent", "count_percent")]
+
+# View result
+print(location_summary)
+#write to csv for manuscript
+write.csv(location_summary,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_location_counts.csv")
 ```
 
 ## Haemangiosarcoma location MSTs
@@ -390,8 +481,43 @@ ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no
 
 ```
 
-## Age at diagnosis
+## Incidence per 100 dog years
+
+Use profile dataset to calculate time between enrolled date and death_date OR 31st Dec 2024 if not dead yet
 
 ```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
 
+#add death date 31/12/24 for all dogs with no death date recorded into death_date_2
+profile <- profile %>%
+  mutate(death_date_2 = if_else(death_date == "", "2024-12-31", death_date))
+time_in_study <- age_calc(profile,"subject_id","enrolled_date","death_date_2")
+
+#as numeric
+time_in_study$time_between_enrolled_date_death_date_2_years <-as.numeric(time_in_study$time_between_enrolled_date_death_date_2_years)
+
+# Sum total dog-years
+total_dog_years <- sum(time_in_study$time_between_enrolled_date_death_date_2_years, na.rm = TRUE)
+
+# Number of cases
+cases <- 490
+
+# Incidence rate per 100 dog-years
+incidence_rate <- (cases / total_dog_years) * 100
+
+incidence_rate
+
+#95%CI 
+# Calculate 95% CI using Poisson distribution
+alpha <- 0.05
+
+lower_limit <- 0.5 * qchisq(alpha / 2, 2 * cases)   # lower bound for cases
+upper_limit <- 0.5 * qchisq(1 - alpha / 2, 2 * (cases + 1)) # upper bound for cases
+
+lower_rate <- (lower_limit / total_dog_years) * 100
+upper_rate <- (upper_limit / total_dog_years) * 100
+
+# Print results
+cat("Incidence rate per 100 dog-years:", round(incidence_rate, 3), "\n")
+cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
 ```
