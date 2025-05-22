@@ -254,7 +254,7 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "quartile_anti_septics_5y_prior_endpoint", "quartile_hormones_and_related_5y_prior_endpoint",
   "quartile_cardio_respiratory_5y_prior_endpoint", "quartile_fluid_metabolites_5y_prior_endpoint",
   "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint",
-  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles", "NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever", "age_at_final_date_GB","age_at_final_date_bio"
+  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever", "age_at_final_date_GB","age_at_final_date_bio","median_weight_5y_prior_endpoint","median_weight_5y_prior_endpoint_any_records"
 )
 
 
@@ -348,6 +348,86 @@ cohort_abr <- cohort_abr %>%
     avg_weight_5y_prior_endpoint_kg
   ))
 
+
+#"median_weight_5y_prior_endpoint","median_weight_5y_prior_endpoint_any_records"
+cohort_abr<- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_kg = median_weight_5y_prior_endpoint *0.453)
+
+#### remove weight values for dogs that have their age at final date as <18m (ie. non adult weights) = 6 dogs
+cohort_abr <- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_kg = if_else(age_at_final_date < 1.5, NA_real_, median_weight_5y_prior_endpoint_kg))
+
+
+#how does data look now
+cohort_abr %>%
+    summarize(
+    mean_weight = mean(median_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    median_weight = median(median_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    sd_weight = sd(median_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    min_weight = min(median_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    max_weight= max(median_weight_5y_prior_endpoint_kg, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(median_weight_5y_prior_endpoint_kg))
+  )
+#remove outliers >1.5X above IQR and also anything <10kg as clearly is wrong
+
+Q1 <- quantile(cohort_abr$median_weight_5y_prior_endpoint_kg, 0.25, na.rm = TRUE)
+Q3 <- quantile(cohort_abr$median_weight_5y_prior_endpoint_kg, 0.75, na.rm = TRUE)
+Q1
+Q3
+IQR <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+cohort_abr <- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_kg_outliers_removed = ifelse(
+    median_weight_5y_prior_endpoint_kg < lower_bound | median_weight_5y_prior_endpoint_kg > upper_bound |
+      median_weight_5y_prior_endpoint_kg < 10,
+    NA,
+    median_weight_5y_prior_endpoint_kg
+  ))
+
+
+# dogs with any of the 5y having records
+cohort_abr<- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_any_records_kg = median_weight_5y_prior_endpoint_any_records * 0.453)
+
+#### remove weight values for dogs that have their age at final date as <18m (ie. non adult weights) = 6 dogs
+cohort_abr <- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_any_records_kg = if_else(age_at_final_date < 1.5, NA_real_, median_weight_5y_prior_endpoint_any_records_kg))
+
+
+#how does data look now
+cohort_abr %>%
+    summarize(
+    mean_weight = mean(median_weight_5y_prior_endpoint_any_records_kg, na.rm = TRUE),
+    median_weight = median(median_weight_5y_prior_endpoint_any_records_kg, na.rm = TRUE),
+    sd_weight = sd(median_weight_5y_prior_endpoint_any_records_kg, na.rm = TRUE),
+    min_weight = min(median_weight_5y_prior_endpoint_any_records_kg, na.rm = TRUE),
+    max_weight= max(median_weight_5y_prior_endpoint_any_records_kg, na.rm = TRUE),
+    n = n(),
+    n_missing = sum(is.na(median_weight_5y_prior_endpoint_any_records_kg))
+  )
+#remove outliers >1.5X above IQR and also anything <10kg as clearly is wrong
+
+Q1 <- quantile(cohort_abr$median_weight_5y_prior_endpoint_any_records_kg, 0.25, na.rm = TRUE)
+Q3 <- quantile(cohort_abr$median_weight_5y_prior_endpoint_any_records_kg, 0.75, na.rm = TRUE)
+Q1
+Q3
+IQR <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+cohort_abr <- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed = ifelse(
+    median_weight_5y_prior_endpoint_any_records_kg < lower_bound | median_weight_5y_prior_endpoint_any_records_kg > upper_bound |
+      median_weight_5y_prior_endpoint_any_records_kg < 10,
+    NA,
+    median_weight_5y_prior_endpoint_any_records_kg
+  ))
+
 #check these weirdly low weight dogs elsewhere to see whats going on with them:
 low_weight <- cohort_abr %>%
   filter(avg_weight_5y_prior_endpoint_kg <15)
@@ -437,6 +517,53 @@ cohort_abr <- cohort_abr %>%
       (avg_weight_5y_prior_endpoint_kg_outliers_removed>= weight_summary$UQ) ~ ">=26.98-37.01",
     )
   )
+#median 5y
+weight_summary2 <- cohort_abr %>%
+  summarise(
+      Mean  = mean(median_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      SD = sd(median_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      Median = median(median_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      LQ = quantile(median_weight_5y_prior_endpoint_kg_outliers_removed, 0.25,na.rm=T),
+      UQ = quantile(median_weight_5y_prior_endpoint_kg_outliers_removed, 0.75,na.rm=T),
+      Min = min(median_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T),
+      Max = max(median_weight_5y_prior_endpoint_kg_outliers_removed,na.rm=T)
+    )
+weight_summary2
+cohort_abr <- cohort_abr %>%
+  mutate(
+    median_weight_5y_prior_endpoint_kg_outliers_removed_quartiles = case_when(
+      (median_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary2$LQ) ~ "10.5-<16.1kg",
+      (median_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary2$LQ & median_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary2$Median) ~ ">=16.1-<21.3kg",
+      (median_weight_5y_prior_endpoint_kg_outliers_removed >= weight_summary2$Median & median_weight_5y_prior_endpoint_kg_outliers_removed < weight_summary2$UQ) ~ ">=21.3-28.8kg",
+      (median_weight_5y_prior_endpoint_kg_outliers_removed>= weight_summary2$UQ) ~ ">=28.8-47.1kg",
+    )
+  )
+#median 5y any records
+weight_summary3 <- cohort_abr %>%
+  summarise(
+      Mean  = mean(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed,na.rm=T),
+      SD = sd(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed,na.rm=T),
+      Median = median(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed,na.rm=T),
+      LQ = quantile(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed, 0.25,na.rm=T),
+      UQ = quantile(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed, 0.75,na.rm=T),
+      Min = min(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed,na.rm=T),
+      Max = max(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed,na.rm=T)
+    )
+weight_summary3
+
+cohort_abr <- cohort_abr %>%
+  mutate(
+    median_weight_5y_prior_endpoint_any_records_kg_outliers_removed_quartiles = case_when(
+      (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed < weight_summary3$LQ) ~ "10.5-<17.1kg",
+      (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed >= weight_summary3$LQ & median_weight_5y_prior_endpoint_any_records_kg_outliers_removed < weight_summary3$Median) ~ ">=17.1-<24.7kg",
+      (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed >= weight_summary3$Median & median_weight_5y_prior_endpoint_any_records_kg_outliers_removed < weight_summary3$UQ) ~ ">=24.7-30.6kg",
+      (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed>= weight_summary3$UQ) ~ ">=30.6-49.1kg",
+    )
+  )
+
+
+
+
 
 #create biological weight variable - <15kg (v underweight/outlier) >15-<25kg (underweight), 25-35kg(normal), 35-45(overweight), 45+ (obese)
 cohort_abr <- cohort_abr %>%
@@ -447,6 +574,27 @@ cohort_abr <- cohort_abr %>%
        avg_weight_5y_prior_endpoint_kg_outliers_removed <35)~ ">25-<=35kg",
     (avg_weight_5y_prior_endpoint_kg_outliers_removed > 35 )~ ">35",
   ))
+#median weights converted ot bio too
+cohort_abr <- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_any_records_kg_outliers_removed_biological = case_when(
+    (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed < 15)~ "<15kg",
+    (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed> 15 & median_weight_5y_prior_endpoint_any_records_kg_outliers_removed <25 )~ ">15-<=25kg",
+    (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed > 25 & 
+       median_weight_5y_prior_endpoint_any_records_kg_outliers_removed <35)~ ">25-<=35kg",
+    (median_weight_5y_prior_endpoint_any_records_kg_outliers_removed > 35 )~ ">35",
+  ))
+
+
+cohort_abr <- cohort_abr %>%
+  mutate(median_weight_5y_prior_endpoint_kg_outliers_removed_biological = case_when(
+    (median_weight_5y_prior_endpoint_kg_outliers_removed < 15)~ "<15kg",
+    (median_weight_5y_prior_endpoint_kg_outliers_removed> 15 & median_weight_5y_prior_endpoint_kg_outliers_removed <25 )~ ">15-<=25kg",
+    (median_weight_5y_prior_endpoint_kg_outliers_removed > 25 & 
+       median_weight_5y_prior_endpoint_kg_outliers_removed <35)~ ">25-<=35kg",
+    (median_weight_5y_prior_endpoint_kg_outliers_removed > 35 )~ ">35",
+  ))
+
+
 #hieght quartiles
 height_summary <- cohort_abr %>%
   summarise(
