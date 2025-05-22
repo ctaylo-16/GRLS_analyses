@@ -307,10 +307,17 @@ dog_weight_HSA2 <- dog_weight_HSA %>%
     count_rows = n(),
     avg_weight_5y_prior_endpoint = if (count_rows >= 5) mean(weight, na.rm = TRUE) else NA_real_,
     avg_height_5y_prior_endpoint = if (count_rows >= 5) mean(height, na.rm = TRUE) else NA_real_,
+    
+#incorp in 2 variants of weight 1) median not mean but need all the 5 year weights 2) median not mean but just of any 5y prior with weights
+    median_weight_5y_prior_endpoint = if (count_rows >= 5) median(weight, na.rm = TRUE) else NA_real_,
+    median_weight_5y_prior_endpoint_any_records = median(weight, na.rm = TRUE),
     avg_purina_BCS_5y_prior_endpoint = if (count_rows >= 5) mean(purina_body_condition_score, na.rm = TRUE) else NA_real_,
     mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score),  # Keep mode even if <5 rows
     .groups = "drop"
   )
+
+
+
 #remove extra columns before join
 
 #rejoin back to merged HSA data
@@ -327,7 +334,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(244:309, ~ case_when(
+  mutate(across(247:314, ~ case_when(
     is.na(.) ~ "no_medication_records_for_this_time_period",
     as.character(.) == "drug_not_administered" ~ "no_medication_records_for_this_time_period",
     TRUE ~ as.character(.)

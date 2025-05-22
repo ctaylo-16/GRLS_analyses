@@ -678,6 +678,74 @@ long_term_meds <- c("insulin","telmisartan","pimobendan","phenobarbital","leveti
 disease_specific_lifetime_meds<-c("insulin","vetsulin","thyroxine","thyrosyn","thyrocare","thyrokare","levocrine","librela","trilostane","vetoryl","pyridostigmine bromide","vetmedin","pimobendan")
 ```
 
+Creating a more in depth NSAID variable so can look at NSAID numbers of prescriptions rather than just NSAID YN exposure in current GRLS log reg HSA model
+
+```{r}
+# use HSA medications df to get list of NSAIDs in df
+table(HSA_medication_5y_filt$medication_ingredients_100)
+unique(HSA_medication_5y_filt$medication_ingredients_100)
+unique(HSA_medication_5y_filt$medication_ingredients)
+NSAID_meds <- c("carprofen","meloxicam","firocoxib","deracoxib","flurbiprofen","ketoprofen")
+
+HSA_medication_5y_filt <- HSA_medication_5y_filt %>%
+  mutate(NSAID_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(NSAID_meds, collapse = "|")),
+    "NSAID_yes",
+    "NSAID_no"
+  ))
+
+#a count of these for each dog exc if NSAID no then just NSAID no
+NSAID_5y_meds_per_dog <- HSA_medication_5y_filt %>%
+  group_by(subject_id, NSAID_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY NSAID_yes value then remove the NSAID_no row/s for that subject id
+  # Step 1: Get subject_ids that have NSAID_yes
+NSAID_yes_subjects <- NSAID_5y_meds_per_dog %>%
+  filter(NSAID_use == "NSAID_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep NSAID_yes rows or NSAID_no only if no NSAID_yes exists for that dog
+NSAID_5y_meds_per_dog_clean <- NSAID_5y_meds_per_dog %>%
+  filter(NSAID_use == "NSAID_yes" | !(subject_id %in% NSAID_yes_subjects))
+
+#calculate NSAID yes quartiles
+NSAID_yes <- NSAID_5y_meds_per_dog_clean %>%
+  filter(NSAID_use=="NSAID_yes")
+
+NSAID_summary <- NSAID_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+
+NSAID_5y_meds_per_dog_clean_quartiles <- NSAID_5y_meds_per_dog_clean %>%
+  mutate(NSAID_quantile = case_when(
+    NSAID_use == "NSAID_no" ~ "no_NSAID_admin",
+    NSAID_use == "NSAID_yes" & count <= 1 ~ "Q1(1)",
+    NSAID_use == "NSAID_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
+    NSAID_use == "NSAID_yes" & count > 2 & count <= 3 ~ "Q3(2-3)",
+    NSAID_use == "NSAID_yes" & count > 3 ~ "Q4(3-11)"
+  ))
+#then filt down to unique single row for each dog of its count or NSAID no, then join back to the 3044 dogs and if no count or no NSAID no then "no_NSAID_recorded_in_time_period"
+NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- HSA_5y_and_lifetime_all_dogs %>% left_join(NSAID_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in NSAID_quantile column with "no_med_records_this_time_period"
+NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+    mutate(NSAID_quantile = replace_na(NSAID_quantile, "no_med_use_recorded"))
+
+#ditch count column 
+NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+  dplyr::select(c(-"count"))
+#rename NSAID_quantile to make clear its a 5y column
+NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+  rename(NSAID_5y_quantiles = NSAID_quantile)
+write.csv(NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
+```
+
 ### Get all medications data for endpoint dogs for 5y prior to endpoint for GRLS lymphoma clinical records cross-checking:
 
 ```{r}
