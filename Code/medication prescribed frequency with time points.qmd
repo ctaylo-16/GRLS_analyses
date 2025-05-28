@@ -743,7 +743,246 @@ NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- NSAID_5y_meds_per_dog_cle
 #rename NSAID_quantile to make clear its a 5y column
 NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
   rename(NSAID_5y_quantiles = NSAID_quantile)
-write.csv(NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
+
+```
+
+Creating a split of ecto vs endoparasites from the parasite treatment variables:
+
+NB lists from this script "GRLS medications 250123.qmd"
+
+```{r}
+
+
+anti_parasites <-c("ivermectin, pyrantel pamoate","afoxolaner","lufenuron, milbemycin oxime","ivermectin","milbemycin oxime","fluralaner","fipronil, (s)-methoprene","milbemycin oxime, spinosad", "neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide","fenbendazole"<"pyrantel pamoate","dinotefuran, permethrin, pyriproxyfen","imidacloprid, pyriproxyfen","sarolaner" , "milbemycin oxime, praziquantel","ivermectin, praziquantel, pyrantel pamoate","selamectin", "flumethrin, imidacloprid","moxidectin","lufenuron, milbemycin oxime, praziquantel", "spinosad","fipronil, permethrin, pyriproxyfen","febantel, praziquantel, pyrantel pamoate","imidacloprid, permethrin", "praziquantel","praziquantel, pyrantel pamoate", "imidacloprid, moxidectin", "fipronil, pyriproxyfen, (s)-methoprene", "fipronil","lotilaner", "lufenuron", "cyphenothrin, fipronil","ponazuril","cyphenothrin, fipronil, (s)-methoprene","clorsulon, ivermectin","imidacloprid", "nitenpyram","terbinafine","indoxacarb","deltamethrin","(s)-methoprene","mebendazole","itraconazole","fipronil, permethrin", "unspecified heartworm preventative", "amitraz", "epsiprantel","permethrin","afoxolaner, milbemycin oxime","indoxacarb, permethrin","permethrin, pyriproxyfen","dinotefuran","ivermectin, lufenuron, mebendazole, praziquantel, pyrantel pamoate","febantel", "milbemycin oxime", "moxidectin", "fenbendazole", "praziquantel", 
+                  "pyrantel pamoate", "oxantel", "diethylcarbamazine citrate","amitraz", "permethrin", "imidacloprid", "fipronil","etofenprox","selamectin", "pyriproxyfen", "s-methoprene", "diatomaceous earth", "nitenpyram","amitraz, metaflurimon", "etofenprox, (s)-methoprene, piperonyl butoxide", 
+  "etofenprox, n-octyl bicycloheptene dicarboximide, piperonyl butoxide, pyriproxyfen, (s)-methoprene", 
+  "unspecified herbal flea/tick preventative", "unspecified flea/tick preventative","Ivermectin",  "milbemycin oxime",
+  "oxantel",
+  "praziquantel",
+  "moxidectin",
+  "pyrantel pamoate",
+  "sarolaner",
+  "unspecified parasite preventative",
+    "moxidectin, pyrantel pamoate, sarolaner", "milbemycin oxime, oxantel, praziquantel", "fatal plus","unspecified flea preventative","toltrazuril","mebendazole, praziquantel, pyrantel pamoate","imidacloprid, permethrin, pyriproxyfen","fenbendazole, maropitant citrate, metronidazole, omeprazole, sucralfate"        
+)
+
+ecto <-c("afoxolaner",
+  "fluralaner",
+  "fipronil",
+  "spinosad",
+  "sarolaner",
+  "selamectin",
+  "moxidectin",
+  "nitenpyram",
+  "lufenuron",
+  "imidacloprid",
+  "permethrin",
+  "pyriproxyfen",
+  "(s)-methoprene",
+  "cyphenothrin",
+  "etofenprox",
+  "deltamethrin",
+  "indoxacarb",
+  "amitraz",
+  "dinotefuran",
+  "terbinafine",
+  "benzyl benzoate",
+  "malathion",
+  "crotamiton",
+  "lindane",
+  "pyrethrins",
+  "piperonyl butoxide",
+  "cyclomethicone",
+  "dimethicone")
+endo <-c( "ivermectin",
+  "pyrantel pamoate",
+  "milbemycin oxime",
+  "fenbendazole",
+  "praziquantel",
+  "oxantel",
+  "diethylcarbamazine citrate",
+  "mebendazole",
+  "epsiprantel",
+  "ponazuril",
+  "toltrazuril",
+  "clorsulon",
+  "albendazole",
+  "niclosamide",
+  "thiabendazole",
+  "nitazoxanide",
+  "paromomycin",
+  "metronidazole",
+  "tinidazole",
+  "doxycycline",
+  "atovaquone",
+  "proguanil",
+  "quinine",
+  "pyrimethamine",
+  "sulfadiazine")
+
+#NB broad spectrum ones that do both here
+broad_spectrum <- c(
+  "ivermectin, pyrantel pamoate",
+  "lufenuron, milbemycin oxime",
+  "milbemycin oxime, spinosad",
+  "milbemycin oxime, praziquantel",
+  "ivermectin, praziquantel, pyrantel pamoate",
+  "lufenuron, milbemycin oxime, praziquantel",
+  "moxidectin, pyrantel pamoate, sarolaner",
+  "milbemycin oxime, oxantel, praziquantel",
+  "afoxolaner, milbemycin oxime",
+  "fenbendazole, maropitant citrate, metronidazole, omeprazole, sucralfate",
+  "mebendazole, praziquantel, pyrantel pamoate",
+  "imidacloprid, moxidectin",
+  "fipronil, permethrin, pyriproxyfen",
+  "fipronil, pyriproxyfen, (s)-methoprene",
+  "cyphenothrin, fipronil, (s)-methoprene",
+  "imidacloprid, permethrin, pyriproxyfen",
+  "etofenprox, (s)-methoprene, piperonyl butoxide",
+  "etofenprox, n-octyl bicycloheptene dicarboximide, piperonyl butoxide, pyriproxyfen, (s)-methoprene",
+  "indoxacarb, permethrin",
+  "flumethrin, imidacloprid"
+)
+
+```
+
+First for ecto
+
+```{r}
+
+HSA_medication_5y_filt <- HSA_medication_5y_filt %>%
+  mutate(ecto_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(ecto, collapse = "|")),
+    "ecto_yes",
+    "ecto_no"
+  ))
+
+#a count of these for each dog exc if ecto no then just ecto no
+ecto_5y_meds_per_dog <- HSA_medication_5y_filt %>%
+  group_by(subject_id, ecto_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY ecto_yes value then remove the ecto_no row/s for that subject id
+  # Step 1: Get subject_ids that have ecto_yes
+ecto_yes_subjects <- ecto_5y_meds_per_dog %>%
+  filter(ecto_use == "ecto_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep ecto_yes rows or ecto_no only if no ecto_yes exists for that dog
+ecto_5y_meds_per_dog_clean <- ecto_5y_meds_per_dog %>%
+  filter(ecto_use == "ecto_yes" | !(subject_id %in% ecto_yes_subjects))
+
+#calculate ecto yes quartiles
+ecto_yes <- ecto_5y_meds_per_dog_clean %>%
+  filter(ecto_use=="ecto_yes")
+
+ecto_summary <- ecto_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+
+ecto_5y_meds_per_dog_clean_quartiles <- ecto_5y_meds_per_dog_clean %>%
+  mutate(ecto_quantile = case_when(
+    ecto_use == "ecto_no" ~ "no_ecto_admin",
+    ecto_use == "ecto_yes" & count <= 1 ~ "Q1(1)",
+    ecto_use == "ecto_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
+    ecto_use == "ecto_yes" & count > 2 & count <= 4 ~ "Q3(2-4)",
+    ecto_use == "ecto_yes" & count > 4 ~ "Q4(4-17)"
+  ))
+#then filt down to unique single row for each dog of its count or ecto no, then join back to the 3044 dogs and if no count or no ecto no then "no_ecto_recorded_in_time_period"
+ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- HSA_5y_and_lifetime_all_dogs %>% left_join(ecto_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in ecto_quantile column with "no_med_records_this_time_period"
+ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+    mutate(ecto_quantile = replace_na(ecto_quantile, "no_med_use_recorded"))
+
+#ditch count column 
+ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+  dplyr::select(c(-"count"))
+#rename ecto_quantile to make clear its a 5y column
+ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+  rename(ecto_5y_quantiles = ecto_quantile)
+```
+
+Endo
+
+```{r}
+HSA_medication_5y_filt <- HSA_medication_5y_filt %>%
+  mutate(endo_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(endo, collapse = "|")),
+    "endo_yes",
+    "endo_no"
+  ))
+
+#a count of these for each dog exc if endo no then just endo no
+endo_5y_meds_per_dog <- HSA_medication_5y_filt %>%
+  group_by(subject_id, endo_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY endo_yes value then remove the endo_no row/s for that subject id
+  # Step 1: Get subject_ids that have endo_yes
+endo_yes_subjects <- endo_5y_meds_per_dog %>%
+  filter(endo_use == "endo_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep endo_yes rows or endo_no only if no endo_yes exists for that dog
+endo_5y_meds_per_dog_clean <- endo_5y_meds_per_dog %>%
+  filter(endo_use == "endo_yes" | !(subject_id %in% endo_yes_subjects))
+
+#calculate endo yes quartiles
+endo_yes <- endo_5y_meds_per_dog_clean %>%
+  filter(endo_use=="endo_yes")
+
+endo_summary <- endo_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+
+endo_5y_meds_per_dog_clean_quartiles <- endo_5y_meds_per_dog_clean %>%
+  mutate(endo_quantile = case_when(
+    endo_use == "endo_no" ~ "no_endo_admin",
+    endo_use == "endo_yes" & count <= 1 ~ "Q1(1-2)",
+    endo_use == "endo_yes" & count > 2 & count <= 3 ~ "Q2(2-3)",
+    endo_use == "endo_yes" & count > 3 & count <= 4 ~ "Q3(3-4)",
+    endo_use == "endo_yes" & count > 4 ~ "Q4(4-17)"
+  ))
+#then filt down to unique single row for each dog of its count or endo no, then join back to the 3044 dogs and if no count or no endo no then "no_endo_recorded_in_time_period"
+endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- HSA_5y_and_lifetime_all_dogs %>% left_join(endo_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in endo_quantile column with "no_med_records_this_time_period"
+endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+    mutate(endo_quantile = replace_na(endo_quantile, "no_med_use_recorded"))
+
+#ditch count column 
+endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+  dplyr::select(c(-"count"))
+#rename endo_quantile to make clear its a 5y column
+endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop <- endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>%
+  rename(endo_5y_quantiles = endo_quantile)
+```
+
+Re-combine ecto, endo and NSAID ones
+
+```{r}
+#parasites
+ecto_endo <- ecto_5y_meds_per_dog_clean_quartiles_whole_HSA_pop %>% 
+  left_join(endo_5y_meds_per_dog_clean_quartiles_whole_HSA_pop,by="subject_id")
+#add back in NSAID exploration
+ecto_endo_NSAID <- ecto_endo %>% 
+  left_join(NSAID_5y_meds_per_dog_clean_quartiles_whole_HSA_pop,by="subject_id")
+#delete duplicate .x and .y across the 3 dfs
+ecto_endo_NSAID <- ecto_endo_NSAID %>%
+  dplyr::select(-c(2:71,74:143))
+
+write.csv(ecto_endo_NSAID,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
 ```
 
 ### Get all medications data for endpoint dogs for 5y prior to endpoint for GRLS lymphoma clinical records cross-checking:
