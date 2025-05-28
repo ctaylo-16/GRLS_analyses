@@ -254,7 +254,7 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "quartile_anti_septics_5y_prior_endpoint", "quartile_hormones_and_related_5y_prior_endpoint",
   "quartile_cardio_respiratory_5y_prior_endpoint", "quartile_fluid_metabolites_5y_prior_endpoint",
   "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint",
-  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever", "age_at_final_date_GB","age_at_final_date_bio","median_weight_5y_prior_endpoint","median_weight_5y_prior_endpoint_any_records"
+  "quartile_anti_viral_5y_prior_endpoint", "age_at_final_date_quartiles", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever", "age_at_final_date_GB","age_at_final_date_bio","median_weight_5y_prior_endpoint","median_weight_5y_prior_endpoint_any_records", "ecto_5y_quantiles","endo_5y_quantiles"
 )
 
 
