@@ -1996,11 +1996,20 @@ final_model_table
 
 ```
 
+
 Sub in parasite individual txs of ecto vs endo:
 Endo
 
 ```{r}
 dependent <- "had_HSA"
+#reset endo levels to be same as other all parasites model
+cohort_abr_sig <- cohort_abr_sig %>%
+  mutate(endo_5y_quantiles = factor(endo_5y_quantiles,
+                              levels=c("Q1(1-2)","Q2(2-3)","Q3(3-4)","Q4(4-17)","no_endo_admin","no_med_use_recorded")))
+
+
+
+
 
 explanatory <- c(
   "age_at_final_date_GB",
@@ -2034,7 +2043,6 @@ summary(model_ecto)
 logistic.display(model_ecto)
 
 ```
-
 
 ```{r}
 dependent <- "had_HSA"
@@ -2989,6 +2997,7 @@ ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.svg", 
 ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
 ```
 
+
 Final model with endoparasite quartiles subed in:
 ```{r}
 
@@ -3034,6 +3043,9 @@ mutate(
                         "no_med_use_recorded"="No medical records in time period")
   )
 df <- df %>%   
+  mutate(endo_5y_quantiles = factor(endo_5y_quantiles,levels=c(
+    "1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medical records in time period"
+=======
   mutate(endo_5y_quantiles = factor(endo_5y_quantiles,levels=c("Endoparasiticide not administered",
     "1-2 times","3 times ","4 times","5-17 times","No medical records in time period"
   )))
@@ -3164,6 +3176,10 @@ final_df[33, 1] <- "Smoke exposure- early life"
 
 
 
+
+final_df$category <- factor(final_df$category, 
+                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medications records for this time period", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period","Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
+=======
 final_df$category <- factor(final_df$category, 
                         levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","Endoparasiticide not administered","1-2 times","3 times ","4 times","5-17 times","No medications records for this time period", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period","Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
 final_df$AutoNumber <- factor(final_df$AutoNumber, 
@@ -3242,9 +3258,14 @@ ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.
 
 
 ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo_2.tif", plot = forest_log, width = 15, height = 10, dpi = 300)
+=======
+
 ```
 
 Create seperate endo only values plot to put underneath
+
 
 
 5y/non time levels
