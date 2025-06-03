@@ -1985,6 +1985,56 @@ final_model_table
 
 ```
 
+<<<<<<< Updated upstream
+=======
+Sub in parasite individual txs of ecto vs endo:
+Endo
+
+```{r}
+dependent <- "had_HSA"
+#reset endo levels to be same as other all parasites model
+cohort_abr_sig <- cohort_abr_sig %>%
+  mutate(endo_5y_quantiles = factor(endo_5y_quantiles,
+                              levels=c("Q1(1-2)","Q2(2-3)","Q3(3-4)","Q4(4-17)","no_endo_admin","no_med_use_recorded")))
+
+
+
+
+explanatory <- c(
+  "age_at_final_date_GB",
+  "sex",
+  "median_weight_5y_prior_endpoint_any_records_kg_outliers_removed_biological",
+  "avg_frequency_5y_prior_endpoint_splits_grouped",
+  "all_cancers_YN_no_HSA",
+  "endo_5y_quantiles",
+  "NSAID_5y_quantiles",
+  "gastrointestinal",
+  "smoke_exposure_study_years_early_life"
+
+)
+
+final_model_table <- cohort_abr_sig %>%
+  finalfit(dependent, explanatory, metrics = FALSE, column = TRUE) %>%
+  kable(format = "html", digits = 2, escape = FALSE) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+
+final_model_table
+
+```
+
+Ecto:
+(NB. final fit not working as levels are same as NSAID quantiles and aliased co-efficiencts with NSAIDs quantiles) 
+
+```{r}
+model_ecto<- glm(had_HSA ~ age_at_final_date_GB  +all_cancers_YN_no_HSA +ecto_5y_quantiles  +NSAID_5y_quantiles +  gastrointestinal + median_weight_5y_prior_endpoint_kg_outliers_removed_biological + sex + smoke_exposure_study_years_early_life  , data = cohort_abr_sig, family = binomial)
+car::vif(model_ecto)
+summary(model_ecto)
+logistic.display(model_ecto)
+
+```
+
+
+>>>>>>> Stashed changes
 ```{r}
 dependent <- "had_HSA"
 explanatory <- c(  "age_at_final_date_GB",
@@ -2930,6 +2980,270 @@ ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.svg", 
 ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
 ```
 
+<<<<<<< Updated upstream
+=======
+Final model with endoparasite quartiles subed in:
+```{r}
+
+
+dependent <- "had_HSA"
+explanatory <- c(   "age_at_final_date_GB",
+  "sex",
+  "median_weight_5y_prior_endpoint_any_records_kg_outliers_removed_biological",
+
+  "all_cancers_YN_no_HSA",
+  "gastrointestinal",
+    "endo_5y_quantiles",
+  "NSAID_5y_quantiles",
+  "avg_frequency_5y_prior_endpoint_splits_grouped",
+  "smoke_exposure_study_years_early_life")
+final_model_table <-cohort_abr_sig %>% 
+  finalfit(dependent, explanatory, metrics = TRUE,column=TRUE) %>%
+  kable(format = "html", digits = 2, escape = FALSE) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+
+final_model_table
+
+final_model_table2<- cohort_abr_sig %>% 
+  finalfit(dependent, explanatory, metrics = FALSE,column = TRUE) 
+final_model_table2_df <- as.data.frame(final_model_table2)
+
+results_flextable <-flextable(final_model_table2_df)
+
+#recode into tidier variables
+#seperate df for recoding to avoid overwriting orignal df
+df <-cohort_abr_sig
+
+#relabel from 0/1 Q1-Q4 etc
+#parasites
+df <- df %>%
+mutate(
+    endo_5y_quantiles = recode(as.character(endo_5y_quantiles),
+                          "no_endo_admin" = "Endoparasiticide not administered",
+                          "Q1(1-2)" = "1-2 times",
+                          "Q2(2-3)" = "3 times ",
+                          "Q3(3-4)"="4 times",
+                        "Q4(4-17)" ="5-17 times",
+                        "no_med_use_recorded"="No medical records in time period")
+  )
+df <- df %>%   
+  mutate(endo_5y_quantiles = factor(endo_5y_quantiles,levels=c(
+    "1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medical records in time period"
+  )))
+#mct
+df <- df %>%
+mutate(
+    all_cancers_YN_no_HSA= recode(as.character(all_cancers_YN_no_HSA),
+                          "0" = "No other cancer reported",
+                          "1" = "Other cancer reported")
+)
+    
+df <- df %>%   
+  mutate(all_cancers_YN_no_HSA = factor(all_cancers_YN_no_HSA,levels=c(
+    "No other cancer reported","Other cancer reported"
+  )))
+  
+
+
+#GI comorb
+df <- df %>%
+mutate(
+    gastrointestinal = recode(as.character(gastrointestinal),
+                          "0" = "GI comorb not present",
+                          "1" = "GI comorb present")
+    )
+
+df <- df %>%   
+  mutate(gastrointestinal = factor(gastrointestinal,levels=c(
+    "GI comorb not present","GI comorb present"
+  )))
+#NSAID ever
+df <- df %>%
+mutate(
+    NSAID_5y_quantiles = recode(as.character(NSAID_5y_quantiles),
+                          "no_NSAID_admin" = "NSAID not administered",
+                          "Q1(1)" = "1 time",
+                          "Q2(1-2)" = "2 times",
+                          "Q3(2-3)"="3 times",
+                        "Q4(3-11)" ="4-11 times",
+                        "no_med_use_recorded"="No medical records in time period")
+  )
+
+df <- df %>%   
+  mutate(NSAID_5y_quantiles = factor(NSAID_5y_quantiles,levels=c(
+    "NSAID not administered","1 time","2 times","3 times","4-11 times","No medical records in time period"
+  )))
+  
+#frequency activity quartile 
+df <- df %>%
+  mutate(
+    avg_frequency_5y_prior_endpoint_splits_grouped = recode(as.character(avg_frequency_5y_prior_endpoint_splits_grouped),
+      "daily_or_more" = "Daily or more",
+      "rarely" = "Rarely",
+      "weekly" = "Weekly",
+      "not_recorded" = "Activity freq. not recorded"
+    ),
+    avg_frequency_5y_prior_endpoint_splits_grouped = factor(
+      avg_frequency_5y_prior_endpoint_splits_grouped,
+      levels = c( 
+                 "Weekly","Daily or more","Rarely",
+        "Activity freq. not recorded"
+      )
+    )
+  )
+
+
+#remove univar
+final_df <-df%>%
+  finalfit(dependent, explanatory)
+
+#final_df <- final_df %>%
+ # rename('variable'=`Dependent: survival_time_group`)%>%
+  #dplyr::select(-c('OR (univariable)')) %>%
+  #dplyr::select(-c('0'))%>%
+   # dplyr::select(-c('1'))
+final_df <- final_df %>%
+  rename('variable'=`Dependent: had_HSA`)%>%
+  dplyr::select(-c('OR (univariable)'))
+#replace all - with 1(1-1)
+
+final_df$`OR (multivariable)`[#replace all - with 1(1-1)
+final_df $`OR (multivariable)` == "-"] <- "1(1-1, p<0.001)"
+
+#extracting values with regex
+
+final_df$estimate <- gsub("([0-9.]+)\\s*\\([0-9.-]+-([0-9.-]+),\\s*p[=<]*([0-9.]+).*\\)", "\\1", final_df$`OR (multivariable)`)
+final_df$conf.low <- gsub("([0-9.]+)\\s*\\(([0-9.-]+)-([0-9.-]+),\\s*p[=<]*([0-9.]+).*\\)", "\\2", final_df$`OR (multivariable)`)
+final_df$conf.high <- gsub("([0-9.]+)\\s*\\([0-9.-]+-([0-9.-]+),\\s*p[=<]*([0-9.]+).*\\)", "\\2",  final_df$`OR (multivariable)`)
+final_df$p.value <- gsub(".*p[=<]*([0-9.]+).*", "\\1", final_df$`OR (multivariable)`)
+
+
+colnames(final_df)[2] <- "category"
+final_df <- final_df %>%
+  rename(OR_CI = 'OR (multivariable)')
+final_df <- final_df %>%
+  rename(Cases = '1')
+final_df <- final_df %>%
+  rename(Controls = '0')
+
+
+
+
+
+#For index for plotting
+final_df$AutoNumber <- seq_along(final_df[[1]])
+
+#rename 1(1-1) to reference
+
+final_df$OR_CI[#replace all - with 1(1-1)
+final_df$OR_CI == "1(1-1, p<0.001)"] <- "Reference"
+
+
+#renaming variables for figure
+final_df[12, 2] <- "Weight not recorded"
+final_df[11,2]<-">35kg"
+final_df[7,2] <- "Female"
+final_df[8,2]<- "Male"
+final_df[1, 1] <- "Age at final date (Barry)"
+final_df[7, 1] <- "Sex"
+final_df[13,1] <- "Cancer recorded 5y prior to endpoint"
+final_df[9, 1] <- "Median adult weight 5y prior to endpoint (biological)"
+final_df[15, 1] <- "Gastrointestinal comorbidity 5y prior to endpoint"
+final_df[17, 1] <- "Endoparasiticide - 5y prior to endpoint (quartiles)"
+final_df[23, 1] <- "NSAID usage - 5y prior to endpoint (quartiles)"
+final_df[29, 1] <- "Avg. activity freq. score– 5y prior to endpoint (grouped)"
+final_df[33, 1] <- "Smoke exposure- early life"
+
+
+
+
+
+final_df$category <- factor(final_df$category, 
+                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medications records for this time period", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period","Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
+final_df$AutoNumber <- factor(final_df$AutoNumber, 
+                        levels = c("1","2","3","4","5","6","7","8","9","10","11","12",
+                                   "13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34"))
+
+
+
+
+final_df$conf.high <- as.numeric(final_df$conf.high)
+final_df$conf.low <- as.numeric(final_df$conf.low)
+final_df$estimate <- as.numeric(final_df$estimate)  
+```
+
+```{r}
+library(ggplot2)
+library(patchwork)
+library(forcats)
+
+# Mid plot with adjusted dimensions
+p_mid <- 
+  final_df |>
+  ggplot(aes(y = fct_rev(AutoNumber))) +
+  theme_classic() +
+  geom_point(aes(x = estimate), shape = 15, size = 5) +
+  geom_linerange(aes(xmin = conf.low, xmax = conf.high)) +
+  labs(x = "Odds Ratio") +
+  coord_cartesian(ylim = c(1, 33), xlim = c(0, 4)) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  theme(
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+# Left plot with more spaced columns and adjusted xlim
+p_left <- 
+  final_df |>
+  ggplot(aes(y = fct_rev(AutoNumber))) + 
+  geom_text(aes(x = 0, label = variable), hjust = 0, size = 4, fontface = "bold") +
+  geom_text(aes(x = 25, label = category), hjust = 0, fontface = "bold", size = 3.5) +
+    geom_text(aes(x = 45, label = Controls), hjust = 0, fontface = "bold", size = 3.5)+
+      geom_text(aes(x = 50, label = Cases), hjust = 0, fontface = "bold", size = 3.5)+
+  geom_text(aes(x = 60, label = OR_CI), hjust = 0, 
+            fontface = ifelse(final_df$OR_CI == "Odds Ratio (95% CI)", "bold", "plain"), 
+            size = 3.5) +
+  theme_void() +
+  coord_cartesian(xlim = c(0, 80))  # Allows room for three text columns
+
+
+
+layout2 <- c(
+  patchwork::area(t = 0, l = 0, b = 30, r = 9),  # Make p_left wider# top, left, bottom, right
+  patchwork::area(t = 1, l = 9, b = 30, r = 15)    # p_mid occupies a smaller part
+)
+
+
+
+
+# Combine plots with adjusted layout
+forest_log <- p_left + p_mid + plot_layout(design = layout2)
+forest_log
+
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_endo.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_endo.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_endo.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
+
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo_2.tif", plot = forest_log, width = 15, height = 10, dpi = 300)
+```
+
+Create seperate endo only values plot to put underneath
+
+
+>>>>>>> Stashed changes
 5y/non time levels
 
 ```{r}

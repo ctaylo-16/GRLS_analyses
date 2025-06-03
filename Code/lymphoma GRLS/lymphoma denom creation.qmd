@@ -1,0 +1,61 @@
+---
+title: "GRLS lymphoma population creation"
+format: html
+editor: visual
+---
+
+## GRLS lymphoma population
+
+Using RP2 students project where cut-off date was Dec 1 2024
+
+```{r}
+library(tidyverse)
+#original 180 dogs identified from endpoints dataset
+lymphoma_cases <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/GRLS lymphoma RP2 projects/clinical_records_coding_compiled_CT_tidy_and_original_columns.csv")
+
+#there were approx ~10 dogs that the students determined didnt match lymphoma criteria 
+lymphoma_cases <- lymphoma_cases %>%
+  dplyr::filter(Lymphoma.confirmed.with.necropsy.histology.cytology
+ =="yes")
+
+#keeping only the relevant columns for creating the bigger dataset with rest of cohort 
+colnames(lymphoma_cases)
+lymphoma_cases_abr <- lymphoma_cases %>%
+  dplyr::select(c(PatientID,Birthdate..UK.date.format.,Date.of.death.recorded,Date.of.last.record.if.no.death.recorded))
+```
+
+Add in cohort population:
+
+```{r}
+endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+dog_profiles <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+#abridge to relevant columns
+dog_profiles_abr<- dog_profiles %>%
+  dplyr::select(c(subject_id,enrolled_date,birth_date,withdrawn_date,inactive_date,death_date))
+                
+#combine the withdrawn/inactive/death dates into one column for calculations
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(end_date = coalesce(death_date,withdrawn_date,inactive_date))
+dog_profiles_abr <- dog_profiles_abr %>%
+#make sure empty cells are definitely an NA not just blank for coalesce to work
+ mutate(
+    withdrawn_date = na_if(withdrawn_date, ""),
+    death_date = na_if(death_date, ""),
+    inactive_date = na_if(inactive_date, "")
+  ) %>%
+  mutate(
+    # Convert to Date if needed (only if not already dates)
+    withdrawn_date = as.Date(withdrawn_date),
+    death_date = as.Date(death_date),
+    inactive_date = as.Date(inactive_date),
+    
+    # Prioritise death_date, then withdrawn, then unenrolled
+    end_date = coalesce(death_date, withdrawn_date, inactive_date)
+  )
+
+#for cells where dog has not got a value across any of these ie. no endpoint date - replace with Dec 1 2024
+sum(is.na(dog_profiles_abr$end_date)) 
+#~1112 dogs don't ahve endpoint
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(end_date = replace_na(end_date, as.Date("2024-12-01")))
+```
