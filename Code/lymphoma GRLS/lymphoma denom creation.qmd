@@ -17,7 +17,7 @@ lymphoma_cases <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary Colle
 lymphoma_cases <- lymphoma_cases %>%
   dplyr::filter(Lymphoma.confirmed.with.necropsy.histology.cytology
  =="yes")
-
+unique(lymphoma_cases$PatientID)
 #keeping only the relevant columns for creating the bigger dataset with rest of cohort 
 colnames(lymphoma_cases)
 lymphoma_cases_abr <- lymphoma_cases %>%
@@ -58,4 +58,106 @@ sum(is.na(dog_profiles_abr$end_date))
 #~1112 dogs don't ahve endpoint
 dog_profiles_abr <- dog_profiles_abr %>%
   mutate(end_date = replace_na(end_date, as.Date("2024-12-01")))
+#check none missing date now 
+sum(is.na(dog_profiles_abr$end_date)) 
+
+```
+
+Add lymphoma status onto the dog profiles df:
+
+```{r}
+#rename patientID column to subject ID in lymphoma casedf
+lymphoma_cases_abr <- lymphoma_cases_abr %>%
+  rename(subject_id = PatientID)
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(lymphoma = if_else(subject_id %in% lymphoma_cases_abr$subject_id, 1, 0)
+  )
+
+#check case control count is right
+table(dog_profiles_abr$lymphoma)
+#there are only 111 coming up as lymphoma cases for this, should be 171
+
+#check all the 170 dogs are in the dog_profiles_abr file
+lymphoma_case_ids <- unique(lymphoma_cases_abr$subject_id)
+whole_cohort_ids <- unique(dog_profiles_abr$subject_id)
+#which lymphoma ones are NOT in cohort
+missing_ids <- setdiff(lymphoma_cases_abr$subject_id, dog_profiles_abr$subject_id)
+#aha, the IDs for ~60 dogs are numeric + dogs name e.g 094-030332 layla 
+#strip the character bits from the ID (anything after a space) and then rerun the mutate above
+lymphoma_cases_abr <- lymphoma_cases_abr %>%
+  mutate(subject_id= sub(" .*", "", subject_id))
+
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(lymphoma = if_else(subject_id %in% lymphoma_cases_abr$subject_id, 1, 0)
+  )
+#check case control count is right
+table(dog_profiles_abr$lymphoma)
+
+#still 7 dogs missing from the 170 in lymphoma cases file count
+missing_ids2 <- setdiff(lymphoma_cases_abr$subject_id, dog_profiles_abr$subject_id)
+
+#lymphoma 
+lymphoma_163 <- dog_profiles_abr %>%
+  dplyr::filter(lymphoma == 1)
+
+dog_ids <- dog_profiles_abr %>%
+  distinct(subject_id) %>%
+  pull(subject_id)
+
+lymphoma_ids <- lymphoma_cases_abr %>%
+  distinct(subject_id) %>%
+  pull(subject_id)
+
+# In lymphoma but not in dog_profiles
+only_in_lymphoma <- setdiff(lymphoma_ids, dog_ids)
+
+# In dog_profiles but not in lymphoma
+only_in_dog_profiles <- setdiff(dog_ids, lymphoma_ids)
+
+
+mismatched_ids <- union(only_in_lymphoma, only_in_dog_profiles)
+
+#check if there is a white space issue
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(subject_id = trimws(as.character(subject_id)))
+
+lymphoma_cases_abr <- lymphoma_cases_abr %>%
+  mutate(subject_id = trimws(as.character(subject_id)))
+
+
+# Left join to check match quality
+check_df <- lymphoma_cases_abr %>%
+  left_join(dog_profiles_abr, by = "subject_id")
+
+# Filter where join failed (i.e., subject_id not matched in dog_profiles)
+missing_join <- check_df %>%
+  filter(is.na(end_date))  # pick any column only in dog_profiles_abr
+
+nrow(missing_join)  # should be 7
+missing_join$subject_id
+
+# there are duplicate rows, which i think is from getting the students to code same 10 dogs in pilot! 
+lymphoma_cases_abr %>%
+  count(subject_id, sort = TRUE) %>%
+  filter(n > 1)
+
+#keep only a single unique row subject_id in the lymphoma_cases_abr
+lymphoma_cases_abr <- lymphoma_cases_abr %>%
+  distinct(subject_id, .keep_all = TRUE)
+
+#now rerun that initial step again 
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(lymphoma = if_else(subject_id %in% lymphoma_cases_abr$subject_id, 1, 0)
+  )
+
+table(dog_profiles_abr$lymphoma
+      )
+```
+
+Write file to csv for then running in other files when creating all the time linked variables.
+
+So there are 163 cases and 2881 controls in the population as of 1/12/24
+
+```{r}
+write.csv(dog_profiles_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lymphoma_cohort_241201.csv")
 ```
