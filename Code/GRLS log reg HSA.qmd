@@ -225,6 +225,11 @@ cohort_abr <- cohort_abr%>%
 cohort_abr <- cohort_abr%>%
   mutate(NSAID_5y_quantiles = factor(NSAID_5y_quantiles, levels = c("no_NSAID_admin", "Q1(1)", "Q2(1-2)", "Q3(2-3)","Q4(3-11)","no_med_use_recorded")))
 
+cohort_abr <- cohort_abr%>%
+  mutate(endo_5y_quantiles = factor(endo_5y_quantiles, levels = c("no_endo_admin", "Q1(1-2)", "Q2(2-3)", "Q3(3-4)","Q4(4-17)","no_med_use_recorded")))
+
+cohort_abr <- cohort_abr%>%
+  mutate(ecto_5y_quantiles = factor(ecto_5y_quantiles, levels = c("no_ecto_admin", "Q1(1)", "Q2(1-2)", "Q3(2-4)","Q4(4-17)","no_med_use_recorded")))
 ###setting "no_medication_records_for_this_time_periodistered" as bottom factor level for drug variables as think it actually means drug use not recorded so doesnt make a good baseline
 # Vector of the column names to modify
 # Suppose you want to modify columns 3 to 17, for example
@@ -445,7 +450,7 @@ explanatory = c(
              "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint",  "quartile_immunologicals_5y_prior_endpoint", 
              "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
              "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
- "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"
+ "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","ecto_5y_quantiles","endo_5y_quantiles"
 )
 
 # Create a univariable logistic regression table
@@ -551,7 +556,7 @@ cohort_abr2 <- cohort_abr %>%
              "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint",  "quartile_immunologicals_5y_prior_endpoint", 
              "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
              "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
- "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","had_HSA")
+ "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever", "ecto_5y_quantiles","endo_5y_quantiles","had_HSA")
 
 cohort_abr2<- cohort_abr2%>%
   mutate_all(~factor(ifelse(is.na(.), "not_recorded", as.character(.))))
@@ -635,6 +640,12 @@ cohort_abr2 <- cohort_abr2%>%
 cohort_abr2 <- cohort_abr2%>%
   mutate(NSAID_5y_quantiles = factor(NSAID_5y_quantiles, levels = c("no_NSAID_admin", "Q1(1)", "Q2(1-2)", "Q3(2-3)","Q4(3-11)","no_med_use_recorded")))
 
+
+cohort_abr2 <- cohort_abr2%>%
+  mutate(endo_5y_quantiles = factor(endo_5y_quantiles, levels = c("no_endo_admin", "Q1(1-2)", "Q2(2-3)", "Q3(3-4)","Q4(4-17)","no_med_use_recorded")))
+
+cohort_abr2 <- cohort_abr2%>%
+  mutate(ecto_5y_quantiles = factor(ecto_5y_quantiles, levels = c("no_ecto_admin", "Q1(1)", "Q2(1-2)", "Q3(2-4)","Q4(4-17)","no_med_use_recorded")))
 cols_to_modify <- 151:200 # replace with your actual column indices
 
 for (i in cols_to_modify) {
@@ -909,7 +920,7 @@ cohort_no_not_rec<- cohort_no_not_rec %>%
              "quartile_anti_inflam_5y_prior_endpoint", "quartile_anti_microbials_5y_prior_endpoint",  "quartile_immunologicals_5y_prior_endpoint", 
              "quartile_misc_5y_prior_endpoint", "quartile_neurological_5y_prior_endpoint", 
              "quartile_anti_parasites_5y_prior_endpoint", "quartile_dietary_supplements_5y_prior_endpoint", 
- "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","had_HSA")
+ "quartile_hormones_and_related_5y_prior_endpoint", "NSAID_5y","NSAID_ever","NSAID_5y_quantiles","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever", "ecto_5y_quantiles","endo_5y_quantiles","had_HSA")
 
 #remove drug not administered as an NA
 cols_to_modify <- 145:193  # adjust as needed
@@ -989,7 +1000,7 @@ Assessing collinearity of potentially sig univariable variables:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:94), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg.png")
+create_corr_matrix(cohort_abr_sig,c(1:96), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg.png")
 ```
 
 Correlated variables
@@ -1015,7 +1026,7 @@ print(corr_values3)
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig2,c(1:94), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_no_missing.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg2_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_no_missing.png")
+create_corr_matrix(cohort_abr_sig2,c(1:96), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_no_missing.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg2_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_no_missing.png")
 
 
 
@@ -1985,8 +1996,7 @@ final_model_table
 
 ```
 
-<<<<<<< Updated upstream
-=======
+
 Sub in parasite individual txs of ecto vs endo:
 Endo
 
@@ -1996,6 +2006,7 @@ dependent <- "had_HSA"
 cohort_abr_sig <- cohort_abr_sig %>%
   mutate(endo_5y_quantiles = factor(endo_5y_quantiles,
                               levels=c("Q1(1-2)","Q2(2-3)","Q3(3-4)","Q4(4-17)","no_endo_admin","no_med_use_recorded")))
+
 
 
 
@@ -2033,8 +2044,6 @@ logistic.display(model_ecto)
 
 ```
 
-
->>>>>>> Stashed changes
 ```{r}
 dependent <- "had_HSA"
 explanatory <- c(  "age_at_final_date_GB",
@@ -2657,7 +2666,7 @@ summary(model_weight_kg5)
 logistic.display(model_weight_kg5)
 ```
 
-Final model output with time restricted variables: H&L p=0.07 C statistics 0.78
+Final model output with time restricted variables: H&L p=0.07 C statistics 0.8
 
 ```{r}
 model_weight_kg <-glm(had_HSA ~ age_at_final_date_GB + all_cancers_YN_no_HSA +  median_weight_5y_prior_endpoint_kg_outliers_removed_biological + NSAID_5y_quantiles  + sex_neuter ,data=cohort_abr_sig_5y,family=binomial)
@@ -2671,6 +2680,14 @@ summary(model_weight_kg_freq)
 logistic.display(model_weight_kg_freq)
 lrtest(model_weight_kg,model_weight_kg_freq)
 ```
+
+Sub in parasite specific treatments (ecto and endo) into this final model :
+
+```{r}
+
+```
+
+
 
 ```{r}
 dependent <- "had_HSA"
@@ -2980,8 +2997,7 @@ ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.svg", 
 ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
 ```
 
-<<<<<<< Updated upstream
-=======
+
 Final model with endoparasite quartiles subed in:
 ```{r}
 
@@ -3029,6 +3045,9 @@ mutate(
 df <- df %>%   
   mutate(endo_5y_quantiles = factor(endo_5y_quantiles,levels=c(
     "1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medical records in time period"
+=======
+  mutate(endo_5y_quantiles = factor(endo_5y_quantiles,levels=c("Endoparasiticide not administered",
+    "1-2 times","3 times ","4 times","5-17 times","No medical records in time period"
   )))
 #mct
 df <- df %>%
@@ -3160,6 +3179,9 @@ final_df[33, 1] <- "Smoke exposure- early life"
 
 final_df$category <- factor(final_df$category, 
                         levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medications records for this time period", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period","Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
+=======
+final_df$category <- factor(final_df$category, 
+                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","Endoparasiticide not administered","1-2 times","3 times ","4 times","5-17 times","No medications records for this time period", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period","Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
 final_df$AutoNumber <- factor(final_df$AutoNumber, 
                         levels = c("1","2","3","4","5","6","7","8","9","10","11","12",
                                    "13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34"))
@@ -3238,12 +3260,14 @@ ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.
 ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
 
 ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo_2.tif", plot = forest_log, width = 15, height = 10, dpi = 300)
+=======
+
 ```
 
 Create seperate endo only values plot to put underneath
 
 
->>>>>>> Stashed changes
+
 5y/non time levels
 
 ```{r}
