@@ -1,0 +1,1007 @@
+---
+title: "Lymphoma variable creation"
+format: html
+editor: visual
+---
+
+## Lymphoma case-control variable creation
+
+```{r}
+library(tidyverse)
+library(lubridate)
+dog_pop <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lymphoma_cohort_241201.csv")
+#remove excess cols
+dog_pop <- dog_pop %>%
+  dplyr::select(-c(record_date))
+```
+
+Make sure population has the endpoint in date format (but also only to the year level to match to questinoaire etc. data which only annual)
+
+```{r}
+dog_pop$diagnosis_year_month_date <- as.Date(dog_pop$end_date)
+# create a year column in  file so can do calculations on year (no point being more precise as questionaire done annually and may not match diagnosis time)
+dog_pop$diagnosis_year <- as.numeric(format(dog_pop$diagnosis_year_month_date,"%Y"))
+
+# set to month level (not day of month) = all on 1st day of month
+dog_pop$diagnosis_year_month_date2 <- as.POSIXct(floor_date(dog_pop$diagnosis_year_month_date,unit="month"))
+
+# get year month bit from column
+# set to month level (not day of month) = all on 1st day of month
+dog_pop$diagnosis_year_month <- format(dog_pop$diagnosis_year_month_date, "%Y-%m")
+```
+
+Datasets to join up to:
+
+-   clinic and deprivation indices
+
+-   Environment
+
+-   lifestyle
+
+-   reproduction
+
+-   comorbidities
+
+-   physical exam
+
+-   medications
+
+Need to create from these (where applicable):
+
+-   early life (SY0-2)
+
+-   rest of life (SY3 +)
+
+-   whole life (SY0-final SY of records)
+
+-   5y prior to endpoint
+
+Had seperate files for all of these datasets for the HSA dataset creation but will add in here for other user of file ease
+
+## Clinic and deprivation indices
+
+created in this file for all the clinics based on 2019 values so can use these again as MDI not updated yet- GRLS clinic and deprivation indices linkup.qmd
+
+```{r}
+deprivation <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+deprivation <- deprivation %>%
+  dplyr::select(c(subject_id,MDI_quintile,owner_MDI_quintile))
+
+#now join onto dog pop
+dog_pop_deprivation <- dog_pop %>% left_join(deprivation, by="subject_id")
+```
+
+## Environment exposures
+
+indoors exposures =
+
+'use_aerosol','use_air_cleaner','use_hepa_filter,'use_moth_balls','use_incense_or_candles','smoke_exposure'
+
+outside house exposures=
+
+'any_treated_weeds','any_treated_insects','any_treated_fertilizer'
+
+```{r}
+#exposures dataset
+environment_exposures<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
+sleep_environment <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
+
+```
+
+### Tidy to binary version of ever exposed (equiv of whole life):
+
+#### Indoor variables
+
+```{r}
+#indoor variables to keep
+indoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure))
+##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
+aerosol <- environment_exposures %>% 
+  group_by(subject_id) %>%
+  mutate(aerosol_ever = if_else(any(use_aerosol == 1), 1, 0))
+
+#exposures ever for all of the indoors variables
+environment_exposures_2 <- environment_exposures %>% 
+  group_by(subject_id) %>%
+#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
+  mutate(across(use_aerosol:smoke_exposure,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
+```
+
+#### Outdoor variables
+
+```{r}
+#outdoors variables to keep
+outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
+##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
+
+#exposures ever for all of the outdoors variables
+environment_exposures_out <- outdoors %>% 
+  group_by(subject_id) %>%
+#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
+  mutate(across(any_treated_weeds:any_treated_fertilizer,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
+```
+
+```{r}
+# combine indoors and outdoors (cant combine sleeping as is different length)
+indoors_outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure,hours_of_smoke,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
+
+#set indoors outdoors date column as date then parse year from it
+indoors_outdoors$date_2 <-parse_date_time(indoors_outdoors$record_date,"ym")
+#parse year from
+indoors_outdoors <- indoors_outdoors %>% mutate(exposure_year = as.numeric(format(date_2, "%Y")))
+
+
+#remove rows where it is the NA record date column
+indoors_outdoors_1_row_year <- indoors_outdoors %>%
+  filter(!is.na(record_date))
+
+
+#join this to deprivation data made above
+indoors_outdoors_1_row_year <- indoors_outdoors_1_row_year %>% 
+  left_join(dog_pop_deprivation,by="subject_id")
+```
+
+### Early life
+
+```{r}
+
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+
+
+dog_pop_deprivation_enviro_early<- check_exposure2(indoors_outdoors_1_row_year, columns_to_check, study_years,year_column)
+    
+```
+
+### Rest of life
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+dog_pop_deprivation_enviro_early_rest <- check_exposure2(dog_pop_deprivation_enviro_early, columns_to_check, study_years,year_column)
+    
+#count how many years exposed for (sum up the 1s)
+```
+
+### Whole life exposure
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+dog_pop_deprivation_enviro__early_rest_whole<- check_exposure2(dog_pop_deprivation_enviro_early_rest, columns_to_check, study_years,year_column)
+```
+
+### 5y prior to endpoint exposure
+
+```{r}
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#delete rows with NA of record date in it in the indoors_outdoors
+indoors_outdoors2 <- indoors_outdoors %>%
+  filter(!is.na(record_date))
+#join records - do it this way so that each of the years of study for enviro exposures are retained 
+exposure <- left_join(indoors_outdoors2,dog_pop_deprivation,by="subject_id")
+
+#then fill in all rows for that patient with its diagnosis date (or else lose all the rwos except 1 for each dog)
+exposure <- exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year_month,.direction="downup")
+exposure <- exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year,.direction="downup")
+exposure <- exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year_month_date2,.direction="downup")
+
+
+dog_pop_deprivation_2 <- years_prior_to(dog_pop_deprivation,diagnosis_year,5)
+# Specify the columns to check
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+#code to check for all relevant columns 
+exposure_years <-5
+dog_pop_deprivation_enviro5y<- check_exposure(exposure, columns_to_check, diagnosis_year, exposure_years)
+
+#strip down to single row for each dog
+```
+
+Tidy column outputs from these functions:
+
+Want to recode study years 0,1,2,3,4,5,6,7,8,9,10 = whole study period, 0,1,2 = early life, 3,4,5,6,7,8,9,10 = rest of life
+
+```{r}
+dog_pop_deprivation_enviro__early_rest_whole
+
+print(colnames(dog_pop_deprivation_enviro__early_rest_whole))
+
+dog_pop_deprivation_enviro__early_rest_whole2 <- dog_pop_deprivation_enviro__early_rest_whole %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+dog_pop_deprivation_enviro__early_rest_whole3 <- dog_pop_deprivation_enviro__early_rest_whole2 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+dog_pop_deprivation_enviro__early_rest_whole4 <- dog_pop_deprivation_enviro__early_rest_whole3 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(dog_pop_deprivation_enviro__early_rest_whole4))
+
+```
+
+#### Hours of smoke exposure - early, rest, whole, 5y prior
+
+##### 5y prior
+
+```{r}
+#remove rows that say see detail rows as these are meaningless - this may have been done in an earlier tidying step
+smoking_df <- dog_pop_deprivation_enviro__early_rest_whole4%>%
+  filter(!grepl("see detail rows", hours_of_smoke))
+#convert column to numeric now
+smoking_df <- smoking_df %>% 
+  mutate(hours_of_smoke= as.numeric(hours_of_smoke))
+
+#create a record_year variable 
+#had to use lubridate not as.POSIX for getting character string into date
+smoking_df <- smoking_df %>% 
+  mutate(record_date2=ym(record_date)) %>%
+  mutate(record_year = as.numeric(format(record_date2, "%Y")))
+  
+# function to calculate hours of smoke exposed to prior to diagnosis 
+#dosage function applied 
+smoking_df2 <- exposure_dosage(smoking_df,"hours_of_smoke","record_year","diagnosis_year")
+
+```
+
+##### early
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(0,1,2)
+smoking_df3 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
+```
+
+##### rest
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(3,4,5,6,7,8,9,10)
+smoking_df4 <- exposure_dosage2(smoking_df3,"hours_of_smoke",study_years)
+
+```
+
+##### whole
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+smoking_df5 <- exposure_dosage2(smoking_df4,"hours_of_smoke",study_years)
+```
+
+```{r}
+smoking_df6 <- smoking_df5 %>%
+  rename("hours_of_smoke_early_life_total_dosage"= "hours_of_smoke_0_1_2_total_dosage") %>%
+  rename("hours_of_smoke_rest_of_life_total_dosage" = "hours_of_smoke_3_4_5_6_7_8_9_10_total_dosage") %>%
+  rename("hours_of_smoke_whole_life_total_dosage"= "hours_of_smoke_0_1_2_3_4_5_6_7_8_9_10_total_dosage")
+
+print(colnames(smoking_df6))
+```
+
+Now tidy these dfs down to 1 row per dog and same for the 5y prior endpoint variable then combine
+
+```{r}
+#all the binary for 5y prior to endpoint here
+dog_pop_deprivation_enviro5y_distinct <- dog_pop_deprivation_enviro5y %>% distinct(subject_id,.keep_all = TRUE) 
+#keep only the rows not in the smoking_hours_df_below
+dog_pop_deprivation_enviro5y_distinct <- dog_pop_deprivation_enviro5y_distinct %>% dplyr::select(c(subject_id,use_aerosol_5y,use_air_cleaner_5y,use_hepa_filter_5y,use_moth_balls_5y,use_incense_or_candles_5y,smoke_exposure_5y,any_treated_weeds_5y,any_treated_insects_5y,any_treated_fertilizer_5y))
+
+#smoking hours df 
+smoking_df6_distinct <- smoking_df6 %>% distinct(subject_id,.keep_all = TRUE)
+
+#combine all 
+dog_pop_deprivation_enviro_smoking_all <- dog_pop_deprivation_enviro5y_distinct  %>% left_join(smoking_df6_distinct , by = "subject_id")
+```
+
+### Sleep location
+
+NB. Lots of dogs have multiple 'specific_sleep_location' for same record year.
+
+```{r}
+sleep <- sleep_environment %>% select(c(subject_id,year_in_study,record_date,sleep_location,specific_sleep_location))
+
+
+#set indoors outdoors date column as date then parse year from it
+sleep$record_date2 <-parse_date_time(sleep$record_date,"ym")
+#parse year from
+sleep <- sleep %>% 
+  mutate(exposure_year = as.numeric(format(record_date2, "%Y")))
+
+#how many sleep locations are there
+table(sleep_environment$sleep_location)
+
+#some patients have duplicate rows within a year ?/there are no differences between the rows so going to remove all rows where the row above is identical
+
+sleep <- unique(sleep)
+
+# 3 locations , need to create 3 columns with a Y/N for each location before then calculating exposure to it
+
+# Specify outcomes for the function
+desired_outcomes <- c("in the garage", "in the house", "outside")
+
+# Applying the function
+sleep2 <- split_column(sleep, sleep$sleep_location, desired_outcomes)
+```
+
+```{r}
+sleep_smoking_enviro <- left_join(sleep2,dog_pop_deprivation_enviro_smoking_all,by=c("subject_id","year_in_study"))
+# remove the .x suffix
+sleep_smoking_enviro <- sleep_smoking_enviro %>%
+  rename_at('exposure_year.x',~'exposure_year')
+```
+
+#### early
+
+```{r}
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+
+
+sleep_smoking_enviro_early<- check_exposure2(sleep_smoking_enviro, columns_to_check, study_years,year_column)
+    
+```
+
+#### rest
+
+```{r}
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+sleep_smoking_enviro_early_rest<- check_exposure2(sleep_smoking_enviro_early, columns_to_check, study_years,year_column)
+```
+
+#### whole
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+sleep_smoking_enviro_early_rest_whole <- check_exposure2(sleep_smoking_enviro_early_rest, columns_to_check, study_years,year_column)
+```
+
+#### 5y prior
+
+```{r}
+#5
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+exposure_years <- 5
+
+sleep_smoking_enviro_early_rest_whole_5y <- check_exposure(sleep_smoking_enviro_early_rest_whole, columns_to_check, diagnosis_year, exposure_years)
+```
+
+Recoding column names for tidyness
+
+```{r}
+print(colnames(sleep_smoking_enviro_early_rest_whole_5y))
+
+sleep_smoking_enviro_early_rest_whole_5y2 <- sleep_smoking_enviro_early_rest_whole_5y %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+sleep_smoking_enviro_early_rest_whole_5y2<- sleep_smoking_enviro_early_rest_whole_5y2 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+sleep_smoking_enviro_early_rest_whole_5y2 <- sleep_smoking_enviro_early_rest_whole_5y2%>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(sleep_smoking_enviro_early_rest_whole_5y2))
+```
+
+#### Main sleep location for whole lifetime only
+
+```{r}
+#initially checking that there is variation in locaiton for the dogs sleep location
+multi_location_count <- sleep_smoking_enviro_early_rest_whole_5y2 %>%
+  group_by(subject_id,sleep_location) %>%
+   summarise(count = n())
+print(multi_location_count)
+#there is, although infrequent 
+# edit above code to determine majority location
+columns_to_count <- c("in the garage_YN","in the house_YN","outside_YN")
+
+
+
+sleep_smoking_enviro_early_rest_whole_5y3 <- majority_location(sleep_smoking_enviro_early_rest_whole_5y2,columns_to_count)
+```
+
+Combine back to other df
+
+```{r}
+
+dog_pop_deprivation_enviro_smoking_sleep_all <- dog_pop_deprivation_enviro_smoking_all %>% left_join(sleep_smoking_enviro_early_rest_whole_5y3, by="subject_id")
+```
+
+## Lifestyle
+
+```{r}
+lifestyle <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifestyle.csv",na.strings=c ("","NA"))
+
+# groupings
+
+
+companion <- c("companion/pet")
+
+therapy <- c("therapy dog", "greeter", "service dog", "blood donor", "ambassador", "service dog, therapy dog")
+
+breeding <- c("breeder", "retired breeder")
+
+competitive <- c("dog athlete", "show", "agility", "field trials", "rally", 
+                 "field trials, obedience", "barn hunt, rally, scent work", 
+                 "agility, companion/pet, rally, tracking", "agility, scent work", 
+                 "agility, hunt test, obedience, scent work", 
+                 "hunt test, obedience, scent work", "agility, companion/pet, hunt test", 
+                 "obedience", "hunt test", "actor/model", "dock diving", 
+                 "dock diving, scent work", "barn hunt", "scent work", 
+                 "dock diving, scent work", "barn hunt, scent work", 
+                 "hunt test, scent work", "scent work, therapy dog")
+
+working <- c("tracking", "search and rescue", "hunting", "fishing dog", "scent work, tracking")
+
+no_lifestyle_misc <- c("none", NA, "other", "receiving medical treatment", "retired from akc activities")
+
+all_groups <- c(companion, therapy, breeding, competitive, working, no_lifestyle_misc)
+
+
+```
+
+Majority lifestyle
+
+```{r}
+main_lifestyle <- lifestyle %>%
+  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
+  group_by(subject_id) %>%                                # Group by subject_id
+  slice_max(n, with_ties = FALSE) %>%                    # Get the lifestyle with the max count, no ties
+  ungroup() %>%                                           # Ungroup for a clean output
+  select(subject_id, lifestyle)                           # Select relevant columns
+
+# View the result
+print(main_lifestyle)
+
+main_lifestyle <- main_lifestyle %>%
+  rename(main_lifestyle = lifestyle)
+```
+
+Further division of main lifestyle into larger groups
+
+```{r}
+competitive <-c("agility","dog athlete", "field trials","obedience","hunt test","demonstration dog","tracking")
+working <-c("hunting","search and rescue","service dog")
+breed_showing <- c("breeder","show")
+misc <- c("other","therapy dog")
+companion <- "companion/pet"
+
+all_groups <- c(competitive, working,breed_showing,misc,companion)
+
+```
+
+```{r}
+
+
+main_lifestyles_combined <- lifestyle %>%
+  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
+  group_by(subject_id) %>%                                # Group by subject_id
+  slice_max(n, n = 2, with_ties = TRUE) %>%              # Get the top 2 lifestyles by count, allowing ties
+  summarise(main_lifestyles = paste(lifestyle, collapse = ", "), # Combine into a single string
+            .groups = 'drop')                             # Drop grouping
+
+# View the result
+print(main_lifestyles_combined)
+print(table(main_lifestyles_combined$main_lifestyles))
+
+# add main lifestyle df in left join to original lifestyle df
+
+
+lifestyle2 <- lifestyle %>%
+  left_join(main_lifestyle, by = "subject_id")  
+
+lifestyle2 <- lifestyle2 %>%
+  dplyr::select(c(subject_id,year_in_study,record_date,lifestyle,main_lifestyle,main_lifestyle))
+
+  
+  
+lifestyle3 <- lifestyle2 %>%
+  mutate(main_lifestyle_category = case_when(
+    str_detect(main_lifestyle, paste(competitive, collapse = "|")) ~ "competitive",
+    str_detect(main_lifestyle, paste(working, collapse = "|")) ~ "working",
+    str_detect(main_lifestyle, paste(breed_showing, collapse = "|")) ~ "breed/showing",
+    str_detect(main_lifestyle, paste(misc, collapse = "|")) ~ "miscellaneous",
+    main_lifestyle == companion ~ "companion/pet",
+    TRUE ~ "other"  # For any lifestyle not matching the above categories
+  ))
+
+# View the updated dataframe
+print(lifestyle3)
+
+table(lifestyle3$main_lifestyle_category)
+
+
+#keep one row for each dog
+lifestyle_by_dog <- lifestyle3 %>%
+  distinct(subject_id, .keep_all = TRUE)
+```
+
+Add back to previous enviro df
+
+```{r}
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_all %>%
+  left_join(lifestyle_by_dog,by="subject_id")
+```
+
+Tidy up some values that are messy
+
+```{r}
+#replace all not withins
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 3,4,5,6,7,8,9,10 years", "Not within rest of life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2 years", "Not within early life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2,3,4,5,6,7,8,9,10 years", "Not within whole life")))
+
+#all withins
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 3,4,5,6,7,8,9,10 years", "Within rest of life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2 years", "Within early life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2,3,4,5,6,7,8,9,10 years", "Within whole life")))
+```
+
+## Household exposures 
+
+House datasets
+
+```{r}
+
+house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+house<- house %>%
+  mutate(across(where(is.character), tolower))
+location <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv")
+location <- location %>%
+  mutate(across(where(is.character), tolower))
+```
+
+Variables to create:
+
+-   fuel - heating and cooking and primary and secondary sources
+
+-   pipe type
+
+-   water source
+
+-   house type
+
+-   area type
+
+Some of the data is a bit untidy - heating, water etc. so need to tidy these up
+
+#### Tidying up heating type into groups
+
+```{r}
+#reclass heating into these
+#class all the others into the main categories
+electric <- c("electric", "geothermal electric", "electric but geothermal", "elec gerothermal", "Electric Heat Pump","electric fire place","electric/induction (magnetic)","induction cooktop","microwave","electric/microwave","microwave (electric)","george forman grill","microwave?","microwave and electric oven", "microwave oven")
+natural_gas <- c("natural gas boiler", "gas hydronic heat system", "gas forced air", "gas-heated hot water", "gas heated hot water","hot water heated by natural gas","in floor hot water heating from gas","in floor hot water heating with natural gas","	
+hot water heated floors  water heated by natural gas","infloor hot water heating  water heated w/gas","inflor heating with hot water heated by a gas furnace","infloor heating with natural gas no forced air furnace","	boiler system fueled by propane","hydronic heat fueled by propane h2o heaters","hydronic in floor heating fueled by propane", "radiant floor heat powered by propane boiler","in floor heating with natural gas","radiant water via natural gas","boiler system fueled by propane","natural gas fireplace little use","occassionally gas fireplace","propane until 1 year ago-switched to natural gas","natural gas for water heater, dryer and fireplace (turned off),; i often 'smell gas,' but gas co. has not found leaks","water/propane (boiler unit)","natural gas and electric","outdoor gas grill","natural gass grill")
+oil <- c("oil", "oil fired hot water","kerosene","kerosine","kerosens","kerosene for emergencies","small oil radiator","free satnding plug in oil heater","electric oil units","kerosene heaters/hardly ever used")
+propane <- c("propane", "hydronic heat fueled by propane", "radiant floor heat powered by propane boiler","outdoor grill propane")
+wood <- c("wood", "wood pellets","wood pellet", "wood pellet stove", "hot water from outside wood furnace", "outside wood furnace","pellets","hot water heated by outside wood furnace","outside wood stove","outside woodstove", "hot water from outside wood furnace", "pellet stove","occasional wood stove", "fireplace wood", "pellets and wood stoves","charcoal","grill(charcoal)","smoker","barbecue","charcoal / wood grill","smoker grill", "charcol","bbq - pellets","bbq - wood pellets","charcoal grill", "wood - outdoor grill", "charcoal barbecue", "charcoal and wood chips", "charcoal grill outside", "charcoal/wood","charcoal with propane starter", "wood pellt bbq", "charcoal grille", "bbq wood pellets","grilling,charcoal", "grilol charcol", "wood chips","w00d")
+renewables <- c("solar","passive solar", "geothermal","radiant/geo thermal","	geo-thermal","geo thermal","geothermal heat pumps","geo heat pump","gio thurmo","gio thurmal","gio thurmal","giothurmal","ground source heat pump","inground heat pump","inground heat pump source","in ground heat pump","geothermal/electric heat exchanger","geothermal heat exchange","geothermal heat pump", "geo thermal heat pump","heat exchanger with geothermal", "	gero thermal - electric","geo-thermal",
+                "geothermal heat pumps","sun", "geo heat pump","geothermal heating","gerothermal","solar hot water","geo thurmo","geo-thermal","giothurmal","gero thermal - electric","passive solar")
+
+#primary heating  
+house <- house %>%
+  mutate(heating_fuel_primary = case_when(
+    heating_fuel_primary_other %in% electric ~ "electric",
+    heating_fuel_primary_other %in% natural_gas ~ "natural_gas",
+    heating_fuel_primary_other %in% oil ~ "oil",
+    heating_fuel_primary_other %in% propane ~ "propane",
+    heating_fuel_primary_other %in% wood ~ "wood",
+    heating_fuel_primary_other %in% renewables ~ "renewable",
+    TRUE ~ heating_fuel_primary
+  ))
+  
+#secondary heating
+house <- house %>%
+  mutate(heating_fuel_secondary = case_when(
+    heating_fuel_secondary_other %in% electric ~ "electric",
+    heating_fuel_secondary_other %in% natural_gas ~ "natural_gas",
+    heating_fuel_secondary_other %in% oil ~ "oil",
+    heating_fuel_secondary_other %in% propane ~ "propane",
+    heating_fuel_secondary_other %in% wood ~ "wood",
+    heating_fuel_secondary_other %in% renewables ~ "renewable",
+    TRUE ~ heating_fuel_secondary
+  ))
+#primary cooking
+
+house <- house %>%
+  mutate(cooking_fuel_primary = case_when(
+    cooking_fuel_primary_other %in% electric ~ "electric",
+    cooking_fuel_primary_other %in% natural_gas ~ "natural_gas",
+    cooking_fuel_primary_other %in% oil ~ "oil",
+    cooking_fuel_primary_other %in% propane ~ "propane",
+    cooking_fuel_primary_other %in% wood ~ "wood",
+    cooking_fuel_primary_other %in% renewables ~ "renewable",
+    TRUE ~ cooking_fuel_primary
+  ))
+  
+
+```
+
+#### Tidying up pipe types
+
+```{r}
+metal <-c("mix of copper and pvc","mixed copper and pvc","galvinazed iron","salvanized",
+          "some copper, some pvc","both copper & plastic","metal and pvc","iron","iron and copper","lead probably", "lead","galvanized steel","copper and plastic", "some copper/some pvc", "mixture of all above","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc", "galvanized","cast iron","copper/metal/pvc","cast","pex and copper","pex, cu",
+          "pex, with copper manifolds", "galvenized steel","galvinized", "copper and pvc","copper/metal and pvc/plastic", "both copper and pvc","maybe copper/metal also" , "some copper", "copper, cpvc","both metal and plastic","probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc", "galvenized" , "copper, pvc and metal","copper/pvc", "pvc & copper" , "copper and pvc" , "copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" , "copper & pvc", "steel"  )
+plastic <-c("mix of copper and pvc","mixed copper and pvc","pex","pec", "some copper, some pvc",
+            "both copper & plastic","metal and pvc", "copper and plastic", "some copper/some pvc", "mixture of all above", "k-peck","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc","copper/metal/pvc","pex and copper", "pe","pex, cu","pex, with copper manifolds","pecs","poly", "copper and pvc", "pvc","cvc", "copper/metal and pvc/plastic", "both copper and pvc", "cpvc", "pvex", "pvc and copper", "copper, cpvc", "cpcv","both metal and plastic", "probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc" , "polybutylene", "copper, pvc and metal", "copper/pvc" , "pvc & copper", "copper and pvc" , "plex","pic system","pec system","plastic","copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" ,"copper & pvc", "peg", "pec plastic", "pex tubing")
+
+house <- house %>%
+  mutate(pipes_metal_any = case_when(
+    pipes_other_specify %in% metal ~ 1,
+    sec_pipes_other_specify %in% metal ~1,
+    pipes_copper_metal == 1 ~ 1,
+    sec_pipes_copper_metal == 1 ~1,
+    TRUE ~ 0
+  ))
+
+house <- house %>%
+  mutate(pipes_plastic_any = case_when(
+    pipes_other_specify %in% plastic ~ 1,
+    sec_pipes_other_specify %in% plastic ~1,
+    pipes_pvc_plastic == 1 ~ 1,
+    sec_pipes_pvc_plastic == 1 ~ 1, 
+    TRUE ~ 0
+  ))
+```
+
+#### Water source tidying/reclassifying
+
+-   In the United States, "municipal water" refers to the public water supply system that provides drinking water to homes, businesses, and other facilities within a city or town. It is managed by local government or utility companies and is typically sourced from rivers, lakes, reservoirs, or groundwater. Municipal water is treated to meet safety standards set by the Environmental Protection Agency (EPA) to ensure it is safe for consumption and use. The term "municipal" indicates that the water is supplied and regulated by a local government authority rather than being privately sourced or managed.
+
+-   Choose to group:
+
+    -   municipal, groundwater, spring and surface, bottled, rainwater and cistern
+
+```{r}
+
+municipal <-c("municipal","municipal at home, well at work with me daily","municipal well","filtered municipal","municipal from lake","municipal filtered via reverse osmosis","municiapl wells with home filtration system","municipal with town well water","highly filtered municipal","private through municipal","municipal and well","both municipal and well","municipal and private well","municipal filtered","municipal with a reverse osmosis filtration unit","municipal but reverse osmosis filtered","filtered muni water","municipal but reverse osmosis water system")
+groundwater <-c("well","ground","underground aquifers","underground aquifer","community owned wells","town well water","town well","community well w/chlorine","community well chlorine filter","subdivision well","community well for subdivision  has chloroine  we filter all chlorine out and have a filtration system","well water with chlorine filter","comunity well with a clorine station  we have a filter in our home to filter out the chlorine","well and municipal","both well and municipal","well 50%, municipal 50%", "fox river and well","1/2 well 1/2 municipal","reverse osmosis from well","aquifer","town wells"," community well, treated & filtered", "wel and municipal","well and spring","well water goes to municipal","community well water","well/bottle/city","aquafer")
+spring_surface <-c("berkeley springs spring water","spring","hicknley springs","spring water","lake water via city","neighborhood water tanks from lake tahoe water","lake tahoe","lake michigan","natural spring","spring on property", "lake filtered/treated","lake filtered system")
+bottled<-c("bottled","bottled spring water","bottled water","bottled water/municipal",".bottle","bottled spring","dogs drink bottled","bottled and municipal")
+rainwater_cistern<-c("cistern", "rain fed cistern","rain fed cistern filtered and uv sanitized","uv and filtered rain filled cistern","rain water","rain","rain water tanks","rainwater","rain water ")
+
+
+house <- house %>%
+  mutate(water_source_2 = case_when(
+    water_source_other %in% municipal ~ "municipal",
+    water_source_other %in% groundwater ~ "groundwater",
+    water_source_other %in% spring_surface ~ "spring_surface",
+    water_source_other %in% bottled ~ "bottled",
+    water_source_other %in% rainwater_cistern ~ "rainwater_cistern",
+    TRUE ~ water_source
+  ))
+```
+
+Mode exposure value calculations
+
+-   rather than early, rest,whole, 5y prior as not that much variation across
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#early life
+columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+
+
+#rest of life
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+
+#late life
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+```
+
+Tidy names
+
+```{r}
+print(colnames(house))
+
+
+
+house_tidy <- house %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+house_tidy <- house_tidy%>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+house_tidy <- house_tidy %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(house_tidy))
+```
+
+#### House mean age
+
+```{r}
+house_tidy<- house_tidy %>%
+  group_by(subject_id)%>%
+  mutate(avg_house_age = mean(house_age, na.rm = TRUE))
+```
+
+#### Majority region/state/zip in study
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#early life
+columns_to_check <- c("region_name","state","zip")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+
+
+#rest of life
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+
+#late life
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+```
+
+Tidy up names
+
+```{r}
+
+result_df3 <- location %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+result_df3 <- result_df3 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+result_df3 <- result_df3 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(result_df3))
+```
+
+Combine house data, location data and enviro/smoke/sleep/deprivation df
+
+```{r}
+#make distinct house and locaiton dfs with 1 row per dog
+location_distinct <- result_df3 %>%
+  distinct(subject_id,.keep_all = TRUE)
+house_tidy_distinct <- house_tidy %>%
+  distinct(subject_id,.keep_all = TRUE)
+#keep only relevant cols
+location_distinct_abr <- location_distinct %>%
+  dplyr::select(subject_id,13:25)
+house_tidy_distinct_abr <- house_tidy_distinct %>%
+  dplyr::select(c(subject_id,57:84))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>% left_join(location_distinct_abr,by="subject_id")
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>% left_join(house_tidy_distinct_abr,by="subject_id")
+```
+
+Code for 5y prior to endpoint calculations
+
+Determining most common exposure (mode) in the 5y prior to endpoint (year_in_study_diagnosis_or_final_record_year):
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+#add to house tidy the final record year column
+cohort_dogs_final_date <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>%
+  dplyr::select(c(subject_id,year_in_study_diagnosis_or_final_record_year))
+#join to house tidy
+house_tidy <- house_tidy %>% left_join(cohort_dogs_final_date,by="subject_id")
+house_tidy$year_in_study_diagnosis_or_final_record_year <-as.numeric(house_tidy$year_in_study_diagnosis_or_final_record_year)
+house_tidy$year_in_study <-as.numeric(house_tidy$year_in_study)
+#1 dog has an NA value for final diagnosis year replace with a 1
+house_tidy <- house_tidy %>%
+  mutate(year_in_study_diagnosis_or_final_record_year = replace_na(year_in_study_diagnosis_or_final_record_year, 1))
+
+columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
+cohort_house <- check_exposure_mode_X_prev_years(
+  data = house_tidy,
+  columns_to_check = columns_to_check,
+  year_range = 5, # Number of years prior to consider
+  year_column = "year_in_study_diagnosis_or_final_record_year",
+  study_year_column = "year_in_study"
+)
+
+#now keeping 1 row per dog
+cohort_house_per_dog <- cohort_house %>%
+  distinct(subject_id,.keep_all = TRUE)
+```
+
+Add back onto main df
+
+```{r}
+#keep only rel columns
+cohort_house_per_dog_abr <- cohort_house_per_dog %>%
+  dplyr::select(c(subject_id,86:94))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>% left_join(cohort_house_per_dog_abr,by="subject_id")
+```
+
+## Comorbidities 
+
+Load in all the comorbidity files:
+
+```{r}
+#read in all csvs that start with the string "conditions_
+folder_path <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data"
+
+# Get a list of all CSV files that start with "conditions_with"
+csv_files <- list.files(path = folder_path, pattern = "^conditions_.*\\.csv$", full.names = TRUE)
+
+for (file in csv_files) {
+  # Extract the file name (without the path and extension) for the data frame name
+  dataframe_name <- tools::file_path_sans_ext(basename(file))
+  
+  # Dynamically assign each file to a data frame with the extracted name
+  assign(dataframe_name, read.csv(file))
+}
+
+#remove not relevant ones
+rm(conditions_dictionary)
+
+
+#combine the comorbidities datasets
+comorbs_all <- cbind(conditions_cardio,conditions_dental,conditions_ear_nose_throat,conditions_endocrine,conditions_eye,conditions_gastrointestinal,conditions_hematologic,conditions_infectious,conditions_musculoskeletal)
+
+#remove duplicate subjectid columns
+comorbs_unique <- comorbs_all %>%
+  dplyr::select(unique(names(.)))
+
+
+```
+
+Comorbs to find:
+
+```{r}
+#potential chronic inflam conditions
+
+```
+
+## Medications - still to do
+
+## Reproduction variables - still to do
+
+## Activity - still to do
+
+```{r}
+
+```
+
+## 

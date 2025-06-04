@@ -154,10 +154,40 @@ table(dog_profiles_abr$lymphoma
       )
 ```
 
+Need to add in a final study year for each dog as well so using the meds data:
+
+-   cut off dates after 1/12/24 and then match our cohort to the final medsrow
+
+```{r}
+med_q <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv")
+#keep only record year cols
+med_q2 <- med_q %>%
+  dplyr::select(c(subject_id,year_in_study,record_date))
+
+#remove any rows with date 2025-01 or beyond - there are none in this df - goes up to end Nov but remember for future datasets eg MCT work 
+#now keep only max row for each dog
+med_q2 <- med_q2 %>%
+  group_by(subject_id) %>%
+  filter(year_in_study == max(year_in_study)) %>%
+  slice(1) %>% # In case of ties, keep the first row
+  ungroup() 
+
+
+
+
+
+med_q3 <- med_q2 %>%
+  rename(year_in_study_diagnosis_or_final_record_year = year_in_study)
+
+dates_and_lymphoma_diagnosis <- dog_profiles_abr %>% left_join(med_q3, by="subject_id")
+```
+
+NB. one dog 094-000461 has no questionaire records filled in at all beyond SY0 it appears so doesn't match up to a record
+
 Write file to csv for then running in other files when creating all the time linked variables.
 
 So there are 163 cases and 2881 controls in the population as of 1/12/24
 
 ```{r}
-write.csv(dog_profiles_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lymphoma_cohort_241201.csv")
+write.csv(dates_and_lymphoma_diagnosis,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lymphoma_cohort_241201.csv")
 ```

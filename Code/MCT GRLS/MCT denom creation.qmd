@@ -1,0 +1,13 @@
+---
+title: "MCT denom creation"
+format: html
+editor: visual
+---
+
+## MCT denom creation
+
+```{r}
+library(tidyverse)
+dog_profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile_for_MCT.csv")
+endpoint<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints_MCT.csv")
+```
