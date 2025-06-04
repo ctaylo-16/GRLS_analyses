@@ -991,6 +991,493 @@ Comorbs to find:
 
 ```{r}
 #potential chronic inflam conditions
+comorbs_to_find <-c("congestive_heart_failure",
+  "cardiomyopathy",
+  "hypertension",
+  "heartworm_infection",
+  "lower_airway_disease",
+  "dental_tarter_calculus",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "keratoconjunctivitis_sicca",
+  "pigmentary_uveitis",
+  "uveitis",
+  "chronic_colitis",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "pancreatitis",
+  "anaplasma",
+  "babesia",
+  "canine_herpesvirus",
+  "coccidia",
+  "cryptosporidium",
+  "ear_mites",
+  "ehrlichia",
+  "eimeria",
+  "fleas",
+  "fungal_infection",
+  "giardia",
+  "granuloma",
+  "hookworms",
+  "influenza",
+  "isospora",
+  "leptospirosis",
+  "lyme_disease",
+  "other_ectoparasite",
+  "parvovirus",
+  "rocky_mountain_spotted_fever",
+  "roundworms",
+  "tapeworms",
+  "ticks",
+  "tracheobronchitis",
+  "unspecified_gastrointestinal_parasite",
+  "valley_fever",
+  "whipworms",
+  "immune_related_musculoskeletal_disorder",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "laryngeal_paralysis",
+  "meningitis",
+  "meningoencephalitis",
+  "myasthenia_gravis",
+  "erythema_multiforme",
+  "flea_allergy_dermatitis",
+  "food_allergy_dermatitis",
+  "r_o_atopy")
+#specific comorb groups 
+intestinal_parasitism <- c("giardia", "hookworms", "coccidia", "tapeworms", "whipworms", "roundworms", "eimeria", "isospora","cryptosporidium","eimeria","tapeworms")
+tick_borne_parasitism <-c("lyme_disease", "anaplasma", "rocky_mountain_spotted_fever", "ticks", "ehrlichia", "lyme disease", "lyme diseases, oa?", "lyme/anaplasma", "lyme+", "anaplasma and lyme +", "positive anaplasma", "erlichia +", "erlichia","valley_fever","babesia","anaplasma","ehrlichia","lyme_disease")
+other_parasitism <-c("fleas", "fungal_infection", "heartworm", "ear_mites","other_ectoparasite","heartworm_infection")
+all_parasitism<-c("giardia", "hookworms", "coccidia", "tapeworms", "whipworms", "roundworms", "eimeria", "isospora","lyme_disease", "anaplasma", "rocky_mountain_spotted_fever", "ticks", "ehrlichia", "lyme disease", "lyme diseases, oa?", "lyme/anaplasma", "lyme+", "anaplasma and lyme +", "positive anaplasma", "erlichia +", "erlichia","fleas", "fungal_infection", "heartworm", "ear_mites","heartworm_infection","other_ectoparasite")
+infectious <- c("leptospirosis","parvovirus","bacterial cystitis/recurrent uti", "chronic uti's/ bacterial cystitis", "cystitis", "uti", "frequent utis", "previous utis", "chronic urinary incontinence","history of valley fever", "mma- coccidioides")
+orthopaedic <-c("osteoarthritis", "l ccl partial tear", "oa of stifle", "hip dysplasia", "right elbow dysplasia grade ii", "ccl rupture", "acl tear", "tendonitis/ arthritis", "arthritis- cervical neck spine", "lh partial ccl tear, lh iliopsoas injury", "chronic lameness- hx of car accident", "lameness","hypothyroidism, chronic lameness, obesity","overweight, arthritis","dvd, larpar", "seizures, oa","tail fracture", "broken leg, histiocytoma","osteochondritis_dissecans","intervertebral_disc_disease","lameness","musculoskeletal_pain","osteomyeltiis","cruciate_ligament_rupture","hip_dysplasia","elbow_dysplasia","crepitus_decreased_range_of_motion","bone_fractures","limber_tail_syndrome","panosteitis")
+immune_mediated <- c("uveitis", "autoimmune_thyroiditis", "keratoconjunctivitis_sicca", "megaesophagus", "diabetes_mellitus", "cushings_disease", "hypothyroidism", "granuloma", "immune complex formation", "suspected cushings/ thyroid carcinoma","dvd, larpar","immune_related_musculoskeletal_disorder","rheumatoid_arthritis","diabetes_insipidus","hypothyroidism","pancreatic_insuficiency","addisons_disease","autoimmune_thyroiditis","cushings_disease","hyperadrenalestrogenism","hypercalcemia")
+cardiovascular <- c("cardiomyopathy", "hypertension", "heart base tumor", "heart base mass", "mild degenerative valve disease", "degenerative mitral and tricuspid valve disease", "mitral valve disease", "pulmonary thrombosis", "portal vein thrombus","arrhythmia","atrial enlargement","cardiomegaly","cardiomyopathy","congestive_heart_failure","hypertension","murmur","lower_airway_disease","myocardial_dysfunction","pleural_effusion","pulmonic_stenosis","pneumothorax","pulmonic_stenosis","subaortic_stenosis","tachycardia","valvular_disease")
+gastrointestinal <-c("chronic_colitis", "pancreatitis", "malabsorptive_disorder", "chronic pancreatitis", "cystic endometrial hyperplasia", "intermittent mixed bowel diarrhea", "intermittent diarrhea - bacterial", "gastric ulcers","mesenteric volvulus","fb","esophagitis","diarrhea","dietary_indiscretion","food_sensitivity","gastrointestinal_foreign_body","gastorintestinal_ulcer","intussusception","malabsorptive_disorder","megaesophagus")
+
+inflammatory_other <- c("tracheobronchitis", "hypercalcaemia", "pigmentary_uveitis", "ear infections", "chronic pyoderma", "chronic pruritis", "chronic rhinitis/ nasal discharge", "allergy, obesity", "pruritis", "severe allergies", "atopy", "allergies, chronic otitis", "chronic hot spots, skin infections", "many pyodera/dermatitis events", "chronic otitis, allergic dermatitis", "dermatitis", "food allergy", "skin allergies", "chronic otitis, overweight", "atopic dermatitis, allergies", "seasonal allergies/pyoderma", "chronic otitis, chronic allergies", "dermatitis lip fold","anal sac infection","otitis_externa","otitis_media","aural_haematoma","aural_foreign_body","pharyngitis","rhinitis","hypercalcaemia","keratoconjunctivitis_sicca","hypercalcemia","influenza","parvovirus")
+
+
+chronic_inflammatory <-c("congestive_heart_failure",
+  "cardiomyopathy",
+  "hypertension",
+  "heartworm_infection",
+  "lower_airway_disease",
+  "dental_tarter_calculus",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "keratoconjunctivitis_sicca",
+  "pigmentary_uveitis",
+  "uveitis",
+  "chronic_colitis",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "pancreatitis",
+  "anaplasma",
+  "babesia",
+  "canine_herpesvirus",
+  "coccidia",
+  "cryptosporidium",
+  "ear_mites",
+  "ehrlichia",
+  "eimeria",
+  "fleas",
+  "fungal_infection",
+  "giardia",
+  "granuloma",
+  "hookworms",
+  "influenza",
+  "isospora",
+  "leptospirosis",
+  "lyme_disease",
+  "other_ectoparasite",
+  "parvovirus",
+  "rocky_mountain_spotted_fever",
+  "roundworms",
+  "tapeworms",
+  "ticks",
+  "tracheobronchitis",
+  "unspecified_gastrointestinal_parasite",
+  "valley_fever",
+  "whipworms",
+  "immune_related_musculoskeletal_disorder",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "laryngeal_paralysis",
+  "meningitis",
+  "meningoencephalitis",
+  "myasthenia_gravis",
+  "erythema_multiforme",
+  "flea_allergy_dermatitis",
+  "food_allergy_dermatitis",
+  "r_o_atopy")
+```
+
+#### Chronic inflam conditions ever in all years of study
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
+
+comorbs_unique_2 <- comorbs_unique %>%
+  #get rid of the to_date row for each dog
+  filter(to_date !=1) %>%
+  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
+
+comorbs_unique_2<- comorbs_unique_2%>%
+# replacing NA values with 0 across comorbidity columns
+  mutate_at(vars(3:196), ~replace_na(., 0))
+
+
+
+
+df_result2 <- comorbs_unique_2 %>%
+  group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present_lifetime = if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present_lifetime = if_else(
+      chronic_inflam_present_lifetime == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities_lifetime = if_else(
+      chronic_inflam_present_lifetime == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+
+
+```
+
+#### Comorbs in final 5y prior to endpoint
+
+```{r}
+#keeping record_date for linking up to cancer diagnosis but remove to_date column
+comorbs_unique_3 <- comorbs_unique %>%
+  mutate_at(vars(5:200), ~replace_na(., 0)) %>%
+  filter(to_date !=1) %>%
+  dplyr::select(-c(relationship_category,to_date)) %>%
+  rename(year_in_study_comorb = year_in_study)
+
+
+#run all functions above onto this dataset
+df_result3 <- comorbs_unique_3 %>%
+  group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present_5y = if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present_5y = if_else(
+      chronic_inflam_present_5y == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities_5y = if_else(
+      chronic_inflam_present_5y == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+
+
+#keep only top 5 rows per patient 
+df_result_restricted <- df_result3 %>%
+  group_by(subject_id) %>%
+  arrange(desc(year_in_study_comorb)) %>%  # Sort in descending order
+  slice_head(n = 5) %>%  # Keep top 5 rows per patient = 5y prior to endpoint
+  ungroup() 
+
+
+# Function to detect comorbidities for each subject_id based on index range
+detect_comorbidity <- function(df, subject_id_col, index_range, comorbidity_groups) {
+  # Extract actual column names within the index range
+  valid_columns <- colnames(df)[index_range]
+
+  df %>%
+    group_by(!!sym(subject_id_col)) %>%  # Group by subject_id
+    summarise(across(all_of(valid_columns), ~ any(. == 1), .names = "temp_{.col}"), .groups = "drop") %>%  # Check for 1s
+    mutate(
+      !!!map(comorbidity_groups, function(cols) {
+        # Identify valid columns that exist in the dataset
+        matched_cols <- intersect(paste0("temp_", cols), colnames(.))
+        
+        # Assign "Y" if any value in matched columns is 1, else "N"
+        if (length(matched_cols) > 0) {
+          ifelse(rowSums(dplyr::select(., all_of(matched_cols))) > 0, "Y", "N")
+        } else {
+          "N"  # If no matching columns exist, default to "N"
+        }
+      })
+    ) %>%
+    dplyr::select(-starts_with("temp_"))  # Remove temporary columns
+}
+
+# Define comorbidity groups (list of column names matching each category)
+comorbidity_groups <- list(
+  intestinal_parasitism = intestinal_parasitism,
+  tick_borne_parasitism = tick_borne_parasitism,
+  other_parasitism = other_parasitism,
+  all_parasitism = all_parasitism,
+  infectious = infectious,
+  orthopaedic = orthopaedic,
+  immune_mediated = immune_mediated,
+  cardiovascular = cardiovascular,
+  gastrointestinal = gastrointestinal,
+  inflammatory_other = inflammatory_other,
+  chronic_inflammatory = chronic_inflammatory
+)
+
+
+# Apply function to data
+GRLS_data <- df_result_restricted %>%
+  left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
+            by = "subject_id")
+
+
+#keep only a single row for each patient
+# Define the index range of comorbidity columns
+comorbidity_index <- c(199:212)  # Keep subject_id out of this list
+
+# Create a second dataframe with one row per subject_id, summarizing only the selected columns
+GRLS_summary <- GRLS_data %>%
+  group_by(subject_id) %>%
+  summarise(
+    subject_id = first(subject_id),  # Keep subject_id as is
+    across(all_of(colnames(GRLS_data)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
+    .groups = "drop"
+  )
+```
+
+There are also a separate subset of conditions that if ever reported as diagnosed then will have for life (so do not need \>1 y study records with it available):
+
+```{r}
+comorbs_single_record <- c(
+  "atrial_enlargement",
+  "cardiomegaly",
+  "cardiomyopathy",
+  "congestive_heart_failure",
+  "hypertension",
+  "myocardial_dysfunction",
+  "valvular_disease",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "cataracts",
+  "glaucoma",
+  "keratoconjunctivitis_sicca",
+  "progressive_retinal_atrophy_or_degeneration",
+  "pigmentary_uveitis",
+  "chronic_colitis",
+  "lymphangiectasia",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "motility_disorder",
+  "elbow_dysplasia",
+  "hip_dysplasia",
+  "intervertebral_disc_disease",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "spondylosis"
+)
+
+#identify in records
+
+comorbs_ever <- comorbs_unique %>%
+  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
+
+comorbs_ever<- comorbs_ever%>%
+# replacing NA values with 0 across comorbidity columns
+  mutate_at(vars(3:196), ~replace_na(., 0))
+
+#remove all the columns that are not in comorbs_single_record list or subject_id
+comorbs_ever <- comorbs_ever %>%
+  dplyr::select(subject_id, all_of(comorbs_single_record))
+
+#
+lifetime_comorbs_ever <- comorbs_ever %>%
+  group_by(subject_id) %>%
+  mutate(
+    ## ANY lifetime comorb inflam present
+    lifelong_comorb_present = if_else(rowSums(across(all_of(comorbs_single_record))) > 0, 1, 0),
+    
+    ### NUMBER OF chronic inflam conditions present
+    number_lifelong_comorbs_present = rowSums(across(all_of(comorbs_single_record))),
+    
+    # what were the comorbidities
+    lifelong_comorbidities = if_else(
+      lifelong_comorb_present == 1,
+      apply(across(all_of(comorbs_single_record)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      NA_character_
+    )
+  ) %>%
+  ungroup()
+
+#keep count of comorbs and if present and then only a unique row for each patient
+lifetime_comorbs_ever_abr <- lifetime_comorbs_ever %>%
+  dplyr::select(c(subject_id,lifelong_comorb_present,number_lifelong_comorbs_present)) %>%
+    distinct(subject_id, .keep_all = TRUE)
+```
+
+Grouping the lifelong_comorbidities column into type of condition e.g endocrine, ocular etc based on earlier lists
+
+```{r}
+
+valid_comorbidity_groups <- lapply(comorbidity_groups, function(cols) {
+  intersect(cols, colnames(lifetime_comorbs_ever))  # Keep only columns that exist in df
+})
+
+# Remove empty comorbidity groups
+valid_comorbidity_groups <- valid_comorbidity_groups[lengths(valid_comorbidity_groups) > 0]
+
+
+
+
+
+# Compute 'lifetime' flags for each comorbidity category
+df_lifetime <- lifetime_comorbs_ever %>%
+  group_by(subject_id) %>%
+  summarise(across(everything(), \(x) max(x, na.rm = TRUE))) %>%  # Collapse per patient (1 if present, 0 otherwise)
+  mutate(!!!setNames(
+    lapply(valid_comorbidity_groups, function(cols) {
+      if (length(cols) > 0) {
+        as.integer(rowSums(.[cols], na.rm = TRUE) > 0)  # Correctly sum across selected columns
+      } else {
+        rep(0, n())  # Handle cases where no valid columns exist
+      }
+    }),
+    paste0("lifelong_", names(valid_comorbidity_groups))  # Create new column names
+  )) %>%
+  select(subject_id, starts_with("lifelong_"))  # Keep only new columns
+
+# View output
+print(df_lifetime)
+```
+
+Combine the lifetime_comorbs_ever_abr and df_lifetime so that we have counts and groupings of these comorbs:
+
+```{r}
+lifelong_data <- df_lifetime %>%
+  left_join(lifetime_comorbs_ever_abr,by="subject_id")
+
+lifelong_data <- lifelong_data %>%
+  dplyr::select(-c(lifelong_comorb_present.y))
+
+
+GRLS_summary_lifelong<- lifelong_data %>%
+  left_join(GRLS_summary,by="subject_id")
+
+#add in _5y to the GRLS summary columns that are from 5y prior to final record
+colnames(GRLS_summary_lifelong)[11:24] <- paste0(colnames(GRLS_summary_lifelong)[11:24], "_5y")
+
+```
+
+Lifetime comorbs now classify into the parasitism/infectious/cardio/ etc
+
+```{r}
+
+# Apply function to data
+GRLS_data_lifetime <- df_result3 %>%
+  left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
+            by = "subject_id")
+
+
+#keep only a single row for each patient
+# Define the index range of comorbidity columns
+comorbidity_index <- c(199:212)  # Keep subject_id out of this list
+
+# Create a second dataframe with one row per subject_id, summarizing only the selected columns
+GRLS_summary_lifetime <- GRLS_data_lifetime %>%
+  group_by(subject_id) %>%
+  summarise(
+    subject_id = first(subject_id),  # Keep subject_id as is
+    across(all_of(colnames(GRLS_data_lifetime)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
+    .groups = "drop"
+  )
+#add lifetime to end of columns at 5:15 indices
+names(GRLS_summary_lifetime)[5:15] <- paste0(names(GRLS_summary_lifetime)[5:15], "_lifetime")
+
+```
+
+Combine lifelong and 5y values into one as consider these comorbs to be permanent once diagnosed:
+
+```{r}
+#mutate the Y N in 5y cols to be 0 and 1 for counting in next step
+GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
+  mutate(across(11:24, ~ case_when(
+    . == "N" ~ 0,
+    . == "Y" ~ 1,
+    TRUE ~ as.numeric(.)
+  )))
+
+#combining counts in 5y columns and then remove the lifelong ones 
+GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
+  mutate(
+    orthopaedic_5y2 = pmax(lifelong_orthopaedic, orthopaedic_5y, na.rm = TRUE),
+    cardiovascular_5y2=pmax(lifelong_cardiovascular,cardiovascular_5y,na.rm=TRUE),
+    immune_mediated_5y2=pmax(lifelong_immune_mediated,immune_mediated_5y,na.rm=TRUE),
+    gastrointestinal_5y2=pmax(lifelong_gastrointestinal,gastrointestinal_5y,na.rm=TRUE),
+    inflammatory_other_5y2=pmax(lifelong_inflammatory_other,inflammatory_other_5y,na.rm=TRUE),
+    chronic_inflammatory_5y2=pmax(lifelong_chronic_inflammatory,chronic_inflammatory_5y,na.rm=TRUE))
+
+#remove the earlier 5y columns
+GRLS_summary_lifelong_2 <- GRLS_summary_lifelong %>%
+  dplyr::select(c(subject_id,25:30))
+```
+
+Combine all of the 5y prior and ever comorb datasets
+
+```{r}
+GRLS_5yprior_lifetime <- GRLS_summary_lifelong_2 %>%
+  left_join(GRLS_summary_lifetime,by="subject_id")
+```
+
+Add neoplasia variables in comorb data
+
+```{r}
+
+```
+
+Combine all comorbs data back into the main df
+
+```{r}
 
 ```
 
