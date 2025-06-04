@@ -334,7 +334,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(247:314, ~ case_when(
+  mutate(across(251:318, ~ case_when(
     is.na(.) ~ "no_medication_records_for_this_time_period",
     as.character(.) == "drug_not_administered" ~ "no_medication_records_for_this_time_period",
     TRUE ~ as.character(.)
