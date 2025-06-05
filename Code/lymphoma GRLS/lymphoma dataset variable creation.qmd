@@ -1469,21 +1469,747 @@ GRLS_5yprior_lifetime <- GRLS_summary_lifelong_2 %>%
   left_join(GRLS_summary_lifetime,by="subject_id")
 ```
 
-Add neoplasia variables in comorb data
+#### Add neoplasia variables in comorb dataset - lifetime
+
+NB. remove lymphoma from lists as will skew for all the cases to have a 1 and none of the controls by definition
 
 ```{r}
+#ggrouping these
+all_cancers <- c("adrenal_tumor","basal_cell_tumor","bile_duct_tumor","bladder_tumor","brain_spinal_cord_tumor","breast_or_mammary_tumor","eye_tumor","hair_matrix_tumor","heart_tumor","hemangiosarcoma",
+                 "histiocytic_sarcoma","kidney_tumor","liver_tumor","lung_tumor","mast_cell_tumor","melanmoma","multiple_myeloma","nasal_tumor","osteosarcoma","pancreatic_tumor","perianal_adenoma","pituitary_tumor","plasma_cell_tumor","plasmacytoma","prostate_tumor","soft_tissue_sarcoma","splenic_tumor","squamous_cell_carcinoma","stomach_intestinal_tumor","testicular_tumor","thymoma","thyroid_tumor")
+malig_cancers <- c("hemangiosarcoma",
+  "histiocytic_sarcoma",  "melanoma", "multiple_myeloma", "osteosarcoma", "pancreatic_tumor", "plasma_cell_tumor", "plasmacytoma", "soft_tissue_sarcoma", "squamous_cell_carcinoma")
+benign_cancers <- c("adrenal_tumor", "basal_cell_tumor", "bile_duct_tumor", "bladder_tumor", "brain_spinal_cord_tumor", "breast_or_mammary_tumor", "eye_tumor", "hair_matrix_tumor", "heart_tumor", "kidney_tumor", "liver_tumor", "lung_tumor", "mast_cell_tumor", "nasal_tumor", "perianal_adenoma", "pituitary_tumor", "prostate_tumor", "splenic_tumor", "stomach_intestinal_tumor", "testicular_tumor", "thymoma", "thyroid_tumor")
 
+```
+
+Create YN and counts for all cancers, benign and malig
+
+```{r}
+comorbs_neoplasia_2 <- conditions_neoplasia %>%
+  filter(to_date != 1)
+
+comorbs_neoplasia_2$all_cancers_count_lifetime <- 0
+comorbs_neoplasia_2$malig_cancers_count_lifetime <- 0
+comorbs_neoplasia_2$benign_cancers_count_lifetime <- 0
+
+
+# Define the cancer columns indices (from index 2 to the last column)
+cancer_columns <- 7:40
+
+# Loop through the cancer columns by index
+for (col_index in cancer_columns) {
+  col_name <- colnames(comorbs_neoplasia_2)[col_index]  # Get column name
+  
+  # Count for all cancers
+  comorbs_neoplasia_2$all_cancers_count_lifetime <- comorbs_neoplasia_2$all_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  
+  # Count for all cancers
+  comorbs_neoplasia_2$all_cancers_count_lifetime <- comorbs_neoplasia_2$all_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  
+  # Count for malignant cancers
+  if (col_name %in% malig_cancers) {
+    comorbs_neoplasia_2$malig_cancers_count_lifetime <- comorbs_neoplasia_2$malig_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  }
+  
+  # Count for benign cancers
+  if (col_name %in% benign_cancers) {
+    comorbs_neoplasia_2$benign_cancers_count_lifetime <- comorbs_neoplasia_2$benign_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  }
+}
+
+#create Y N columns for each in addition to counts
+comorbs_neoplasia_2 <- comorbs_neoplasia_2 %>%
+  mutate(
+    all_cancers_YN_lifetime = ifelse(all_cancers_count_lifetime >= 1, 1, 0),
+    malig_cancers_YN_lifetime = ifelse(malig_cancers_count_lifetime >= 1, 1, 0),
+    benign_cancers_YN_lifetime = ifelse(benign_cancers_count_lifetime >= 1, 1, 0),
+
+  )
+
+
+#code to get to unique rows and keep the max count for each dog
+#get the max count value for each of the counts for each dog 
+cancer_count_summary <- comorbs_neoplasia_2 %>%
+  group_by(subject_id) %>%
+  summarise(
+    malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
+    benign_cancers_count_lifetime = if_else(all(is.na(benign_cancers_count_lifetime)), 0, max(benign_cancers_count_lifetime, na.rm = TRUE)),
+    all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
+    malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
+    all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
+
+    malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
+    benign_cancers_YN_lifetime = if_else(all(is.na(benign_cancers_YN_lifetime)), 0, max(benign_cancers_YN_lifetime, na.rm = TRUE)),
+    all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
+    malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
+    all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
+    
+    .groups = "drop"
+  )
+
+```
+
+#### Neoplasia YN and counts - 5y prior to endpoint
+
+```{r}
+#keep only the max 5 rows for that dog in year_in_study then same calcs as above
+comorbs_neoplasia_3 <- comorbs_neoplasia_3 %>%
+  group_by(subject_id) %>%
+  filter(year_in_study %in% sort(unique(year_in_study), decreasing = TRUE)[1:5]) %>%
+  ungroup()
+  
+
+comorbs_neoplasia_3$all_cancers_count_5y <- 0
+comorbs_neoplasia_3$malig_cancers_count_5y <- 0
+comorbs_neoplasia_3$benign_cancers_count_5y <- 0
+
+
+# Define the cancer columns indices (from index 2 to the last column)
+cancer_columns <- 7:40
+
+# Loop through the cancer columns by index
+for (col_index in cancer_columns) {
+  col_name <- colnames(comorbs_neoplasia_3)[col_index]  # Get column name
+  
+  # Count for all cancers
+  comorbs_neoplasia_3$all_cancers_count_5y <- comorbs_neoplasia_3$all_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  
+  # Count for all cancers
+  comorbs_neoplasia_3$all_cancers_count_5y <- comorbs_neoplasia_3$all_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  
+  # Count for malignant cancers
+  if (col_name %in% malig_cancers) {
+    comorbs_neoplasia_3$malig_cancers_count_5y <- comorbs_neoplasia_3$malig_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  }
+  
+  # Count for benign cancers
+  if (col_name %in% benign_cancers) {
+    comorbs_neoplasia_3$benign_cancers_count_5y <- comorbs_neoplasia_3$benign_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  }
+}
+
+#create Y N columns for each in addition to counts
+comorbs_neoplasia_3 <- comorbs_neoplasia_3 %>%
+  mutate(
+    all_cancers_YN_5y = ifelse(all_cancers_count_5y >= 1, 1, 0),
+    malig_cancers_YN_5y = ifelse(malig_cancers_count_5y >= 1, 1, 0),
+    benign_cancers_YN_5y = ifelse(benign_cancers_count_5y >= 1, 1, 0),
+
+  )
+
+
+#code to get to unique rows and keep the max count for each dog
+#get the max count value for each of the counts for each dog 
+cancer_count_summary_2 <- comorbs_neoplasia_3 %>%
+  group_by(subject_id) %>%
+  summarise(
+    malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
+    benign_cancers_count_5y = if_else(all(is.na(benign_cancers_count_5y)), 0, max(benign_cancers_count_5y, na.rm = TRUE)),
+    all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
+    malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
+    all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
+
+    malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
+    benign_cancers_YN_5y = if_else(all(is.na(benign_cancers_YN_5y)), 0, max(benign_cancers_YN_5y, na.rm = TRUE)),
+    all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
+    malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
+    all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
+    
+    .groups = "drop"
+  )
+
+#combine the 2 cancer summaries
+cancer_summary_5y_lifetime <- cancer_count_summary %>%
+  left_join(cancer_count_summary_2,by="subject_id")
 ```
 
 Combine all comorbs data back into the main df
 
 ```{r}
+#combine cancer and other comorbs
+GRLS_comorbs_cancer_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
+  left_join(cancer_summary_5y_lifetime,by="subject_id")
+
+#combine back to main df
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location2 %>% left_join(GRLS_comorbs_cancer_5yprior_lifetime,by="subject_id")
+```
+
+## Medications 
+
+Using the df created in an earlier script of analyses which tidies up free text and the many drug categories etc. in this qmd GRLS medications.qmd
+
+```{r}
+medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+```
+
+### Lifetime medication calculations
+
+```{r}
+# Step 1: Count occurrences per dog per active ingredient group
+meds_per_dog_lifetime <- medications %>%
+  group_by(subject_id, active_ingredient_groups) %>%
+  summarise(count = n(), .groups = "drop")
+
+# Step 2: Compute quartiles *within* each active ingredient group
+medication_summary_lifetime <- meds_per_dog_lifetime%>%
+  group_by(active_ingredient_groups) %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    .groups = "drop",
+    max = max(count)
+  )
+
+write.csv(medication_summary_lifetime,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_study_medication_quartiles_summaries_lifetime.csv")
+
+
+
+# Step 3: Join quartiles back to individual dog data and assign quartile categories
+meds_per_dog_quart_lifetime <- meds_per_dog_lifetime %>%
+  left_join(medication_summary_lifetime, by = "active_ingredient_groups") %>%
+  mutate(
+    quartile = case_when(
+      count <= Q1 ~ "Q1",
+      count > Q1 & count <= median_count_per_dog ~ "Q2",
+      count > median_count_per_dog & count <= Q3 ~ "Q3",
+      count > Q3 ~ "Q4"
+    ),
+    # Assign halves based on median
+    half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
+  ) %>%
+  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
+
+
+# Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
+meds_wide_quart_lifetime <- meds_per_dog_quart_lifetime %>%
+  pivot_wider(names_from = active_ingredient_groups, values_from = c(half,quartile))
+
+# View the final data
+meds_wide_quart_lifetime
+
+meds_wide_quart_lifetime <- meds_wide_quart_lifetime %>%
+  rename_with(~ paste0(.x, "_lifetime"), -1)
+```
+
+### 5y prior to endpoint medication calculations
+
+```{r}
+#keeping only the 5y prior rows
+medications_5y <- medications %>%
+  group_by(subject_id) %>%
+  filter(year_in_study %in% sort(unique(year_in_study), decreasing = TRUE)[1:5]) %>%
+  ungroup()
+
+
+# Step 1: Count occurrences per dog per active ingredient group
+meds_per_dog_5y <- medications_5y %>%
+  group_by(subject_id, active_ingredient_groups) %>%
+  summarise(count = n(), .groups = "drop")
+
+# Step 2: Compute quartiles *within* each active ingredient group
+medication_summary_5y <- meds_per_dog_5y%>%
+  group_by(active_ingredient_groups) %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    .groups = "drop",
+    max = max(count)
+  )
+
+write.csv(medication_summary_5y,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_study_medication_quartiles_summaries_5y.csv")
+
+
+
+# Step 3: Join quartiles back to individual dog data and assign quartile categories
+meds_per_dog_quart_5y <- meds_per_dog_5y %>%
+  left_join(medication_summary_5y, by = "active_ingredient_groups") %>%
+  mutate(
+    quartile = case_when(
+      count <= Q1 ~ "Q1",
+      count > Q1 & count <= median_count_per_dog ~ "Q2",
+      count > median_count_per_dog & count <= Q3 ~ "Q3",
+      count > Q3 ~ "Q4"
+    ),
+    # Assign halves based on median
+    half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
+  ) %>%
+  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
+
+
+# Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
+meds_wide_quart_5y <- meds_per_dog_quart_5y %>%
+  pivot_wider(names_from = active_ingredient_groups, values_from = c(half,quartile))
+
+# View the final data
+meds_wide_quart_5y
+
+meds_wide_quart_5y <- meds_wide_quart_5y %>%
+  rename_with(~ paste0(.x, "_5y"), -1)
+```
+
+### Examine for specific potential RF medications:
+
+-   NSAIDs exposure
+
+    -   ever Y N and 5y prior Y N
+    -   counts
+
+-   steroids exposure
+
+    -   ever Y N and 5y prior Y N
+    -   counts
+
+-   Fenbendazole exposure
+
+    -   ever Y N and 5y prior Y N
+    -   counts
+
+```{r}
+#free text drug names to look for
+NSAID_names<-c("carprofen","meloxicam","firocoxib","deracoxib","flurbiprofen","piroxicam","ketotifen","ketoprofen","rimadyl","metacam","meloxidyl","previcox","vetprofen","ketorolac opthalmic ointment","toradol","acular","voltaren
+","diclofenac","flurbiprofen eye drops
+","carprovet","carprieve","truprofen","ofloxacin ophthalmic ointment + nsaid
+")
+steroid_names<-c("dexamethasone, neomycin sulfate, thiabendazole
+","prednisolone acetate
+","betamethasone, clotrimazole, gentamicin sulfate
+","betamethasone, gentamicin sulfate
+","dexamethasone","dexamethasone, miconazole nitrate
+","dexamethasone, miconazole nitrate
+","methylprednisolone","prednisone","betamethasone, florfenicol, terbinafine
+","clotrimazole, gentamicin sulfate, mometasone furoate
+","dexamethasone, methylprednisolone
+","mometasone furoate, orbifloxacin, posaconazole
+","dexamethasone, neomycin sulfate, polymyxin b
+","bacitracin zinc, dexamethasone, neomycin sulfate, polymyxin b
+","miconazole nitrate, polymyxin b, prednisolone acetate
+","hydrocortisone, gentamicin sulfate, miconazole nitrate
+","gentamicin sulfate, hydrocortisone, miconazole nitrate
+","burow's solution, hydrocortisone
+","acetic acid, boric acid, hydrocortisone, ketoconazole
+","hydrocortisone","bacitracin zinc, hydrocortisone, neomycin sulfate, polymyxin b
+","dexamethasone, enrofloxacin, miconazole nitrate
+","clotrimazole, dexamethasone, enrofloxacin
+","hydrocortisone, ketoconazole
+","dexamethasone, ketoconazole, phytosphingosine
+","betamethasone","acetic acid, boric acid, ceramide complex, hydrocortisone, ketoconazole
+","hydrocortisone, troleandomycin
+","dexamethasone, enrofloxacin, ketoconazole, tris-edta
+","bacitracin zinc, neomycin sulfate, polymyxin b, unspecified steroid
+","clotrimazole, dexamethasone
+","dexamethasone, ketoconazole, tris-edta
+","dexamethasone, ketoconazole
+","betamethasone, clotrimazole, gentamicin sulfate, mometasone furoate
+","dexamethasone, diphenhydramine
+","beclomethasone, clotrimazole, neomycin sulfate
+","dexamethasone, enrofloxacin, ketoconazole
+","dexamethasone, dimethyl sulfoxide, enrofloxacin, lidocaine
+","dexamethasone, enrofloxacin
+","betamethasone, gentamicin sulfate, miconazole nitrate
+","chloramphenicol, dexamethasone
+","hydrocortisone, pramoxine
+","dexamethasone, penicillin
+","betamethasone, chloramphenicol, ketoconazole
+","dexamethasone, tobramycin
+","enrofloxacin, dexamethasone, tris-edta
+","dexamethasone, miconazole nitrate, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide
+","betamethasone, burow's solution, gentamicin sulfate, hydrocortisone, miconazole nitrate
+","ketoconazole, hydrocortisone
+","bacitracin, hydrocortisone
+","dexamethasone, miconazole nitrate, tris-edta
+","chlorhexidine gluconate, dexamethasone
+","dexamethasone, enrofloxacin, tris-edta
+","dexamethasone, enrofloxacin, silver sulfadiazine
+","dexamethasone, miconazole nitrate, neomycin sulfate, polymyxin b, prednisolone acetate, thiabendazole
+","betamethasone, enrofloxacin
+","dexamethasone, ear cleaner (epi-otic advanced), enrofloxacin
+","betamethasone, tobramycin
+","dexamethasone ophthalmic ointment
+","miconazole + dexamethasone ear solution
+","amikacin + dexamethasone ear solution
+","depo-medrol
+","prednisolone acetate ophthalmic suspension
+","neo-poly-dex ophthalmic ointment
+","neo-poly-bac ophthalmic ointment + dexamethasone
+","betamethasone + gentamicin ear solution
+","conofite + dexamethasone ear solution
+","neo-poly-bac ophthalmic ointment + hydrocortisone
+","baytril + conofite + dexamethasone ear solution
+","betamethasone + gentamicin spray
+","baytil + clotrimazole + dexamethasone ear solution
+","baytril + dexamethasone + miconazole ear solution
+","baytril + conzol + dexamethasone ear solution
+","trizulta + keto + baytril + dexamethasone flush
+","clotrimazole + dexamethasone ear solution
+","burow's solution + hydrocortisone
+","betamethasone + clotrimazole + gentamicin ear solution
+","trizulta + keto + dexamethasone flush
+","cortalone
+","baytril + dexamethasone + ketoconazole ear solution
+","betamethasone + gentamicin sulfate + miconazole nitrate ear solution
+","dexamethasone otic
+","baytril + trizulta + dexamethasone ear solution
+","neomycin sulfate + nystatin + triamcinolone acetonide
+","chloramphenicol + ketoconazole + triamcinolone acetonide ear solution
+","triamcinolone","trizedta + dexamethasone + miconazole flush
+","chlorhexiderm + dexamethasone spray
+","trizedta + baytril + dexamethasone flush
+","neomycin sulfate + tetracaine + triamcinolone acetonide
+","clotrimazole + gentamicin + mometasone ear solution
+","baytril + dexamethasone + silvadene ear solution
+","itraconazole + ketoconazole + triamcinolone acetonide ear solution
+","baytril + triamcinolone acetonide
+","troleandomycin + hydrocortisone
+","neo-poly-bac ophthalmic ointment + steroid
+","t8 keto flush + dexamethasone
+","dexamethasone + miconazole
+","dermacool + hydrocortisone
+","trizchlor 4 + hydrocortisone
+","dexamethasone + diphenhydramine
+","tear stimulation forte + betamethasone + ofloxacin
+","baytril + dexamethasone + dimethyl sulfoxide + lidocaine
+","dexamethasone + baytril
+","ketoconazole + mupirocin + triamcinolone acetonide
+","penicillin + dexamethasone
+","tobramycin + betamethasone ophthalmic ointment
+","lotramin + dexamethasone
+","bacitracin + hydrocortisone
+")
+fenbendazole_names<-c("fenbendazole","fenbendazole, maropitant citrate, metronidazole, omeprazole, sucralfate
+","cerenia + fenbendazole + metronidazole + omeprazole + sucralfate
+","panacur","safe-guard")
+```
+
+Lifetime
+
+```{r}
+#NSAID
+NSAID_ever<- medications %>%
+  mutate(NSAID_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
+                            })) %>%
+  mutate(NSAID_ever= ifelse(NSAID_ever, 1, 0)) %>%
+  arrange(subject_id, desc(NSAID_ever)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, NSAID_ever)
+
+#steroid
+steroid_ever<- medications %>%
+  mutate(steroid_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
+                            })) %>%
+  mutate(steroid_ever = ifelse(steroid_ever, 1, 0)) %>%
+  arrange(subject_id, desc(steroid_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, steroid_ever)
+#fenbendazole
+fenbendazole_ever <- medications %>%
+  mutate(fenbendazole_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
+                            })) %>%
+  mutate(fenbendazole_ever = ifelse(fenbendazole_ever, 1, 0)) %>%
+  arrange(subject_id, desc(fenbendazole_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, fenbendazole_ever)
+```
+
+5y prior
+
+```{r}
+
+#NSAID
+NSAID_5y <-medications_5y %>%
+  ungroup()%>%
+  mutate(NSAID_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
+                            })) %>%
+  mutate(NSAID_5y = ifelse(NSAID_5y, 1, 0)) %>%
+  arrange(subject_id, desc(NSAID_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, NSAID_5y)
+
+#steroid
+steroid_5y <- medications_5y %>%
+    ungroup()%>%
+  mutate(steroid_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
+                            })) %>%
+  mutate(steroid_5y = ifelse(steroid_5y, 1, 0)) %>%
+  arrange(subject_id, desc(steroid_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, steroid_5y)
+#fenbendazole
+fenbendazole_5y <-medications_5y %>%
+    ungroup()%>%
+  mutate(fenbendazole_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
+                            })) %>%
+  mutate(fenbendazole_5y = ifelse(fenbendazole_5y, 1, 0)) %>%
+  arrange(subject_id, desc(fenbendazole_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, fenbendazole_5y)
+```
+
+Combine these dfs
+
+```{r}
+#all med counts of interest
+meds_5y_lifetime <- meds_wide_quart_5y %>% left_join (meds_wide_quart_lifetime,by="subject_id")
+
+#specific drugs of interest
+combined_df <- reduce(list(NSAID_ever,NSAID_5y,steroid_ever,steroid_5y,fenbendazole_ever,fenbendazole_5y), full_join, by = "subject_id")
+
+#combine both of these
+meds_5y_lifetime_NSAID_steroid_fenbendazole <- meds_5y_lifetime %>%
+  left_join(combined_df,by="subject_id")
+
+
+#add onto the comorbs and all other variables df
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs %>% left_join(meds_5y_lifetime_NSAID_steroid_fenbendazole,by="subject_id")
+```
+
+#### Examine also an NSAID number of times variable
+
+```{r}
+# use HSA medications df to get list of NSAIDs in df
+table(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients)
+NSAID_meds <- c("carprofen","meloxicam","firocoxib","deracoxib","flurbiprofen","ketoprofen")
+
+medications_5y  <- medications_5y  %>%
+  mutate(NSAID_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(NSAID_meds, collapse = "|")),
+    "NSAID_yes",
+    "NSAID_no"
+  ))
+
+#a count of these for each dog exc if NSAID no then just NSAID no
+NSAID_5y_meds_per_dog <- medications_5y  %>%
+  group_by(subject_id, NSAID_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY NSAID_yes value then remove the NSAID_no row/s for that subject id
+  # Step 1: Get subject_ids that have NSAID_yes
+NSAID_yes_subjects <- NSAID_5y_meds_per_dog %>%
+  filter(NSAID_use == "NSAID_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep NSAID_yes rows or NSAID_no only if no NSAID_yes exists for that dog
+NSAID_5y_meds_per_dog_clean <- NSAID_5y_meds_per_dog %>%
+  filter(NSAID_use == "NSAID_yes" | !(subject_id %in% NSAID_yes_subjects))
+
+#calculate NSAID yes quartiles
+NSAID_yes <- NSAID_5y_meds_per_dog_clean %>%
+  filter(NSAID_use=="NSAID_yes")
+
+NSAID_summary <- NSAID_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+
+NSAID_5y_meds_per_dog_clean_quartiles <- NSAID_5y_meds_per_dog_clean %>%
+  mutate(NSAID_quantile = case_when(
+    NSAID_use == "NSAID_no" ~ "no_NSAID_admin",
+    NSAID_use == "NSAID_yes" & count <= 1 ~ "Q1(1)",
+    NSAID_use == "NSAID_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
+    NSAID_use == "NSAID_yes" & count > 2 & count <= 3 ~ "Q3(2-3)",
+    NSAID_use == "NSAID_yes" & count > 3 ~ "Q4(3-8)"
+  ))
+#then filt down to unique single row for each dog of its count or NSAID no, then join back to the 3044 dogs and if no count or no NSAID no then "no_NSAID_recorded_in_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds %>% left_join(NSAID_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in NSAID_quantile column with "no_med_records_this_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>%
+    mutate(NSAID_quantile = replace_na(NSAID_quantile, "no_med_use_recorded"))
+
+#ditch count column 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID%>%
+  dplyr::select(c(-"count"))
+#rename NSAID_quantile to make clear its a 5y column
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>%
+  rename(NSAID_5y_quantiles = NSAID_quantile)
 
 ```
 
-## Medications - still to do
+#### Examine also a steroid number of times variable
+
+```{r}
+steroids <- c(
+  "prednisone",
+  "predisolone acetate",
+  "trimeprazine tartrate, prednisone",
+  "triamcinolone acetonide",
+  "methylpredisolone",
+  "hydrocortisone, gentamicin sulfate, miconazole nitrate",
+  "burow's solution, hydrocortisone",
+  "dexamethasone, miconazole nitrate",
+  "dimethyl sulfoxide, fluocinolone acetonide",
+  "hydrocortisone",
+  "dexamethasone, enrofloxacin, ketoconazole, tris-edta",
+  "beclomethasone, clotrimazole, neomycin sulfate",
+  "dexamethasone, ketoconazole, tris-edta",
+  "acetic acid, boric acid, ceramide complex, hydrocortisone, ketoconazole",
+  "betamethasone",
+  "mometasone furoate",
+  "dexamethasone",
+  "betamethasone",
+  "hydrocortisone",
+  "prednisolone",
+  "methylprednisolone",
+  "triamcinolone acetonide",
+  "difluprednate",
+  "fluticasone",
+  "dexamethasone, miconazole nitrate",
+  "amikacin sulfate, dexamethasone",
+  "dexamethasone, methylprednisolone",
+  "dexamethasone, triamcinolone acetonide",
+  "hydrocortisone, ketoconazole",
+  "dexamethasone, ketoconazole, phytosphingosine",
+  "dexamethasone, diphenhydramine",
+  "betamethasone, clotrimazole, gentamicin sulfate, mometasone furoate",
+  "dimethyl sulfoxide, fluocinolone acetonide, gentamicin sulfate, miconazole nitrate",
+  "dimethyl sulfoxide, flunixin, fluocinolone acetonide",
+  "hydrocortisone, troleandomycin",
+  "Dexamethasone",
+  "Betamethasone",
+  "dexamethasone",
+  "betamethasone",
+  "hydrocortisone",
+  "menthol, hydrocortisone",
+  "dexamethasone, ketoconazole",
+  "dexamethasone, enrofloxacin",
+  "dexamethasone, dimethyl sulfoxide, enrofloxacin, lidocaine",
+  "dexamethasone, enrofloxacin, ketoconazole",
+  "dexamethasone, penicillin",
+  "dexamethasone, tobramycin",
+  "betamethasone, ofloxacin",
+  "chloramphenicol, dexamethasone",
+  "betamethasone, chloramphenicol, ketoconazole",
+  "enrofloxacin, dexamethasone, tris-edta",
+  "dexamethasone, miconazole nitrate, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide",
+  "betamethasone, burow's solution, gentamicin sulfate, hydrocortisone, miconazole nitrate",
+  "ketoconazole, hydrocortisone",
+  "bacitracin, hydrocortisone",
+  "dexamethasone, miconazole nitrate, tris-edta",
+  "chlorhexidine gluconate, dexamethasone",
+  "dexamethasone, enrofloxacin, tris-edta",
+  "dexamethasone, enrofloxacin, silver sulfadiazine",
+  "dexamethasone, miconazole nitrate, neomycin sulfate, polymyxin b, prednisolone acetate, thiabendazole",
+  "betamethasone, enrofloxacin",
+  "dexamethasone, ear cleaner (epi-otic advanced), enrofloxacin",
+  "betamethasone, tobramycin"
+)
+
+```
+
+Use steroids list to do counting now
+
+```{r}
+# use HSA medications df to get list of NSAIDs in df
+table(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients)
+
+
+medications_5y  <- medications_5y  %>%
+  mutate(steroid_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(steroids, collapse = "|")),
+    "steroid_yes",
+    "steroid_no"
+  ))
+
+#a count of these for each dog exc if steroid no then just steroid no
+steroid_5y_meds_per_dog <- medications_5y  %>%
+  group_by(subject_id, steroid_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY steroid_yes value then remove the steroid_no row/s for that subject id
+  # Step 1: Get subject_ids that have steroid_yes
+steroid_yes_subjects <- steroid_5y_meds_per_dog %>%
+  filter(steroid_use == "steroid_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep steroid_yes rows or steroid_no only if no steroid_yes exists for that dog
+steroid_5y_meds_per_dog_clean <- steroid_5y_meds_per_dog %>%
+  filter(steroid_use == "steroid_yes" | !(subject_id %in% steroid_yes_subjects))
+
+#calculate steroid yes quartiles
+steroid_yes <- steroid_5y_meds_per_dog_clean %>%
+  filter(steroid_use=="steroid_yes")
+
+steroid_summary <- steroid_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+
+steroid_5y_meds_per_dog_clean_quartiles <- steroid_5y_meds_per_dog_clean %>%
+  mutate(steroid_quantile = case_when(
+    steroid_use == "steroid_no" ~ "no_steroid_admin",
+    steroid_use == "steroid_yes" & count <= 1 ~ "Q1(1)",
+    steroid_use == "steroid_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
+    steroid_use == "steroid_yes" & count > 2 & count <= 3 ~ "Q3(2-3)",
+    steroid_use == "steroid_yes" & count > 3 ~ "Q4(3-17)"
+  ))
+#then filt down to unique single row for each dog of its count or steroid no, then join back to the 3044 dogs and if no count or no steroid no then "no_steroid_recorded_in_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>% left_join(steroid_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>%
+    mutate(steroid_quantile = replace_na(steroid_quantile, "no_med_use_recorded"))
+
+#ditch count column 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid%>%
+  dplyr::select(c(-"count"))
+#rename steroid_quantile to make clear its a 5y column
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>%
+  rename(steroid_5y_quantiles = steroid_quantile)
+```
+
+For MCT might also want to do atopy meds eg. lokivetmab etc
+
+Interim write to csv
+
+```{r}
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_variables_dataset_interim.csv")
+```
 
 ## Reproduction variables - still to do
+
+```{r}
+
+```
 
 ## Activity - still to do
 
