@@ -12,18 +12,23 @@ A function to find the date of first exposure of an event - initially using for 
 #create first exposure date function
 #3 inputs required
 first_exposure_point <- function(data, exposure_column, record_date) {
-  #dynamic column naming code to create a column name depending on what exposure column is called
-  col_name <- paste0(quo_name(enquo(exposure_column)), "_", "first_exposure_date")
+  exposure_col <- enquo(exposure_column)
+  date_col <- enquo(record_date)
+  col_name <- paste0(quo_name(exposure_col), "_first_exposure_date")
   
   data %>%
     mutate(
-      #!! and := used in dynamic col naming. if the dog is exposed (==1) and the record date is not NA then find earliest record date , else record NA
-      !!col_name := ifelse({{ exposure_column }} == 1,
-                           ifelse(!is.na(first(record_date, order_by = record_date)),
-                                  format(first(record_date, order_by = record_date), "%Y-%m-%d"),
-                                  NA),
-                           NA)
-    )
+      !!col_name := if_else(
+        !!exposure_col == 1 & !is.na(!!date_col),
+        as.character(!!date_col),
+        NA_character_
+      )
+    ) %>%
+    group_by(subject_id) %>%  # assuming your ID column is subject_id
+    mutate(
+      !!col_name := min(!!sym(col_name), na.rm = TRUE)
+    ) %>%
+    ungroup()
 }
 ```
 
