@@ -73,6 +73,8 @@ dog_pop_deprivation <- dog_pop %>% left_join(deprivation, by="subject_id")
 
 ## Environment exposures
 
+NB. most of the enviro variables (or possibly all) do not have any missing data ie. they are all encoded 0 or 1 for the questionaires - so there is no 3rd level of "no_records/not_recorded" as with many other variables in the dataset
+
 indoors exposures =
 
 'use_aerosol','use_air_cleaner','use_hepa_filter,'use_moth_balls','use_incense_or_candles','smoke_exposure'
@@ -407,7 +409,7 @@ sleep_smoking_enviro_early<- check_exposure2(sleep_smoking_enviro, columns_to_ch
     
 ```
 
-#### rest
+#### rest of life
 
 ```{r}
 #read in function file for all GRLS functions:
@@ -425,7 +427,7 @@ year_column <-"year_in_study"
 sleep_smoking_enviro_early_rest<- check_exposure2(sleep_smoking_enviro_early, columns_to_check, study_years,year_column)
 ```
 
-#### whole
+#### whole life
 
 ```{r}
 source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
@@ -504,9 +506,13 @@ dog_pop_deprivation_enviro_smoking_sleep_all <- dog_pop_deprivation_enviro_smoki
 
 ## Lifestyle
 
+-   like with the enviro exposures/sleep data, no dogs are missing this bit of data so there will not be a "not_recorded/records_not_available" category
+
 ```{r}
 lifestyle <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifestyle.csv",na.strings=c ("","NA"))
 
+#check if all dogs have lifestyle recorded - they do
+unique_lifestyle <- unique(lifestyle$subject_id)
 # groupings
 
 
@@ -654,6 +660,16 @@ house<- house %>%
 location <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv")
 location <- location %>%
   mutate(across(where(is.character), tolower))
+
+
+#recode NAs and blank cells in df as "no_records_available"
+house <- house %>%
+  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
+                ~ replace(., is.na(.) | . == "", "no_records_available")))
+
+location <- location %>%
+  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
+                ~ replace(., is.na(.) | . == "", "no_records_available")))
 ```
 
 Variables to create:
@@ -683,6 +699,7 @@ propane <- c("propane", "hydronic heat fueled by propane", "radiant floor heat p
 wood <- c("wood", "wood pellets","wood pellet", "wood pellet stove", "hot water from outside wood furnace", "outside wood furnace","pellets","hot water heated by outside wood furnace","outside wood stove","outside woodstove", "hot water from outside wood furnace", "pellet stove","occasional wood stove", "fireplace wood", "pellets and wood stoves","charcoal","grill(charcoal)","smoker","barbecue","charcoal / wood grill","smoker grill", "charcol","bbq - pellets","bbq - wood pellets","charcoal grill", "wood - outdoor grill", "charcoal barbecue", "charcoal and wood chips", "charcoal grill outside", "charcoal/wood","charcoal with propane starter", "wood pellt bbq", "charcoal grille", "bbq wood pellets","grilling,charcoal", "grilol charcol", "wood chips","w00d")
 renewables <- c("solar","passive solar", "geothermal","radiant/geo thermal","	geo-thermal","geo thermal","geothermal heat pumps","geo heat pump","gio thurmo","gio thurmal","gio thurmal","giothurmal","ground source heat pump","inground heat pump","inground heat pump source","in ground heat pump","geothermal/electric heat exchanger","geothermal heat exchange","geothermal heat pump", "geo thermal heat pump","heat exchanger with geothermal", "	gero thermal - electric","geo-thermal",
                 "geothermal heat pumps","sun", "geo heat pump","geothermal heating","gerothermal","solar hot water","geo thurmo","geo-thermal","giothurmal","gero thermal - electric","passive solar")
+no_records_available <- c("no_records_available")
 
 #primary heating  
 house <- house %>%
@@ -742,12 +759,41 @@ house <- house %>%
   ))
 
 house <- house %>%
+  mutate(pipes_metal_any = case_when(
+    pipes_other_specify %in% metal ~ "1",
+    sec_pipes_other_specify %in% metal ~ "1",
+    pipes_copper_metal == "1" ~ "1",
+    sec_pipes_copper_metal == "1" ~ "1",
+    pipes_other_specify == "no_records_available" |
+      sec_pipes_other_specify == "no_records_available" |
+      is.na(pipes_copper_metal) |
+      is.na(sec_pipes_copper_metal) ~ "no_records_available",
+    TRUE ~ "0"  # keep "0" as a character for consistency
+  ))
+
+house <- house %>%
+  mutate(pipes_metal_any = case_when(
+    #only keeping the no_records_available for these columns as the specify columns are super messy and missing loads 
+    pipes_copper_metal == "no_records_available" | 
+    sec_pipes_copper_metal == "no_records_available" ~ "no_records_available",
+    pipes_other_specify %in% metal ~ "1",
+    sec_pipes_other_specify %in% metal ~ "1",
+    pipes_copper_metal == "1" ~ "1",
+    sec_pipes_copper_metal == "1" ~ "1",
+    TRUE ~ "0"
+  ))
+
+
+
+house <- house %>%
   mutate(pipes_plastic_any = case_when(
-    pipes_other_specify %in% plastic ~ 1,
-    sec_pipes_other_specify %in% plastic ~1,
-    pipes_pvc_plastic == 1 ~ 1,
-    sec_pipes_pvc_plastic == 1 ~ 1, 
-    TRUE ~ 0
+        pipes_pvc_plastic == "no_records_available" | 
+    sec_pipes_pvc_plastic == "no_records_available" ~ "no_records_available",
+    pipes_other_specify %in% plastic ~ "1",
+    sec_pipes_other_specify %in% plastic ~"1",
+    pipes_pvc_plastic == "1" ~ "1",
+    sec_pipes_pvc_plastic == "1" ~ "1", 
+    TRUE ~ "0"
   ))
 ```
 
@@ -777,6 +823,9 @@ house <- house %>%
     water_source_other %in% rainwater_cistern ~ "rainwater_cistern",
     TRUE ~ water_source
   ))
+
+
+
 ```
 
 Mode exposure value calculations
@@ -839,9 +888,17 @@ print(colnames(house_tidy))
 #### House mean age
 
 ```{r}
-house_tidy<- house_tidy %>%
-  group_by(subject_id)%>%
-  mutate(avg_house_age = mean(house_age, na.rm = TRUE))
+
+
+house_tidy <- house_tidy %>%
+  group_by(subject_id) %>%
+  mutate(
+    avg_house_age = mean(
+      # convert "no_records_available" to NA, others to numeric
+      as.numeric(ifelse(house_age == "no_records_available", NA, house_age)),
+      na.rm = TRUE
+    )
+  )
 ```
 
 #### Majority region/state/zip in study
@@ -1137,12 +1194,18 @@ conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
 comorbs_unique_2 <- comorbs_unique %>%
   #get rid of the to_date row for each dog
   filter(to_date !=1) %>%
+  #get rid of the NA rows in the dataset - then add in later at the 3044 level to be "no_records_available" across the comorbs
   dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
-
-comorbs_unique_2<- comorbs_unique_2%>%
+###not using currently as want to keep the NA to tidy at end into "no_records_available"
+#comorbs_unique_2<- comorbs_unique_2%>%
 # replacing NA values with 0 across comorbidity columns
-  mutate_at(vars(3:196), ~replace_na(., 0))
+ # mutate_at(vars(3:196), ~replace_na(., 0))
 
+
+#remove the rows in the comorbs_unique_2 that have got NAs across whole dataset for each dog. then when creating cohort variable at end can recode any of these dogs with no records as "no_records_available" (very few missing records across WHOLE study period, generally just occ year)
+
+cols_to_check <- c(7:21,164:196)
+comorbs_unique_2 <- comorbs_unique_2[complete.cases(comorbs_unique_2[, cols_to_check]), ]
 
 
 
@@ -1179,10 +1242,13 @@ df_result2 <- comorbs_unique_2 %>%
 ```{r}
 #keeping record_date for linking up to cancer diagnosis but remove to_date column
 comorbs_unique_3 <- comorbs_unique %>%
-  mutate_at(vars(5:200), ~replace_na(., 0)) %>%
+#  mutate_at(vars(5:200), ~replace_na(., 0)) %>%
   filter(to_date !=1) %>%
   dplyr::select(-c(relationship_category,to_date)) %>%
   rename(year_in_study_comorb = year_in_study)
+cols_to_check <- c(5:23,26:164,165:198)
+comorbs_unique_3 <- comorbs_unique_3[complete.cases(comorbs_unique_3[, cols_to_check]), ]
+
 
 
 #run all functions above onto this dataset
@@ -1259,7 +1325,6 @@ comorbidity_groups <- list(
   chronic_inflammatory = chronic_inflammatory
 )
 
-
 # Apply function to data
 GRLS_data <- df_result_restricted %>%
   left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
@@ -1270,14 +1335,28 @@ GRLS_data <- df_result_restricted %>%
 # Define the index range of comorbidity columns
 comorbidity_index <- c(199:212)  # Keep subject_id out of this list
 
-# Create a second dataframe with one row per subject_id, summarizing only the selected columns
+# Create a second dataframe with one row per subject_id, summarizing only the selected columns - not using this as need to ensure rows with a 1 are preferentially kept
+#GRLS_summary <- GRLS_data %>%
+#  group_by(subject_id) %>%
+#   arrange(desc(number_comorbs_present_5y)) %>%
+#  summarise(
+#    subject_id = first(subject_id),  # Keep subject_id as is
+#    across(all_of(colnames(GRLS_data)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
+ #   .groups = "drop"
+ # )
+
+
 GRLS_summary <- GRLS_data %>%
   group_by(subject_id) %>%
-  summarise(
-    subject_id = first(subject_id),  # Keep subject_id as is
-    across(all_of(colnames(GRLS_data)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
-    .groups = "drop"
-  )
+  arrange(desc(number_comorbs_present_5y)) %>%  # prioritise higher values
+  slice(1) %>%  # keep only the top row per subject
+  ungroup()
+
+
+### recode any NA as "no_record_available"
+GRLS_summary <- GRLS_summary%>%
+  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
+                ~ replace(., is.na(.) | . == "", "no_records_available")))
 ```
 
 There are also a separate subset of conditions that if ever reported as diagnosed then will have for life (so do not need \>1 y study records with it available):
@@ -1305,14 +1384,12 @@ comorbs_single_record <- c(
   "keratoconjunctivitis_sicca",
   "progressive_retinal_atrophy_or_degeneration",
   "pigmentary_uveitis",
-  "chronic_colitis",
   "lymphangiectasia",
   "malabsorptive_disorder",
   "megaesophagus",
   "motility_disorder",
   "elbow_dysplasia",
   "hip_dysplasia",
-  "intervertebral_disc_disease",
   "osteoarthritis",
   "rheumatoid_arthritis",
   "spondylosis"
@@ -1323,9 +1400,14 @@ comorbs_single_record <- c(
 comorbs_ever <- comorbs_unique %>%
   dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
 
-comorbs_ever<- comorbs_ever%>%
+#comorbs_ever<- comorbs_ever%>%
 # replacing NA values with 0 across comorbidity columns
-  mutate_at(vars(3:196), ~replace_na(., 0))
+ # mutate_at(vars(3:196), ~replace_na(., 0))
+
+
+### restrict columns so that those with all NAs are removed and then can recode back as "no_records_available" later
+cols_to_check <- c(3:21,24:162,164:196)
+comorbs_ever<- comorbs_ever[complete.cases(comorbs_ever[, cols_to_check]), ]
 
 #remove all the columns that are not in comorbs_single_record list or subject_id
 comorbs_ever <- comorbs_ever %>%
@@ -1352,8 +1434,11 @@ lifetime_comorbs_ever <- comorbs_ever %>%
 
 #keep count of comorbs and if present and then only a unique row for each patient
 lifetime_comorbs_ever_abr <- lifetime_comorbs_ever %>%
-  dplyr::select(c(subject_id,lifelong_comorb_present,number_lifelong_comorbs_present)) %>%
-    distinct(subject_id, .keep_all = TRUE)
+    dplyr::select(c(subject_id,lifelong_comorb_present,number_lifelong_comorbs_present))%>%
+  group_by(subject_id) %>%
+  arrange(desc(number_lifelong_comorbs_present)) %>%  # prioritise higher values
+  slice(1) %>%  # keep only the top row per subject
+  ungroup()
 ```
 
 Grouping the lifelong_comorbidities column into type of condition e.g endocrine, ocular etc based on earlier lists
@@ -1405,7 +1490,7 @@ GRLS_summary_lifelong<- lifelong_data %>%
   left_join(GRLS_summary,by="subject_id")
 
 #add in _5y to the GRLS summary columns that are from 5y prior to final record
-colnames(GRLS_summary_lifelong)[11:24] <- paste0(colnames(GRLS_summary_lifelong)[11:24], "_5y")
+colnames(GRLS_summary_lifelong)[211:221] <- paste0(colnames(GRLS_summary_lifelong)[211:221], "_5y")
 
 ```
 
@@ -1418,6 +1503,8 @@ GRLS_data_lifetime <- df_result3 %>%
   left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
             by = "subject_id")
 
+#add in _5y to the GRLS summary columns that are from 5y prior to final record
+#colnames(GRLS_data_lifetime)[202:212] <- paste0(colnames(GRLS_data_lifetime)[202:212], "_5y")
 
 #keep only a single row for each patient
 # Define the index range of comorbidity columns
@@ -1440,8 +1527,11 @@ Combine lifelong and 5y values into one as consider these comorbs to be permanen
 
 ```{r}
 #mutate the Y N in 5y cols to be 0 and 1 for counting in next step
+
+
+
 GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
-  mutate(across(11:24, ~ case_when(
+  mutate(across(c(4:9, 211:221), ~ case_when(
     . == "N" ~ 0,
     . == "Y" ~ 1,
     TRUE ~ as.numeric(.)
@@ -1457,9 +1547,9 @@ GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
     inflammatory_other_5y2=pmax(lifelong_inflammatory_other,inflammatory_other_5y,na.rm=TRUE),
     chronic_inflammatory_5y2=pmax(lifelong_chronic_inflammatory,chronic_inflammatory_5y,na.rm=TRUE))
 
-#remove the earlier 5y columns
+#remove the earlier 5y columns and just keep the ones where lifelong + 5y ar ecombined
 GRLS_summary_lifelong_2 <- GRLS_summary_lifelong %>%
-  dplyr::select(c(subject_id,25:30))
+  dplyr::select(c(subject_id,222:227))
 ```
 
 Combine all of the 5y prior and ever comorb datasets
@@ -1467,6 +1557,16 @@ Combine all of the 5y prior and ever comorb datasets
 ```{r}
 GRLS_5yprior_lifetime <- GRLS_summary_lifelong_2 %>%
   left_join(GRLS_summary_lifetime,by="subject_id")
+
+GRLS_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
+  dplyr::select(-c(8:10))
+
+GRLS_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
+  mutate(across(c(8:18), ~ case_when(
+    . == "N" ~ 0,
+    . == "Y" ~ 1,
+    TRUE ~ as.numeric(.)
+  )))
 ```
 
 #### Add neoplasia variables in comorb dataset - lifetime
@@ -1487,7 +1587,12 @@ Create YN and counts for all cancers, benign and malig
 
 ```{r}
 comorbs_neoplasia_2 <- conditions_neoplasia %>%
-  filter(to_date != 1)
+  filter(to_date != 1)%>%
+  dplyr::select(-other_specify)
+
+#remove rows where comorbs NA
+cols_to_check <- c(6:40)
+comorbs_neoplasia_2 <- comorbs_neoplasia_2[complete.cases(comorbs_neoplasia_2[, cols_to_check]), ]
 
 comorbs_neoplasia_2$all_cancers_count_lifetime <- 0
 comorbs_neoplasia_2$malig_cancers_count_lifetime <- 0
