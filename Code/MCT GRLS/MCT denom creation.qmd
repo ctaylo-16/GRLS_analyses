@@ -1,0 +1,53 @@
+---
+title: "MCT denom creation"
+format: html
+editor: visual
+---
+
+## MCT denom creation
+
+-   keep only first endpoint for the dog ie. first MCT diagnosed (so keep only first distinct row for each dog for calcs)
+
+```{r}
+library(tidyverse)
+dog_profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile_for_MCT.csv")
+endpoint<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints_MCT.csv")
+
+
+#keep only date of death and subject id
+dog_profile <- dog_profile %>%
+  dplyr::select(c(subject_id,death_date,withdrawn_date,inactive_date))
+endpoints_profile <- endpoint %>%
+  left_join(dog_profile, by="subject_id")
+```
+
+Find MCT cases
+
+```{r}
+endpoints_profile <- endpoints_profile %>%
+  mutate(across(where(is.character), tolower))
+#create in endpoints df a column called final_date where get date of death from dog_profile for dogs that did not die with HSA
+#creat had HSA column in endpoitns_profile
+endpoints_profile <- endpoints_profile %>%
+  mutate(had_MCT = case_when(
+    grepl('mast', tracked_condition, ignore.case = TRUE) ~ 1, # If 'mast' is found (case insensitive)
+    TRUE ~ 0 # Otherwise, 0
+  ))
+
+#make sure those dogs that are not unique ID are removed
+endpoints_profile2 <- endpoints_profile %>%
+  group_by(subject_id) %>%
+  arrange(desc(had_MCT), diagnosis_date) %>%  # Prioritize had_MCT, then earliest date
+  slice_head(n = 1) %>%
+  ungroup()
+#list of dogs with HSA
+MCT_subjectIDs<- endpoints_profile2 %>%
+  filter(had_MCT==1)
+MCT_subjectID <- MCT_subjectIDs$subject_id
+endpoints_profile2 <- endpoints_profile2 %>%
+  mutate(final_date = case_when(
+    had_MCT == 1 ~ diagnosis_date, # Use `diagnosis_date` if `had_MCT` is 1
+    TRUE ~ death_date              # Otherwise, use `death_date`
+  ))
+
+```

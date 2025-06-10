@@ -1,0 +1,3195 @@
+---
+title: "Lymphoma variable creation"
+format: html
+editor: visual
+---
+
+## Lymphoma case-control variable creation
+
+```{r}
+library(tidyverse)
+library(lubridate)
+dog_pop <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lymphoma_cohort_241201.csv")
+#remove excess cols
+dog_pop <- dog_pop %>%
+  dplyr::select(-c(record_date))
+```
+
+Make sure population has the endpoint in date format (but also only to the year level to match to questinoaire etc. data which only annual)
+
+```{r}
+dog_pop$diagnosis_year_month_date <- as.Date(dog_pop$end_date)
+# create a year column in  file so can do calculations on year (no point being more precise as questionaire done annually and may not match diagnosis time)
+dog_pop$diagnosis_year <- as.numeric(format(dog_pop$diagnosis_year_month_date,"%Y"))
+
+# set to month level (not day of month) = all on 1st day of month
+dog_pop$diagnosis_year_month_date2 <- as.POSIXct(floor_date(dog_pop$diagnosis_year_month_date,unit="month"))
+
+# get year month bit from column
+# set to month level (not day of month) = all on 1st day of month
+dog_pop$diagnosis_year_month <- format(dog_pop$diagnosis_year_month_date, "%Y-%m")
+```
+
+Datasets to join up to:
+
+-   clinic and deprivation indices
+
+-   Environment
+
+-   lifestyle
+
+-   reproduction
+
+-   comorbidities
+
+-   physical exam
+
+-   medications
+
+Need to create from these (where applicable):
+
+-   early life (SY0-2)
+
+-   rest of life (SY3 +)
+
+-   whole life (SY0-final SY of records)
+
+-   5y prior to endpoint
+
+Had seperate files for all of these datasets for the HSA dataset creation but will add in here for other user of file ease
+
+## Clinic and deprivation indices
+
+created in this file for all the clinics based on 2019 values so can use these again as MDI not updated yet- GRLS clinic and deprivation indices linkup.qmd
+
+```{r}
+deprivation <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+deprivation <- deprivation %>%
+  dplyr::select(c(subject_id,MDI_quintile,owner_MDI_quintile))
+
+#now join onto dog pop
+dog_pop_deprivation <- dog_pop %>% left_join(deprivation, by="subject_id")
+```
+
+## Environment exposures
+
+NB. most of the enviro variables (or possibly all) do not have any missing data ie. they are all encoded 0 or 1 for the questionaires - so there is no 3rd level of "no_records/not_recorded" as with many other variables in the dataset
+
+indoors exposures =
+
+'use_aerosol','use_air_cleaner','use_hepa_filter,'use_moth_balls','use_incense_or_candles','smoke_exposure'
+
+outside house exposures=
+
+'any_treated_weeds','any_treated_insects','any_treated_fertilizer'
+
+```{r}
+#exposures dataset
+environment_exposures<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
+sleep_environment <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
+
+```
+
+### Tidy to binary version of ever exposed (equiv of whole life):
+
+#### Indoor variables
+
+```{r}
+#indoor variables to keep
+indoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure))
+##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
+aerosol <- environment_exposures %>% 
+  group_by(subject_id) %>%
+  mutate(aerosol_ever = if_else(any(use_aerosol == 1), 1, 0))
+
+#exposures ever for all of the indoors variables
+environment_exposures_2 <- environment_exposures %>% 
+  group_by(subject_id) %>%
+#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
+  mutate(across(use_aerosol:smoke_exposure,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
+```
+
+#### Outdoor variables
+
+```{r}
+#outdoors variables to keep
+outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
+##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
+
+#exposures ever for all of the outdoors variables
+environment_exposures_out <- outdoors %>% 
+  group_by(subject_id) %>%
+#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
+  mutate(across(any_treated_weeds:any_treated_fertilizer,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
+```
+
+```{r}
+# combine indoors and outdoors (cant combine sleeping as is different length)
+indoors_outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure,hours_of_smoke,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
+
+#set indoors outdoors date column as date then parse year from it
+indoors_outdoors$date_2 <-parse_date_time(indoors_outdoors$record_date,"ym")
+#parse year from
+indoors_outdoors <- indoors_outdoors %>% mutate(exposure_year = as.numeric(format(date_2, "%Y")))
+
+
+#remove rows where it is the NA record date column
+indoors_outdoors_1_row_year <- indoors_outdoors %>%
+  filter(!is.na(record_date))
+
+
+#join this to deprivation data made above
+indoors_outdoors_1_row_year <- indoors_outdoors_1_row_year %>% 
+  left_join(dog_pop_deprivation,by="subject_id")
+```
+
+### Early life
+
+```{r}
+
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+
+
+dog_pop_deprivation_enviro_early<- check_exposure2(indoors_outdoors_1_row_year, columns_to_check, study_years,year_column)
+    
+```
+
+### Rest of life
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+dog_pop_deprivation_enviro_early_rest <- check_exposure2(dog_pop_deprivation_enviro_early, columns_to_check, study_years,year_column)
+    
+#count how many years exposed for (sum up the 1s)
+```
+
+### Whole life exposure
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+# apply check exposure function
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+dog_pop_deprivation_enviro__early_rest_whole<- check_exposure2(dog_pop_deprivation_enviro_early_rest, columns_to_check, study_years,year_column)
+```
+
+### 5y prior to endpoint exposure
+
+```{r}
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#delete rows with NA of record date in it in the indoors_outdoors
+indoors_outdoors2 <- indoors_outdoors %>%
+  filter(!is.na(record_date))
+#join records - do it this way so that each of the years of study for enviro exposures are retained 
+exposure <- left_join(indoors_outdoors2,dog_pop_deprivation,by="subject_id")
+
+#then fill in all rows for that patient with its diagnosis date (or else lose all the rwos except 1 for each dog)
+exposure <- exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year_month,.direction="downup")
+exposure <- exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year,.direction="downup")
+exposure <- exposure %>%
+  group_by(subject_id)%>%
+  fill(diagnosis_year_month_date2,.direction="downup")
+
+
+dog_pop_deprivation_2 <- years_prior_to(dog_pop_deprivation,diagnosis_year,5)
+# Specify the columns to check
+columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
+                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
+                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
+
+#code to check for all relevant columns 
+exposure_years <-5
+dog_pop_deprivation_enviro5y<- check_exposure(exposure, columns_to_check, diagnosis_year, exposure_years)
+
+#strip down to single row for each dog
+```
+
+Tidy column outputs from these functions:
+
+Want to recode study years 0,1,2,3,4,5,6,7,8,9,10 = whole study period, 0,1,2 = early life, 3,4,5,6,7,8,9,10 = rest of life
+
+```{r}
+dog_pop_deprivation_enviro__early_rest_whole
+
+print(colnames(dog_pop_deprivation_enviro__early_rest_whole))
+
+dog_pop_deprivation_enviro__early_rest_whole2 <- dog_pop_deprivation_enviro__early_rest_whole %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+dog_pop_deprivation_enviro__early_rest_whole3 <- dog_pop_deprivation_enviro__early_rest_whole2 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+dog_pop_deprivation_enviro__early_rest_whole4 <- dog_pop_deprivation_enviro__early_rest_whole3 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(dog_pop_deprivation_enviro__early_rest_whole4))
+
+```
+
+#### Hours of smoke exposure - early, rest, whole, 5y prior
+
+##### 5y prior
+
+```{r}
+#remove rows that say see detail rows as these are meaningless - this may have been done in an earlier tidying step
+smoking_df <- dog_pop_deprivation_enviro__early_rest_whole4%>%
+  filter(!grepl("see detail rows", hours_of_smoke))
+#convert column to numeric now
+smoking_df <- smoking_df %>% 
+  mutate(hours_of_smoke= as.numeric(hours_of_smoke))
+
+#create a record_year variable 
+#had to use lubridate not as.POSIX for getting character string into date
+smoking_df <- smoking_df %>% 
+  mutate(record_date2=ym(record_date)) %>%
+  mutate(record_year = as.numeric(format(record_date2, "%Y")))
+  
+# function to calculate hours of smoke exposed to prior to diagnosis 
+#dosage function applied 
+smoking_df2 <- exposure_dosage(smoking_df,"hours_of_smoke","record_year","diagnosis_year")
+
+```
+
+##### early
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(0,1,2)
+smoking_df3 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
+```
+
+##### rest
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(3,4,5,6,7,8,9,10)
+smoking_df4 <- exposure_dosage2(smoking_df3,"hours_of_smoke",study_years)
+
+```
+
+##### whole
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+smoking_df5 <- exposure_dosage2(smoking_df4,"hours_of_smoke",study_years)
+```
+
+```{r}
+smoking_df6 <- smoking_df5 %>%
+  rename("hours_of_smoke_early_life_total_dosage"= "hours_of_smoke_0_1_2_total_dosage") %>%
+  rename("hours_of_smoke_rest_of_life_total_dosage" = "hours_of_smoke_3_4_5_6_7_8_9_10_total_dosage") %>%
+  rename("hours_of_smoke_whole_life_total_dosage"= "hours_of_smoke_0_1_2_3_4_5_6_7_8_9_10_total_dosage")
+
+print(colnames(smoking_df6))
+```
+
+Now tidy these dfs down to 1 row per dog and same for the 5y prior endpoint variable then combine
+
+```{r}
+#all the binary for 5y prior to endpoint here
+dog_pop_deprivation_enviro5y_distinct <- dog_pop_deprivation_enviro5y %>% distinct(subject_id,.keep_all = TRUE) 
+#keep only the rows not in the smoking_hours_df_below
+dog_pop_deprivation_enviro5y_distinct <- dog_pop_deprivation_enviro5y_distinct %>% dplyr::select(c(subject_id,use_aerosol_5y,use_air_cleaner_5y,use_hepa_filter_5y,use_moth_balls_5y,use_incense_or_candles_5y,smoke_exposure_5y,any_treated_weeds_5y,any_treated_insects_5y,any_treated_fertilizer_5y))
+
+#smoking hours df 
+smoking_df6_distinct <- smoking_df6 %>% distinct(subject_id,.keep_all = TRUE)
+
+#combine all 
+dog_pop_deprivation_enviro_smoking_all <- dog_pop_deprivation_enviro5y_distinct  %>% left_join(smoking_df6_distinct , by = "subject_id")
+```
+
+### Sleep location
+
+NB. Lots of dogs have multiple 'specific_sleep_location' for same record year.
+
+```{r}
+sleep <- sleep_environment %>% select(c(subject_id,year_in_study,record_date,sleep_location,specific_sleep_location))
+
+
+#set indoors outdoors date column as date then parse year from it
+sleep$record_date2 <-parse_date_time(sleep$record_date,"ym")
+#parse year from
+sleep <- sleep %>% 
+  mutate(exposure_year = as.numeric(format(record_date2, "%Y")))
+
+#how many sleep locations are there
+table(sleep_environment$sleep_location)
+
+#some patients have duplicate rows within a year ?/there are no differences between the rows so going to remove all rows where the row above is identical
+
+sleep <- unique(sleep)
+
+# 3 locations , need to create 3 columns with a Y/N for each location before then calculating exposure to it
+
+# Specify outcomes for the function
+desired_outcomes <- c("in the garage", "in the house", "outside")
+
+# Applying the function
+sleep2 <- split_column(sleep, sleep$sleep_location, desired_outcomes)
+```
+
+```{r}
+sleep_smoking_enviro <- left_join(sleep2,dog_pop_deprivation_enviro_smoking_all,by=c("subject_id","year_in_study"))
+# remove the .x suffix
+sleep_smoking_enviro <- sleep_smoking_enviro %>%
+  rename_at('exposure_year.x',~'exposure_year')
+```
+
+#### early
+
+```{r}
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+
+
+sleep_smoking_enviro_early<- check_exposure2(sleep_smoking_enviro, columns_to_check, study_years,year_column)
+    
+```
+
+#### rest of life
+
+```{r}
+#read in function file for all GRLS functions:
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+sleep_smoking_enviro_early_rest<- check_exposure2(sleep_smoking_enviro_early, columns_to_check, study_years,year_column)
+```
+
+#### whole life
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+# apply check exposure function
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+
+
+sleep_smoking_enviro_early_rest_whole <- check_exposure2(sleep_smoking_enviro_early_rest, columns_to_check, study_years,year_column)
+```
+
+#### 5y prior
+
+```{r}
+#5
+columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
+
+exposure_years <- 5
+
+sleep_smoking_enviro_early_rest_whole_5y <- check_exposure(sleep_smoking_enviro_early_rest_whole, columns_to_check, diagnosis_year, exposure_years)
+```
+
+Recoding column names for tidyness
+
+```{r}
+print(colnames(sleep_smoking_enviro_early_rest_whole_5y))
+
+sleep_smoking_enviro_early_rest_whole_5y2 <- sleep_smoking_enviro_early_rest_whole_5y %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+sleep_smoking_enviro_early_rest_whole_5y2<- sleep_smoking_enviro_early_rest_whole_5y2 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+sleep_smoking_enviro_early_rest_whole_5y2 <- sleep_smoking_enviro_early_rest_whole_5y2%>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(sleep_smoking_enviro_early_rest_whole_5y2))
+```
+
+#### Main sleep location for whole lifetime only
+
+```{r}
+#initially checking that there is variation in locaiton for the dogs sleep location
+multi_location_count <- sleep_smoking_enviro_early_rest_whole_5y2 %>%
+  group_by(subject_id,sleep_location) %>%
+   summarise(count = n())
+print(multi_location_count)
+#there is, although infrequent 
+# edit above code to determine majority location
+columns_to_count <- c("in the garage_YN","in the house_YN","outside_YN")
+
+
+
+sleep_smoking_enviro_early_rest_whole_5y3 <- majority_location(sleep_smoking_enviro_early_rest_whole_5y2,columns_to_count)
+```
+
+Combine back to other df
+
+```{r}
+
+dog_pop_deprivation_enviro_smoking_sleep_all <- dog_pop_deprivation_enviro_smoking_all %>% left_join(sleep_smoking_enviro_early_rest_whole_5y3, by="subject_id")
+```
+
+## Lifestyle
+
+-   like with the enviro exposures/sleep data, no dogs are missing this bit of data so there will not be a "not_recorded/records_not_available" category
+
+```{r}
+lifestyle <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifestyle.csv",na.strings=c ("","NA"))
+
+#check if all dogs have lifestyle recorded - they do
+unique_lifestyle <- unique(lifestyle$subject_id)
+# groupings
+
+
+companion <- c("companion/pet")
+
+therapy <- c("therapy dog", "greeter", "service dog", "blood donor", "ambassador", "service dog, therapy dog")
+
+breeding <- c("breeder", "retired breeder")
+
+competitive <- c("dog athlete", "show", "agility", "field trials", "rally", 
+                 "field trials, obedience", "barn hunt, rally, scent work", 
+                 "agility, companion/pet, rally, tracking", "agility, scent work", 
+                 "agility, hunt test, obedience, scent work", 
+                 "hunt test, obedience, scent work", "agility, companion/pet, hunt test", 
+                 "obedience", "hunt test", "actor/model", "dock diving", 
+                 "dock diving, scent work", "barn hunt", "scent work", 
+                 "dock diving, scent work", "barn hunt, scent work", 
+                 "hunt test, scent work", "scent work, therapy dog")
+
+working <- c("tracking", "search and rescue", "hunting", "fishing dog", "scent work, tracking")
+
+no_lifestyle_misc <- c("none", NA, "other", "receiving medical treatment", "retired from akc activities")
+
+all_groups <- c(companion, therapy, breeding, competitive, working, no_lifestyle_misc)
+
+
+```
+
+Majority lifestyle
+
+```{r}
+main_lifestyle <- lifestyle %>%
+  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
+  group_by(subject_id) %>%                                # Group by subject_id
+  slice_max(n, with_ties = FALSE) %>%                    # Get the lifestyle with the max count, no ties
+  ungroup() %>%                                           # Ungroup for a clean output
+  select(subject_id, lifestyle)                           # Select relevant columns
+
+# View the result
+print(main_lifestyle)
+
+main_lifestyle <- main_lifestyle %>%
+  rename(main_lifestyle = lifestyle)
+```
+
+Further division of main lifestyle into larger groups
+
+```{r}
+competitive <-c("agility","dog athlete", "field trials","obedience","hunt test","demonstration dog","tracking")
+working <-c("hunting","search and rescue","service dog")
+breed_showing <- c("breeder","show")
+misc <- c("other","therapy dog")
+companion <- "companion/pet"
+
+all_groups <- c(competitive, working,breed_showing,misc,companion)
+
+```
+
+```{r}
+
+
+main_lifestyles_combined <- lifestyle %>%
+  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
+  group_by(subject_id) %>%                                # Group by subject_id
+  slice_max(n, n = 2, with_ties = TRUE) %>%              # Get the top 2 lifestyles by count, allowing ties
+  summarise(main_lifestyles = paste(lifestyle, collapse = ", "), # Combine into a single string
+            .groups = 'drop')                             # Drop grouping
+
+# View the result
+print(main_lifestyles_combined)
+print(table(main_lifestyles_combined$main_lifestyles))
+
+# add main lifestyle df in left join to original lifestyle df
+
+
+lifestyle2 <- lifestyle %>%
+  left_join(main_lifestyle, by = "subject_id")  
+
+lifestyle2 <- lifestyle2 %>%
+  dplyr::select(c(subject_id,year_in_study,record_date,lifestyle,main_lifestyle,main_lifestyle))
+
+  
+  
+lifestyle3 <- lifestyle2 %>%
+  mutate(main_lifestyle_category = case_when(
+    str_detect(main_lifestyle, paste(competitive, collapse = "|")) ~ "competitive",
+    str_detect(main_lifestyle, paste(working, collapse = "|")) ~ "working",
+    str_detect(main_lifestyle, paste(breed_showing, collapse = "|")) ~ "breed/showing",
+    str_detect(main_lifestyle, paste(misc, collapse = "|")) ~ "miscellaneous",
+    main_lifestyle == companion ~ "companion/pet",
+    TRUE ~ "other"  # For any lifestyle not matching the above categories
+  ))
+
+# View the updated dataframe
+print(lifestyle3)
+
+table(lifestyle3$main_lifestyle_category)
+
+
+#keep one row for each dog
+lifestyle_by_dog <- lifestyle3 %>%
+  distinct(subject_id, .keep_all = TRUE)
+```
+
+Add back to previous enviro df
+
+```{r}
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_all %>%
+  left_join(lifestyle_by_dog,by="subject_id")
+```
+
+Tidy up some values that are messy
+
+```{r}
+#replace all not withins
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 3,4,5,6,7,8,9,10 years", "Not within rest of life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2 years", "Not within early life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2,3,4,5,6,7,8,9,10 years", "Not within whole life")))
+
+#all withins
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 3,4,5,6,7,8,9,10 years", "Within rest of life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2 years", "Within early life")))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
+    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2,3,4,5,6,7,8,9,10 years", "Within whole life")))
+```
+
+## Household exposures 
+
+House datasets
+
+```{r}
+
+house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+house<- house %>%
+  mutate(across(where(is.character), tolower))
+location <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv")
+location <- location %>%
+  mutate(across(where(is.character), tolower))
+
+
+#recode NAs and blank cells in df as "no_records_available"
+house <- house %>%
+  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
+                ~ replace(., is.na(.) | . == "", "no_records_available")))
+
+location <- location %>%
+  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
+                ~ replace(., is.na(.) | . == "", "no_records_available")))
+```
+
+Variables to create:
+
+-   fuel - heating and cooking and primary and secondary sources
+
+-   pipe type
+
+-   water source
+
+-   house type
+
+-   area type
+
+Some of the data is a bit untidy - heating, water etc. so need to tidy these up
+
+#### Tidying up heating type into groups
+
+```{r}
+#reclass heating into these
+#class all the others into the main categories
+electric <- c("electric", "geothermal electric", "electric but geothermal", "elec gerothermal", "Electric Heat Pump","electric fire place","electric/induction (magnetic)","induction cooktop","microwave","electric/microwave","microwave (electric)","george forman grill","microwave?","microwave and electric oven", "microwave oven")
+natural_gas <- c("natural gas boiler", "gas hydronic heat system", "gas forced air", "gas-heated hot water", "gas heated hot water","hot water heated by natural gas","in floor hot water heating from gas","in floor hot water heating with natural gas","	
+hot water heated floors  water heated by natural gas","infloor hot water heating  water heated w/gas","inflor heating with hot water heated by a gas furnace","infloor heating with natural gas no forced air furnace","	boiler system fueled by propane","hydronic heat fueled by propane h2o heaters","hydronic in floor heating fueled by propane", "radiant floor heat powered by propane boiler","in floor heating with natural gas","radiant water via natural gas","boiler system fueled by propane","natural gas fireplace little use","occassionally gas fireplace","propane until 1 year ago-switched to natural gas","natural gas for water heater, dryer and fireplace (turned off),; i often 'smell gas,' but gas co. has not found leaks","water/propane (boiler unit)","natural gas and electric","outdoor gas grill","natural gass grill")
+oil <- c("oil", "oil fired hot water","kerosene","kerosine","kerosens","kerosene for emergencies","small oil radiator","free satnding plug in oil heater","electric oil units","kerosene heaters/hardly ever used")
+propane <- c("propane", "hydronic heat fueled by propane", "radiant floor heat powered by propane boiler","outdoor grill propane")
+wood <- c("wood", "wood pellets","wood pellet", "wood pellet stove", "hot water from outside wood furnace", "outside wood furnace","pellets","hot water heated by outside wood furnace","outside wood stove","outside woodstove", "hot water from outside wood furnace", "pellet stove","occasional wood stove", "fireplace wood", "pellets and wood stoves","charcoal","grill(charcoal)","smoker","barbecue","charcoal / wood grill","smoker grill", "charcol","bbq - pellets","bbq - wood pellets","charcoal grill", "wood - outdoor grill", "charcoal barbecue", "charcoal and wood chips", "charcoal grill outside", "charcoal/wood","charcoal with propane starter", "wood pellt bbq", "charcoal grille", "bbq wood pellets","grilling,charcoal", "grilol charcol", "wood chips","w00d")
+renewables <- c("solar","passive solar", "geothermal","radiant/geo thermal","	geo-thermal","geo thermal","geothermal heat pumps","geo heat pump","gio thurmo","gio thurmal","gio thurmal","giothurmal","ground source heat pump","inground heat pump","inground heat pump source","in ground heat pump","geothermal/electric heat exchanger","geothermal heat exchange","geothermal heat pump", "geo thermal heat pump","heat exchanger with geothermal", "	gero thermal - electric","geo-thermal",
+                "geothermal heat pumps","sun", "geo heat pump","geothermal heating","gerothermal","solar hot water","geo thurmo","geo-thermal","giothurmal","gero thermal - electric","passive solar")
+no_records_available <- c("no_records_available")
+
+#primary heating  
+house <- house %>%
+  mutate(heating_fuel_primary = case_when(
+    heating_fuel_primary_other %in% electric ~ "electric",
+    heating_fuel_primary_other %in% natural_gas ~ "natural_gas",
+    heating_fuel_primary_other %in% oil ~ "oil",
+    heating_fuel_primary_other %in% propane ~ "propane",
+    heating_fuel_primary_other %in% wood ~ "wood",
+    heating_fuel_primary_other %in% renewables ~ "renewable",
+    TRUE ~ heating_fuel_primary
+  ))
+  
+#secondary heating
+house <- house %>%
+  mutate(heating_fuel_secondary = case_when(
+    heating_fuel_secondary_other %in% electric ~ "electric",
+    heating_fuel_secondary_other %in% natural_gas ~ "natural_gas",
+    heating_fuel_secondary_other %in% oil ~ "oil",
+    heating_fuel_secondary_other %in% propane ~ "propane",
+    heating_fuel_secondary_other %in% wood ~ "wood",
+    heating_fuel_secondary_other %in% renewables ~ "renewable",
+    TRUE ~ heating_fuel_secondary
+  ))
+#primary cooking
+
+house <- house %>%
+  mutate(cooking_fuel_primary = case_when(
+    cooking_fuel_primary_other %in% electric ~ "electric",
+    cooking_fuel_primary_other %in% natural_gas ~ "natural_gas",
+    cooking_fuel_primary_other %in% oil ~ "oil",
+    cooking_fuel_primary_other %in% propane ~ "propane",
+    cooking_fuel_primary_other %in% wood ~ "wood",
+    cooking_fuel_primary_other %in% renewables ~ "renewable",
+    TRUE ~ cooking_fuel_primary
+  ))
+  
+
+```
+
+#### Tidying up pipe types
+
+```{r}
+metal <-c("mix of copper and pvc","mixed copper and pvc","galvinazed iron","salvanized",
+          "some copper, some pvc","both copper & plastic","metal and pvc","iron","iron and copper","lead probably", "lead","galvanized steel","copper and plastic", "some copper/some pvc", "mixture of all above","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc", "galvanized","cast iron","copper/metal/pvc","cast","pex and copper","pex, cu",
+          "pex, with copper manifolds", "galvenized steel","galvinized", "copper and pvc","copper/metal and pvc/plastic", "both copper and pvc","maybe copper/metal also" , "some copper", "copper, cpvc","both metal and plastic","probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc", "galvenized" , "copper, pvc and metal","copper/pvc", "pvc & copper" , "copper and pvc" , "copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" , "copper & pvc", "steel"  )
+plastic <-c("mix of copper and pvc","mixed copper and pvc","pex","pec", "some copper, some pvc",
+            "both copper & plastic","metal and pvc", "copper and plastic", "some copper/some pvc", "mixture of all above", "k-peck","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc","copper/metal/pvc","pex and copper", "pe","pex, cu","pex, with copper manifolds","pecs","poly", "copper and pvc", "pvc","cvc", "copper/metal and pvc/plastic", "both copper and pvc", "cpvc", "pvex", "pvc and copper", "copper, cpvc", "cpcv","both metal and plastic", "probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc" , "polybutylene", "copper, pvc and metal", "copper/pvc" , "pvc & copper", "copper and pvc" , "plex","pic system","pec system","plastic","copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" ,"copper & pvc", "peg", "pec plastic", "pex tubing")
+
+house <- house %>%
+  mutate(pipes_metal_any = case_when(
+    pipes_other_specify %in% metal ~ 1,
+    sec_pipes_other_specify %in% metal ~1,
+    pipes_copper_metal == 1 ~ 1,
+    sec_pipes_copper_metal == 1 ~1,
+    TRUE ~ 0
+  ))
+
+house <- house %>%
+  mutate(pipes_metal_any = case_when(
+    pipes_other_specify %in% metal ~ "1",
+    sec_pipes_other_specify %in% metal ~ "1",
+    pipes_copper_metal == "1" ~ "1",
+    sec_pipes_copper_metal == "1" ~ "1",
+    pipes_other_specify == "no_records_available" |
+      sec_pipes_other_specify == "no_records_available" |
+      is.na(pipes_copper_metal) |
+      is.na(sec_pipes_copper_metal) ~ "no_records_available",
+    TRUE ~ "0"  # keep "0" as a character for consistency
+  ))
+
+house <- house %>%
+  mutate(pipes_metal_any = case_when(
+    #only keeping the no_records_available for these columns as the specify columns are super messy and missing loads 
+    pipes_copper_metal == "no_records_available" | 
+    sec_pipes_copper_metal == "no_records_available" ~ "no_records_available",
+    pipes_other_specify %in% metal ~ "1",
+    sec_pipes_other_specify %in% metal ~ "1",
+    pipes_copper_metal == "1" ~ "1",
+    sec_pipes_copper_metal == "1" ~ "1",
+    TRUE ~ "0"
+  ))
+
+
+
+house <- house %>%
+  mutate(pipes_plastic_any = case_when(
+        pipes_pvc_plastic == "no_records_available" | 
+    sec_pipes_pvc_plastic == "no_records_available" ~ "no_records_available",
+    pipes_other_specify %in% plastic ~ "1",
+    sec_pipes_other_specify %in% plastic ~"1",
+    pipes_pvc_plastic == "1" ~ "1",
+    sec_pipes_pvc_plastic == "1" ~ "1", 
+    TRUE ~ "0"
+  ))
+```
+
+#### Water source tidying/reclassifying
+
+-   In the United States, "municipal water" refers to the public water supply system that provides drinking water to homes, businesses, and other facilities within a city or town. It is managed by local government or utility companies and is typically sourced from rivers, lakes, reservoirs, or groundwater. Municipal water is treated to meet safety standards set by the Environmental Protection Agency (EPA) to ensure it is safe for consumption and use. The term "municipal" indicates that the water is supplied and regulated by a local government authority rather than being privately sourced or managed.
+
+-   Choose to group:
+
+    -   municipal, groundwater, spring and surface, bottled, rainwater and cistern
+
+```{r}
+
+municipal <-c("municipal","municipal at home, well at work with me daily","municipal well","filtered municipal","municipal from lake","municipal filtered via reverse osmosis","municiapl wells with home filtration system","municipal with town well water","highly filtered municipal","private through municipal","municipal and well","both municipal and well","municipal and private well","municipal filtered","municipal with a reverse osmosis filtration unit","municipal but reverse osmosis filtered","filtered muni water","municipal but reverse osmosis water system")
+groundwater <-c("well","ground","underground aquifers","underground aquifer","community owned wells","town well water","town well","community well w/chlorine","community well chlorine filter","subdivision well","community well for subdivision  has chloroine  we filter all chlorine out and have a filtration system","well water with chlorine filter","comunity well with a clorine station  we have a filter in our home to filter out the chlorine","well and municipal","both well and municipal","well 50%, municipal 50%", "fox river and well","1/2 well 1/2 municipal","reverse osmosis from well","aquifer","town wells"," community well, treated & filtered", "wel and municipal","well and spring","well water goes to municipal","community well water","well/bottle/city","aquafer")
+spring_surface <-c("berkeley springs spring water","spring","hicknley springs","spring water","lake water via city","neighborhood water tanks from lake tahoe water","lake tahoe","lake michigan","natural spring","spring on property", "lake filtered/treated","lake filtered system")
+bottled<-c("bottled","bottled spring water","bottled water","bottled water/municipal",".bottle","bottled spring","dogs drink bottled","bottled and municipal")
+rainwater_cistern<-c("cistern", "rain fed cistern","rain fed cistern filtered and uv sanitized","uv and filtered rain filled cistern","rain water","rain","rain water tanks","rainwater","rain water ")
+
+
+house <- house %>%
+  mutate(water_source_2 = case_when(
+    water_source_other %in% municipal ~ "municipal",
+    water_source_other %in% groundwater ~ "groundwater",
+    water_source_other %in% spring_surface ~ "spring_surface",
+    water_source_other %in% bottled ~ "bottled",
+    water_source_other %in% rainwater_cistern ~ "rainwater_cistern",
+    TRUE ~ water_source
+  ))
+
+
+
+```
+
+Mode exposure value calculations
+
+-   rather than early, rest,whole, 5y prior as not that much variation across
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#early life
+columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+
+
+#rest of life
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+
+#late life
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
+```
+
+Tidy names
+
+```{r}
+print(colnames(house))
+
+
+
+house_tidy <- house %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+house_tidy <- house_tidy%>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+house_tidy <- house_tidy %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(house_tidy))
+```
+
+#### House mean age
+
+```{r}
+
+
+house_tidy <- house_tidy %>%
+  group_by(subject_id) %>%
+  mutate(
+    avg_house_age = mean(
+      # convert "no_records_available" to NA, others to numeric
+      as.numeric(ifelse(house_age == "no_records_available", NA, house_age)),
+      na.rm = TRUE
+    )
+  )
+```
+
+#### Majority region/state/zip in study
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+#early life
+columns_to_check <- c("region_name","state","zip")
+
+study_years <- c(0,1,2)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+
+
+#rest of life
+study_years <- c(3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+
+#late life
+study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
+
+year_column <-"year_in_study"
+location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
+```
+
+Tidy up names
+
+```{r}
+
+result_df3 <- location %>%
+    rename_with(
+      ~ gsub("_0_1_2$", "_early_life", .), 
+      ends_with("_0_1_2")
+    ) 
+
+result_df3 <- result_df3 %>%
+  rename_with(
+      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
+      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
+    ) 
+  
+result_df3 <- result_df3 %>%
+    rename_with(
+      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
+      ends_with("_3_4_5_6_7_8_9_10")
+    )
+#check renaming all OK
+print(colnames(result_df3))
+```
+
+Combine house data, location data and enviro/smoke/sleep/deprivation df
+
+```{r}
+#make distinct house and locaiton dfs with 1 row per dog
+location_distinct <- result_df3 %>%
+  distinct(subject_id,.keep_all = TRUE)
+house_tidy_distinct <- house_tidy %>%
+  distinct(subject_id,.keep_all = TRUE)
+#keep only relevant cols
+location_distinct_abr <- location_distinct %>%
+  dplyr::select(subject_id,13:25)
+house_tidy_distinct_abr <- house_tidy_distinct %>%
+  dplyr::select(c(subject_id,57:84))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>% left_join(location_distinct_abr,by="subject_id")
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>% left_join(house_tidy_distinct_abr,by="subject_id")
+```
+
+Code for 5y prior to endpoint calculations
+
+Determining most common exposure (mode) in the 5y prior to endpoint (year_in_study_diagnosis_or_final_record_year):
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+#add to house tidy the final record year column
+cohort_dogs_final_date <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>%
+  dplyr::select(c(subject_id,year_in_study_diagnosis_or_final_record_year))
+#join to house tidy
+house_tidy <- house_tidy %>% left_join(cohort_dogs_final_date,by="subject_id")
+house_tidy$year_in_study_diagnosis_or_final_record_year <-as.numeric(house_tidy$year_in_study_diagnosis_or_final_record_year)
+house_tidy$year_in_study <-as.numeric(house_tidy$year_in_study)
+#1 dog has an NA value for final diagnosis year replace with a 1
+house_tidy <- house_tidy %>%
+  mutate(year_in_study_diagnosis_or_final_record_year = replace_na(year_in_study_diagnosis_or_final_record_year, 1))
+
+columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
+cohort_house <- check_exposure_mode_X_prev_years(
+  data = house_tidy,
+  columns_to_check = columns_to_check,
+  year_range = 5, # Number of years prior to consider
+  year_column = "year_in_study_diagnosis_or_final_record_year",
+  study_year_column = "year_in_study"
+)
+
+#now keeping 1 row per dog
+cohort_house_per_dog <- cohort_house %>%
+  distinct(subject_id,.keep_all = TRUE)
+```
+
+Add back onto main df
+
+```{r}
+#keep only rel columns
+cohort_house_per_dog_abr <- cohort_house_per_dog %>%
+  dplyr::select(c(subject_id,86:94))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>% left_join(cohort_house_per_dog_abr,by="subject_id")
+```
+
+## Comorbidities 
+
+Load in all the comorbidity files:
+
+```{r}
+#read in all csvs that start with the string "conditions_
+folder_path <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data"
+
+# Get a list of all CSV files that start with "conditions_with"
+csv_files <- list.files(path = folder_path, pattern = "^conditions_.*\\.csv$", full.names = TRUE)
+
+for (file in csv_files) {
+  # Extract the file name (without the path and extension) for the data frame name
+  dataframe_name <- tools::file_path_sans_ext(basename(file))
+  
+  # Dynamically assign each file to a data frame with the extracted name
+  assign(dataframe_name, read.csv(file))
+}
+
+#remove not relevant ones
+rm(conditions_dictionary)
+
+
+#combine the comorbidities datasets
+comorbs_all <- cbind(conditions_cardio,conditions_dental,conditions_ear_nose_throat,conditions_endocrine,conditions_eye,conditions_gastrointestinal,conditions_hematologic,conditions_infectious,conditions_musculoskeletal)
+
+#remove duplicate subjectid columns
+comorbs_unique <- comorbs_all %>%
+  dplyr::select(unique(names(.)))
+
+
+```
+
+Comorbs to find:
+
+```{r}
+#potential chronic inflam conditions
+comorbs_to_find <-c("congestive_heart_failure",
+  "cardiomyopathy",
+  "hypertension",
+  "heartworm_infection",
+  "lower_airway_disease",
+  "dental_tarter_calculus",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "keratoconjunctivitis_sicca",
+  "pigmentary_uveitis",
+  "uveitis",
+  "chronic_colitis",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "pancreatitis",
+  "anaplasma",
+  "babesia",
+  "canine_herpesvirus",
+  "coccidia",
+  "cryptosporidium",
+  "ear_mites",
+  "ehrlichia",
+  "eimeria",
+  "fleas",
+  "fungal_infection",
+  "giardia",
+  "granuloma",
+  "hookworms",
+  "influenza",
+  "isospora",
+  "leptospirosis",
+  "lyme_disease",
+  "other_ectoparasite",
+  "parvovirus",
+  "rocky_mountain_spotted_fever",
+  "roundworms",
+  "tapeworms",
+  "ticks",
+  "tracheobronchitis",
+  "unspecified_gastrointestinal_parasite",
+  "valley_fever",
+  "whipworms",
+  "immune_related_musculoskeletal_disorder",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "laryngeal_paralysis",
+  "meningitis",
+  "meningoencephalitis",
+  "myasthenia_gravis",
+  "erythema_multiforme",
+  "flea_allergy_dermatitis",
+  "food_allergy_dermatitis",
+  "r_o_atopy")
+#specific comorb groups 
+intestinal_parasitism <- c("giardia", "hookworms", "coccidia", "tapeworms", "whipworms", "roundworms", "eimeria", "isospora","cryptosporidium","eimeria","tapeworms")
+tick_borne_parasitism <-c("lyme_disease", "anaplasma", "rocky_mountain_spotted_fever", "ticks", "ehrlichia", "lyme disease", "lyme diseases, oa?", "lyme/anaplasma", "lyme+", "anaplasma and lyme +", "positive anaplasma", "erlichia +", "erlichia","valley_fever","babesia","anaplasma","ehrlichia","lyme_disease")
+other_parasitism <-c("fleas", "fungal_infection", "heartworm", "ear_mites","other_ectoparasite","heartworm_infection")
+all_parasitism<-c("giardia", "hookworms", "coccidia", "tapeworms", "whipworms", "roundworms", "eimeria", "isospora","lyme_disease", "anaplasma", "rocky_mountain_spotted_fever", "ticks", "ehrlichia", "lyme disease", "lyme diseases, oa?", "lyme/anaplasma", "lyme+", "anaplasma and lyme +", "positive anaplasma", "erlichia +", "erlichia","fleas", "fungal_infection", "heartworm", "ear_mites","heartworm_infection","other_ectoparasite")
+infectious <- c("leptospirosis","parvovirus","bacterial cystitis/recurrent uti", "chronic uti's/ bacterial cystitis", "cystitis", "uti", "frequent utis", "previous utis", "chronic urinary incontinence","history of valley fever", "mma- coccidioides")
+orthopaedic <-c("osteoarthritis", "l ccl partial tear", "oa of stifle", "hip dysplasia", "right elbow dysplasia grade ii", "ccl rupture", "acl tear", "tendonitis/ arthritis", "arthritis- cervical neck spine", "lh partial ccl tear, lh iliopsoas injury", "chronic lameness- hx of car accident", "lameness","hypothyroidism, chronic lameness, obesity","overweight, arthritis","dvd, larpar", "seizures, oa","tail fracture", "broken leg, histiocytoma","osteochondritis_dissecans","intervertebral_disc_disease","lameness","musculoskeletal_pain","osteomyeltiis","cruciate_ligament_rupture","hip_dysplasia","elbow_dysplasia","crepitus_decreased_range_of_motion","bone_fractures","limber_tail_syndrome","panosteitis")
+immune_mediated <- c("uveitis", "autoimmune_thyroiditis", "keratoconjunctivitis_sicca", "megaesophagus", "diabetes_mellitus", "cushings_disease", "hypothyroidism", "granuloma", "immune complex formation", "suspected cushings/ thyroid carcinoma","dvd, larpar","immune_related_musculoskeletal_disorder","rheumatoid_arthritis","diabetes_insipidus","hypothyroidism","pancreatic_insuficiency","addisons_disease","autoimmune_thyroiditis","cushings_disease","hyperadrenalestrogenism","hypercalcemia")
+cardiovascular <- c("cardiomyopathy", "hypertension", "heart base tumor", "heart base mass", "mild degenerative valve disease", "degenerative mitral and tricuspid valve disease", "mitral valve disease", "pulmonary thrombosis", "portal vein thrombus","arrhythmia","atrial enlargement","cardiomegaly","cardiomyopathy","congestive_heart_failure","hypertension","murmur","lower_airway_disease","myocardial_dysfunction","pleural_effusion","pulmonic_stenosis","pneumothorax","pulmonic_stenosis","subaortic_stenosis","tachycardia","valvular_disease")
+gastrointestinal <-c("chronic_colitis", "pancreatitis", "malabsorptive_disorder", "chronic pancreatitis", "cystic endometrial hyperplasia", "intermittent mixed bowel diarrhea", "intermittent diarrhea - bacterial", "gastric ulcers","mesenteric volvulus","fb","esophagitis","diarrhea","dietary_indiscretion","food_sensitivity","gastrointestinal_foreign_body","gastorintestinal_ulcer","intussusception","malabsorptive_disorder","megaesophagus")
+
+inflammatory_other <- c("tracheobronchitis", "hypercalcaemia", "pigmentary_uveitis", "ear infections", "chronic pyoderma", "chronic pruritis", "chronic rhinitis/ nasal discharge", "allergy, obesity", "pruritis", "severe allergies", "atopy", "allergies, chronic otitis", "chronic hot spots, skin infections", "many pyodera/dermatitis events", "chronic otitis, allergic dermatitis", "dermatitis", "food allergy", "skin allergies", "chronic otitis, overweight", "atopic dermatitis, allergies", "seasonal allergies/pyoderma", "chronic otitis, chronic allergies", "dermatitis lip fold","anal sac infection","otitis_externa","otitis_media","aural_haematoma","aural_foreign_body","pharyngitis","rhinitis","hypercalcaemia","keratoconjunctivitis_sicca","hypercalcemia","influenza","parvovirus")
+
+
+chronic_inflammatory <-c("congestive_heart_failure",
+  "cardiomyopathy",
+  "hypertension",
+  "heartworm_infection",
+  "lower_airway_disease",
+  "dental_tarter_calculus",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "keratoconjunctivitis_sicca",
+  "pigmentary_uveitis",
+  "uveitis",
+  "chronic_colitis",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "pancreatitis",
+  "anaplasma",
+  "babesia",
+  "canine_herpesvirus",
+  "coccidia",
+  "cryptosporidium",
+  "ear_mites",
+  "ehrlichia",
+  "eimeria",
+  "fleas",
+  "fungal_infection",
+  "giardia",
+  "granuloma",
+  "hookworms",
+  "influenza",
+  "isospora",
+  "leptospirosis",
+  "lyme_disease",
+  "other_ectoparasite",
+  "parvovirus",
+  "rocky_mountain_spotted_fever",
+  "roundworms",
+  "tapeworms",
+  "ticks",
+  "tracheobronchitis",
+  "unspecified_gastrointestinal_parasite",
+  "valley_fever",
+  "whipworms",
+  "immune_related_musculoskeletal_disorder",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "laryngeal_paralysis",
+  "meningitis",
+  "meningoencephalitis",
+  "myasthenia_gravis",
+  "erythema_multiforme",
+  "flea_allergy_dermatitis",
+  "food_allergy_dermatitis",
+  "r_o_atopy")
+```
+
+#### Chronic inflam conditions ever in all years of study
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+
+conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
+
+comorbs_unique_2 <- comorbs_unique %>%
+  #get rid of the to_date row for each dog
+  filter(to_date !=1) %>%
+  #get rid of the NA rows in the dataset - then add in later at the 3044 level to be "no_records_available" across the comorbs
+  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
+###not using currently as want to keep the NA to tidy at end into "no_records_available"
+#comorbs_unique_2<- comorbs_unique_2%>%
+# replacing NA values with 0 across comorbidity columns
+ # mutate_at(vars(3:196), ~replace_na(., 0))
+
+
+#remove the rows in the comorbs_unique_2 that have got NAs across whole dataset for each dog. then when creating cohort variable at end can recode any of these dogs with no records as "no_records_available" (very few missing records across WHOLE study period, generally just occ year)
+
+cols_to_check <- c(7:21,164:196)
+comorbs_unique_2 <- comorbs_unique_2[complete.cases(comorbs_unique_2[, cols_to_check]), ]
+
+
+
+df_result2 <- comorbs_unique_2 %>%
+  group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present_lifetime = if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present_lifetime = if_else(
+      chronic_inflam_present_lifetime == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities_lifetime = if_else(
+      chronic_inflam_present_lifetime == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+
+
+```
+
+#### Comorbs in final 5y prior to endpoint
+
+```{r}
+#keeping record_date for linking up to cancer diagnosis but remove to_date column
+comorbs_unique_3 <- comorbs_unique %>%
+#  mutate_at(vars(5:200), ~replace_na(., 0)) %>%
+  filter(to_date !=1) %>%
+  dplyr::select(-c(relationship_category,to_date)) %>%
+  rename(year_in_study_comorb = year_in_study)
+cols_to_check <- c(5:23,26:164,165:198)
+comorbs_unique_3 <- comorbs_unique_3[complete.cases(comorbs_unique_3[, cols_to_check]), ]
+
+
+
+#run all functions above onto this dataset
+df_result3 <- comorbs_unique_3 %>%
+  group_by(subject_id) %>%
+  mutate(
+    #is there any chronic inflam condition present in at least 1 row for subject id
+    chronic_inflam_present_5y = if_else(
+      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
+        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
+      1, 
+      0
+    ),
+    #how many chronic inflam conditions
+    number_comorbs_present_5y = if_else(
+      chronic_inflam_present_5y == 1,
+      rowSums(across(all_of(conditions_in_df_and_list))),
+      0
+    ),
+    ,
+    #what were the comorbidities
+    comorbidities_5y = if_else(
+      chronic_inflam_present_5y == 1,
+      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      "")
+  ) %>%
+  ungroup()
+
+
+#keep only top 5 rows per patient 
+df_result_restricted <- df_result3 %>%
+  group_by(subject_id) %>%
+  filter(year_in_study_comorb %in% sort(unique(year_in_study_comorb), decreasing = TRUE)[1:5]) %>%
+  ungroup()
+  
+
+
+# Function to detect comorbidities for each subject_id based on index range
+detect_comorbidity <- function(df, subject_id_col, index_range, comorbidity_groups) {
+  # Extract actual column names within the index range
+  valid_columns <- colnames(df)[index_range]
+
+  df %>%
+    group_by(!!sym(subject_id_col)) %>%  # Group by subject_id
+    summarise(across(all_of(valid_columns), ~ any(. == 1), .names = "temp_{.col}"), .groups = "drop") %>%  # Check for 1s
+    mutate(
+      !!!map(comorbidity_groups, function(cols) {
+        # Identify valid columns that exist in the dataset
+        matched_cols <- intersect(paste0("temp_", cols), colnames(.))
+        
+        # Assign "Y" if any value in matched columns is 1, else "N"
+        if (length(matched_cols) > 0) {
+          ifelse(rowSums(dplyr::select(., all_of(matched_cols))) > 0, "Y", "N")
+        } else {
+          "N"  # If no matching columns exist, default to "N"
+        }
+      })
+    ) %>%
+    dplyr::select(-starts_with("temp_"))  # Remove temporary columns
+}
+
+# Define comorbidity groups (list of column names matching each category)
+comorbidity_groups <- list(
+  intestinal_parasitism = intestinal_parasitism,
+  tick_borne_parasitism = tick_borne_parasitism,
+  other_parasitism = other_parasitism,
+  all_parasitism = all_parasitism,
+  infectious = infectious,
+  orthopaedic = orthopaedic,
+  immune_mediated = immune_mediated,
+  cardiovascular = cardiovascular,
+  gastrointestinal = gastrointestinal,
+  inflammatory_other = inflammatory_other,
+  chronic_inflammatory = chronic_inflammatory
+)
+
+# Apply function to data
+GRLS_data <- df_result_restricted %>%
+  left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
+            by = "subject_id")
+
+
+#keep only a single row for each patient
+# Define the index range of comorbidity columns
+comorbidity_index <- c(199:212)  # Keep subject_id out of this list
+
+# Create a second dataframe with one row per subject_id, summarizing only the selected columns - not using this as need to ensure rows with a 1 are preferentially kept
+#GRLS_summary <- GRLS_data %>%
+#  group_by(subject_id) %>%
+#   arrange(desc(number_comorbs_present_5y)) %>%
+#  summarise(
+#    subject_id = first(subject_id),  # Keep subject_id as is
+#    across(all_of(colnames(GRLS_data)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
+ #   .groups = "drop"
+ # )
+
+
+GRLS_summary <- GRLS_data %>%
+  group_by(subject_id) %>%
+  arrange(desc(number_comorbs_present_5y)) %>%  # prioritise higher values
+  slice(1) %>%  # keep only the top row per subject
+  ungroup()
+
+
+### recode any NA as "no_record_available"
+GRLS_summary <- GRLS_summary%>%
+  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
+                ~ replace(., is.na(.) | . == "", "no_records_available")))
+```
+
+There are also a separate subset of conditions that if ever reported as diagnosed then will have for life (so do not need \>1 y study records with it available):
+
+```{r}
+comorbs_single_record <- c(
+  "atrial_enlargement",
+  "cardiomegaly",
+  "cardiomyopathy",
+  "congestive_heart_failure",
+  "hypertension",
+  "myocardial_dysfunction",
+  "valvular_disease",
+  "addisons_disease",
+  "autoimmune_thyroiditis",
+  "cushings_disease",
+  "diabetes_insipidus",
+  "diabetes_mellitus",
+  "hyperadrenalestrogenism",
+  "hypercalcemia",
+  "hypothyroidism",
+  "pancreatic_insufficiency",
+  "cataracts",
+  "glaucoma",
+  "keratoconjunctivitis_sicca",
+  "progressive_retinal_atrophy_or_degeneration",
+  "pigmentary_uveitis",
+  "lymphangiectasia",
+  "malabsorptive_disorder",
+  "megaesophagus",
+  "motility_disorder",
+  "elbow_dysplasia",
+  "hip_dysplasia",
+  "osteoarthritis",
+  "rheumatoid_arthritis",
+  "spondylosis"
+)
+
+#identify in records
+
+comorbs_ever <- comorbs_unique %>%
+  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
+
+#comorbs_ever<- comorbs_ever%>%
+# replacing NA values with 0 across comorbidity columns
+ # mutate_at(vars(3:196), ~replace_na(., 0))
+
+
+### restrict columns so that those with all NAs are removed and then can recode back as "no_records_available" later
+cols_to_check <- c(3:21,24:162,164:196)
+comorbs_ever<- comorbs_ever[complete.cases(comorbs_ever[, cols_to_check]), ]
+
+#remove all the columns that are not in comorbs_single_record list or subject_id
+comorbs_ever <- comorbs_ever %>%
+  dplyr::select(subject_id, all_of(comorbs_single_record))
+
+#
+lifetime_comorbs_ever <- comorbs_ever %>%
+  group_by(subject_id) %>%
+  mutate(
+    ## ANY lifetime comorb inflam present
+    lifelong_comorb_present = if_else(rowSums(across(all_of(comorbs_single_record))) > 0, 1, 0),
+    
+    ### NUMBER OF chronic inflam conditions present
+    number_lifelong_comorbs_present = rowSums(across(all_of(comorbs_single_record))),
+    
+    # what were the comorbidities
+    lifelong_comorbidities = if_else(
+      lifelong_comorb_present == 1,
+      apply(across(all_of(comorbs_single_record)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
+      NA_character_
+    )
+  ) %>%
+  ungroup()
+
+#keep count of comorbs and if present and then only a unique row for each patient
+lifetime_comorbs_ever_abr <- lifetime_comorbs_ever %>%
+    dplyr::select(c(subject_id,lifelong_comorb_present,number_lifelong_comorbs_present))%>%
+  group_by(subject_id) %>%
+  arrange(desc(number_lifelong_comorbs_present)) %>%  # prioritise higher values
+  slice(1) %>%  # keep only the top row per subject
+  ungroup()
+```
+
+Grouping the lifelong_comorbidities column into type of condition e.g endocrine, ocular etc based on earlier lists
+
+```{r}
+
+valid_comorbidity_groups <- lapply(comorbidity_groups, function(cols) {
+  intersect(cols, colnames(lifetime_comorbs_ever))  # Keep only columns that exist in df
+})
+
+# Remove empty comorbidity groups
+valid_comorbidity_groups <- valid_comorbidity_groups[lengths(valid_comorbidity_groups) > 0]
+
+
+
+
+
+# Compute 'lifetime' flags for each comorbidity category
+df_lifetime <- lifetime_comorbs_ever %>%
+  group_by(subject_id) %>%
+  summarise(across(everything(), \(x) max(x, na.rm = TRUE))) %>%  # Collapse per patient (1 if present, 0 otherwise)
+  mutate(!!!setNames(
+    lapply(valid_comorbidity_groups, function(cols) {
+      if (length(cols) > 0) {
+        as.integer(rowSums(.[cols], na.rm = TRUE) > 0)  # Correctly sum across selected columns
+      } else {
+        rep(0, n())  # Handle cases where no valid columns exist
+      }
+    }),
+    paste0("lifelong_", names(valid_comorbidity_groups))  # Create new column names
+  )) %>%
+  select(subject_id, starts_with("lifelong_"))  # Keep only new columns
+
+# View output
+print(df_lifetime)
+```
+
+Combine the lifetime_comorbs_ever_abr and df_lifetime so that we have counts and groupings of these comorbs:
+
+```{r}
+lifelong_data <- df_lifetime %>%
+  left_join(lifetime_comorbs_ever_abr,by="subject_id")
+
+lifelong_data <- lifelong_data %>%
+  dplyr::select(-c(lifelong_comorb_present.y))
+
+
+GRLS_summary_lifelong<- lifelong_data %>%
+  left_join(GRLS_summary,by="subject_id")
+
+#add in _5y to the GRLS summary columns that are from 5y prior to final record
+colnames(GRLS_summary_lifelong)[211:221] <- paste0(colnames(GRLS_summary_lifelong)[211:221], "_5y")
+
+```
+
+Lifetime comorbs now classify into the parasitism/infectious/cardio/ etc
+
+```{r}
+
+# Apply function to data
+GRLS_data_lifetime <- df_result3 %>%
+  left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
+            by = "subject_id")
+
+#add in _5y to the GRLS summary columns that are from 5y prior to final record
+#colnames(GRLS_data_lifetime)[202:212] <- paste0(colnames(GRLS_data_lifetime)[202:212], "_5y")
+
+#keep only a single row for each patient
+# Define the index range of comorbidity columns
+comorbidity_index <- c(199:212)  # Keep subject_id out of this list
+
+# Create a second dataframe with one row per subject_id, summarizing only the selected columns
+GRLS_summary_lifetime <- GRLS_data_lifetime %>%
+  group_by(subject_id) %>%
+  summarise(
+    subject_id = first(subject_id),  # Keep subject_id as is
+    across(all_of(colnames(GRLS_data_lifetime)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
+    .groups = "drop"
+  )
+#add lifetime to end of columns at 5:15 indices
+names(GRLS_summary_lifetime)[5:15] <- paste0(names(GRLS_summary_lifetime)[5:15], "_lifetime")
+
+```
+
+Combine lifelong and 5y values into one as consider these comorbs to be permanent once diagnosed:
+
+```{r}
+#mutate the Y N in 5y cols to be 0 and 1 for counting in next step
+
+
+
+GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
+  mutate(across(c(4:9, 211:221), ~ case_when(
+    . == "N" ~ 0,
+    . == "Y" ~ 1,
+    TRUE ~ as.numeric(.)
+  )))
+
+#combining counts in 5y columns and then remove the lifelong ones 
+GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
+  mutate(
+    orthopaedic_5y2 = pmax(lifelong_orthopaedic, orthopaedic_5y, na.rm = TRUE),
+    cardiovascular_5y2=pmax(lifelong_cardiovascular,cardiovascular_5y,na.rm=TRUE),
+    immune_mediated_5y2=pmax(lifelong_immune_mediated,immune_mediated_5y,na.rm=TRUE),
+    gastrointestinal_5y2=pmax(lifelong_gastrointestinal,gastrointestinal_5y,na.rm=TRUE),
+    inflammatory_other_5y2=pmax(lifelong_inflammatory_other,inflammatory_other_5y,na.rm=TRUE),
+    chronic_inflammatory_5y2=pmax(lifelong_chronic_inflammatory,chronic_inflammatory_5y,na.rm=TRUE))
+
+#remove the earlier 5y columns and just keep the ones where lifelong + 5y ar ecombined
+GRLS_summary_lifelong_2 <- GRLS_summary_lifelong %>%
+  dplyr::select(c(subject_id,222:227))
+```
+
+Combine all of the 5y prior and ever comorb datasets
+
+```{r}
+GRLS_5yprior_lifetime <- GRLS_summary_lifelong_2 %>%
+  left_join(GRLS_summary_lifetime,by="subject_id")
+
+GRLS_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
+  dplyr::select(-c(8:10))
+
+GRLS_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
+  mutate(across(c(8:18), ~ case_when(
+    . == "N" ~ 0,
+    . == "Y" ~ 1,
+    TRUE ~ as.numeric(.)
+  )))
+```
+
+#### Add neoplasia variables in comorb dataset - lifetime
+
+NB. remove lymphoma from lists as will skew for all the cases to have a 1 and none of the controls by definition
+
+```{r}
+#ggrouping these
+all_cancers <- c("adrenal_tumor","basal_cell_tumor","bile_duct_tumor","bladder_tumor","brain_spinal_cord_tumor","breast_or_mammary_tumor","eye_tumor","hair_matrix_tumor","heart_tumor","hemangiosarcoma",
+                 "histiocytic_sarcoma","kidney_tumor","liver_tumor","lung_tumor","mast_cell_tumor","melanmoma","multiple_myeloma","nasal_tumor","osteosarcoma","pancreatic_tumor","perianal_adenoma","pituitary_tumor","plasma_cell_tumor","plasmacytoma","prostate_tumor","soft_tissue_sarcoma","splenic_tumor","squamous_cell_carcinoma","stomach_intestinal_tumor","testicular_tumor","thymoma","thyroid_tumor")
+malig_cancers <- c("hemangiosarcoma",
+  "histiocytic_sarcoma",  "melanoma", "multiple_myeloma", "osteosarcoma", "pancreatic_tumor", "plasma_cell_tumor", "plasmacytoma", "soft_tissue_sarcoma", "squamous_cell_carcinoma")
+benign_cancers <- c("adrenal_tumor", "basal_cell_tumor", "bile_duct_tumor", "bladder_tumor", "brain_spinal_cord_tumor", "breast_or_mammary_tumor", "eye_tumor", "hair_matrix_tumor", "heart_tumor", "kidney_tumor", "liver_tumor", "lung_tumor", "mast_cell_tumor", "nasal_tumor", "perianal_adenoma", "pituitary_tumor", "prostate_tumor", "splenic_tumor", "stomach_intestinal_tumor", "testicular_tumor", "thymoma", "thyroid_tumor")
+
+```
+
+Create YN and counts for all cancers, benign and malig
+
+```{r}
+comorbs_neoplasia_2 <- conditions_neoplasia %>%
+  filter(to_date != 1)%>%
+  dplyr::select(-other_specify)
+
+#remove rows where comorbs NA
+cols_to_check <- c(6:40)
+comorbs_neoplasia_2 <- comorbs_neoplasia_2[complete.cases(comorbs_neoplasia_2[, cols_to_check]), ]
+
+comorbs_neoplasia_2$all_cancers_count_lifetime <- 0
+comorbs_neoplasia_2$malig_cancers_count_lifetime <- 0
+comorbs_neoplasia_2$benign_cancers_count_lifetime <- 0
+
+
+# Define the cancer columns indices (from index 2 to the last column)
+cancer_columns <- 7:40
+
+# Loop through the cancer columns by index
+for (col_index in cancer_columns) {
+  col_name <- colnames(comorbs_neoplasia_2)[col_index]  # Get column name
+  
+  # Count for all cancers
+  comorbs_neoplasia_2$all_cancers_count_lifetime <- comorbs_neoplasia_2$all_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  
+  # Count for all cancers
+  comorbs_neoplasia_2$all_cancers_count_lifetime <- comorbs_neoplasia_2$all_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  
+  # Count for malignant cancers
+  if (col_name %in% malig_cancers) {
+    comorbs_neoplasia_2$malig_cancers_count_lifetime <- comorbs_neoplasia_2$malig_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  }
+  
+  # Count for benign cancers
+  if (col_name %in% benign_cancers) {
+    comorbs_neoplasia_2$benign_cancers_count_lifetime <- comorbs_neoplasia_2$benign_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
+  }
+}
+
+#create Y N columns for each in addition to counts
+comorbs_neoplasia_2 <- comorbs_neoplasia_2 %>%
+  mutate(
+    all_cancers_YN_lifetime = ifelse(all_cancers_count_lifetime >= 1, 1, 0),
+    malig_cancers_YN_lifetime = ifelse(malig_cancers_count_lifetime >= 1, 1, 0),
+    benign_cancers_YN_lifetime = ifelse(benign_cancers_count_lifetime >= 1, 1, 0),
+
+  )
+
+
+#code to get to unique rows and keep the max count for each dog
+#get the max count value for each of the counts for each dog 
+cancer_count_summary <- comorbs_neoplasia_2 %>%
+  group_by(subject_id) %>%
+  summarise(
+    malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
+    benign_cancers_count_lifetime = if_else(all(is.na(benign_cancers_count_lifetime)), 0, max(benign_cancers_count_lifetime, na.rm = TRUE)),
+    all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
+    malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
+    all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
+
+    malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
+    benign_cancers_YN_lifetime = if_else(all(is.na(benign_cancers_YN_lifetime)), 0, max(benign_cancers_YN_lifetime, na.rm = TRUE)),
+    all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
+    malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
+    all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
+    
+    .groups = "drop"
+  )
+
+```
+
+#### Neoplasia YN and counts - 5y prior to endpoint
+
+```{r}
+#keep only the max 5 rows for that dog in year_in_study then same calcs as above
+comorbs_neoplasia_3 <- comorbs_neoplasia_3 %>%
+  group_by(subject_id) %>%
+  filter(year_in_study %in% sort(unique(year_in_study), decreasing = TRUE)[1:5]) %>%
+  ungroup()
+  
+
+comorbs_neoplasia_3$all_cancers_count_5y <- 0
+comorbs_neoplasia_3$malig_cancers_count_5y <- 0
+comorbs_neoplasia_3$benign_cancers_count_5y <- 0
+
+
+# Define the cancer columns indices (from index 2 to the last column)
+cancer_columns <- 7:40
+
+# Loop through the cancer columns by index
+for (col_index in cancer_columns) {
+  col_name <- colnames(comorbs_neoplasia_3)[col_index]  # Get column name
+  
+  # Count for all cancers
+  comorbs_neoplasia_3$all_cancers_count_5y <- comorbs_neoplasia_3$all_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  
+  # Count for all cancers
+  comorbs_neoplasia_3$all_cancers_count_5y <- comorbs_neoplasia_3$all_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  
+  # Count for malignant cancers
+  if (col_name %in% malig_cancers) {
+    comorbs_neoplasia_3$malig_cancers_count_5y <- comorbs_neoplasia_3$malig_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  }
+  
+  # Count for benign cancers
+  if (col_name %in% benign_cancers) {
+    comorbs_neoplasia_3$benign_cancers_count_5y <- comorbs_neoplasia_3$benign_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
+  }
+}
+
+#create Y N columns for each in addition to counts
+comorbs_neoplasia_3 <- comorbs_neoplasia_3 %>%
+  mutate(
+    all_cancers_YN_5y = ifelse(all_cancers_count_5y >= 1, 1, 0),
+    malig_cancers_YN_5y = ifelse(malig_cancers_count_5y >= 1, 1, 0),
+    benign_cancers_YN_5y = ifelse(benign_cancers_count_5y >= 1, 1, 0),
+
+  )
+
+
+#code to get to unique rows and keep the max count for each dog
+#get the max count value for each of the counts for each dog 
+cancer_count_summary_2 <- comorbs_neoplasia_3 %>%
+  group_by(subject_id) %>%
+  summarise(
+    malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
+    benign_cancers_count_5y = if_else(all(is.na(benign_cancers_count_5y)), 0, max(benign_cancers_count_5y, na.rm = TRUE)),
+    all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
+    malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
+    all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
+
+    malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
+    benign_cancers_YN_5y = if_else(all(is.na(benign_cancers_YN_5y)), 0, max(benign_cancers_YN_5y, na.rm = TRUE)),
+    all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
+    malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
+    all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
+    
+    .groups = "drop"
+  )
+
+#combine the 2 cancer summaries
+cancer_summary_5y_lifetime <- cancer_count_summary %>%
+  left_join(cancer_count_summary_2,by="subject_id")
+```
+
+Combine all comorbs data back into the main df
+
+```{r}
+#combine cancer and other comorbs
+GRLS_comorbs_cancer_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
+  left_join(cancer_summary_5y_lifetime,by="subject_id")
+
+#combine back to main df
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location2 %>% left_join(GRLS_comorbs_cancer_5yprior_lifetime,by="subject_id")
+```
+
+## Medications 
+
+Using the df created in an earlier script of analyses which tidies up free text and the many drug categories etc. in this qmd GRLS medications.qmd
+
+```{r}
+medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+```
+
+### Lifetime medication calculations
+
+```{r}
+# Step 1: Count occurrences per dog per active ingredient group
+meds_per_dog_lifetime <- medications %>%
+  group_by(subject_id, active_ingredient_groups) %>%
+  summarise(count = n(), .groups = "drop")
+
+# Step 2: Compute quartiles *within* each active ingredient group
+medication_summary_lifetime <- meds_per_dog_lifetime%>%
+  group_by(active_ingredient_groups) %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    .groups = "drop",
+    max = max(count)
+  )
+
+write.csv(medication_summary_lifetime,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_study_medication_quartiles_summaries_lifetime.csv")
+
+
+
+# Step 3: Join quartiles back to individual dog data and assign quartile categories
+meds_per_dog_quart_lifetime <- meds_per_dog_lifetime %>%
+  left_join(medication_summary_lifetime, by = "active_ingredient_groups") %>%
+  mutate(
+    quartile = case_when(
+      count <= Q1 ~ "Q1",
+      count > Q1 & count <= median_count_per_dog ~ "Q2",
+      count > median_count_per_dog & count <= Q3 ~ "Q3",
+      count > Q3 ~ "Q4"
+    ),
+    # Assign halves based on median
+    half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
+  ) %>%
+  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
+
+
+# Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
+meds_wide_quart_lifetime <- meds_per_dog_quart_lifetime %>%
+  pivot_wider(names_from = active_ingredient_groups, values_from = c(half,quartile))
+
+# View the final data
+meds_wide_quart_lifetime
+
+meds_wide_quart_lifetime <- meds_wide_quart_lifetime %>%
+  rename_with(~ paste0(.x, "_lifetime"), -1)
+```
+
+### 5y prior to endpoint medication calculations
+
+```{r}
+#keeping only the 5y prior rows
+medications_5y <- medications %>%
+  group_by(subject_id) %>%
+  filter(year_in_study %in% sort(unique(year_in_study), decreasing = TRUE)[1:5]) %>%
+  ungroup()
+
+
+# Step 1: Count occurrences per dog per active ingredient group
+meds_per_dog_5y <- medications_5y %>%
+  group_by(subject_id, active_ingredient_groups) %>%
+  summarise(count = n(), .groups = "drop")
+
+# Step 2: Compute quartiles *within* each active ingredient group
+medication_summary_5y <- meds_per_dog_5y%>%
+  group_by(active_ingredient_groups) %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    .groups = "drop",
+    max = max(count)
+  )
+
+write.csv(medication_summary_5y,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_study_medication_quartiles_summaries_5y.csv")
+
+
+
+# Step 3: Join quartiles back to individual dog data and assign quartile categories
+meds_per_dog_quart_5y <- meds_per_dog_5y %>%
+  left_join(medication_summary_5y, by = "active_ingredient_groups") %>%
+  mutate(
+    quartile = case_when(
+      count <= Q1 ~ "Q1",
+      count > Q1 & count <= median_count_per_dog ~ "Q2",
+      count > median_count_per_dog & count <= Q3 ~ "Q3",
+      count > Q3 ~ "Q4"
+    ),
+    # Assign halves based on median
+    half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
+  ) %>%
+  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
+
+
+# Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
+meds_wide_quart_5y <- meds_per_dog_quart_5y %>%
+  pivot_wider(names_from = active_ingredient_groups, values_from = c(half,quartile))
+
+# View the final data
+meds_wide_quart_5y
+
+meds_wide_quart_5y <- meds_wide_quart_5y %>%
+  rename_with(~ paste0(.x, "_5y"), -1)
+```
+
+### Examine for specific potential RF medications:
+
+-   NSAIDs exposure
+
+    -   ever Y N and 5y prior Y N
+    -   counts
+
+-   steroids exposure
+
+    -   ever Y N and 5y prior Y N
+    -   counts
+
+-   Fenbendazole exposure
+
+    -   ever Y N and 5y prior Y N
+    -   counts
+
+```{r}
+#free text drug names to look for
+NSAID_names<-c("carprofen","meloxicam","firocoxib","deracoxib","flurbiprofen","piroxicam","ketotifen","ketoprofen","rimadyl","metacam","meloxidyl","previcox","vetprofen","ketorolac opthalmic ointment","toradol","acular","voltaren
+","diclofenac","flurbiprofen eye drops
+","carprovet","carprieve","truprofen","ofloxacin ophthalmic ointment + nsaid
+")
+steroid_names<-c("dexamethasone, neomycin sulfate, thiabendazole
+","prednisolone acetate
+","betamethasone, clotrimazole, gentamicin sulfate
+","betamethasone, gentamicin sulfate
+","dexamethasone","dexamethasone, miconazole nitrate
+","dexamethasone, miconazole nitrate
+","methylprednisolone","prednisone","betamethasone, florfenicol, terbinafine
+","clotrimazole, gentamicin sulfate, mometasone furoate
+","dexamethasone, methylprednisolone
+","mometasone furoate, orbifloxacin, posaconazole
+","dexamethasone, neomycin sulfate, polymyxin b
+","bacitracin zinc, dexamethasone, neomycin sulfate, polymyxin b
+","miconazole nitrate, polymyxin b, prednisolone acetate
+","hydrocortisone, gentamicin sulfate, miconazole nitrate
+","gentamicin sulfate, hydrocortisone, miconazole nitrate
+","burow's solution, hydrocortisone
+","acetic acid, boric acid, hydrocortisone, ketoconazole
+","hydrocortisone","bacitracin zinc, hydrocortisone, neomycin sulfate, polymyxin b
+","dexamethasone, enrofloxacin, miconazole nitrate
+","clotrimazole, dexamethasone, enrofloxacin
+","hydrocortisone, ketoconazole
+","dexamethasone, ketoconazole, phytosphingosine
+","betamethasone","acetic acid, boric acid, ceramide complex, hydrocortisone, ketoconazole
+","hydrocortisone, troleandomycin
+","dexamethasone, enrofloxacin, ketoconazole, tris-edta
+","bacitracin zinc, neomycin sulfate, polymyxin b, unspecified steroid
+","clotrimazole, dexamethasone
+","dexamethasone, ketoconazole, tris-edta
+","dexamethasone, ketoconazole
+","betamethasone, clotrimazole, gentamicin sulfate, mometasone furoate
+","dexamethasone, diphenhydramine
+","beclomethasone, clotrimazole, neomycin sulfate
+","dexamethasone, enrofloxacin, ketoconazole
+","dexamethasone, dimethyl sulfoxide, enrofloxacin, lidocaine
+","dexamethasone, enrofloxacin
+","betamethasone, gentamicin sulfate, miconazole nitrate
+","chloramphenicol, dexamethasone
+","hydrocortisone, pramoxine
+","dexamethasone, penicillin
+","betamethasone, chloramphenicol, ketoconazole
+","dexamethasone, tobramycin
+","enrofloxacin, dexamethasone, tris-edta
+","dexamethasone, miconazole nitrate, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide
+","betamethasone, burow's solution, gentamicin sulfate, hydrocortisone, miconazole nitrate
+","ketoconazole, hydrocortisone
+","bacitracin, hydrocortisone
+","dexamethasone, miconazole nitrate, tris-edta
+","chlorhexidine gluconate, dexamethasone
+","dexamethasone, enrofloxacin, tris-edta
+","dexamethasone, enrofloxacin, silver sulfadiazine
+","dexamethasone, miconazole nitrate, neomycin sulfate, polymyxin b, prednisolone acetate, thiabendazole
+","betamethasone, enrofloxacin
+","dexamethasone, ear cleaner (epi-otic advanced), enrofloxacin
+","betamethasone, tobramycin
+","dexamethasone ophthalmic ointment
+","miconazole + dexamethasone ear solution
+","amikacin + dexamethasone ear solution
+","depo-medrol
+","prednisolone acetate ophthalmic suspension
+","neo-poly-dex ophthalmic ointment
+","neo-poly-bac ophthalmic ointment + dexamethasone
+","betamethasone + gentamicin ear solution
+","conofite + dexamethasone ear solution
+","neo-poly-bac ophthalmic ointment + hydrocortisone
+","baytril + conofite + dexamethasone ear solution
+","betamethasone + gentamicin spray
+","baytil + clotrimazole + dexamethasone ear solution
+","baytril + dexamethasone + miconazole ear solution
+","baytril + conzol + dexamethasone ear solution
+","trizulta + keto + baytril + dexamethasone flush
+","clotrimazole + dexamethasone ear solution
+","burow's solution + hydrocortisone
+","betamethasone + clotrimazole + gentamicin ear solution
+","trizulta + keto + dexamethasone flush
+","cortalone
+","baytril + dexamethasone + ketoconazole ear solution
+","betamethasone + gentamicin sulfate + miconazole nitrate ear solution
+","dexamethasone otic
+","baytril + trizulta + dexamethasone ear solution
+","neomycin sulfate + nystatin + triamcinolone acetonide
+","chloramphenicol + ketoconazole + triamcinolone acetonide ear solution
+","triamcinolone","trizedta + dexamethasone + miconazole flush
+","chlorhexiderm + dexamethasone spray
+","trizedta + baytril + dexamethasone flush
+","neomycin sulfate + tetracaine + triamcinolone acetonide
+","clotrimazole + gentamicin + mometasone ear solution
+","baytril + dexamethasone + silvadene ear solution
+","itraconazole + ketoconazole + triamcinolone acetonide ear solution
+","baytril + triamcinolone acetonide
+","troleandomycin + hydrocortisone
+","neo-poly-bac ophthalmic ointment + steroid
+","t8 keto flush + dexamethasone
+","dexamethasone + miconazole
+","dermacool + hydrocortisone
+","trizchlor 4 + hydrocortisone
+","dexamethasone + diphenhydramine
+","tear stimulation forte + betamethasone + ofloxacin
+","baytril + dexamethasone + dimethyl sulfoxide + lidocaine
+","dexamethasone + baytril
+","ketoconazole + mupirocin + triamcinolone acetonide
+","penicillin + dexamethasone
+","tobramycin + betamethasone ophthalmic ointment
+","lotramin + dexamethasone
+","bacitracin + hydrocortisone
+")
+fenbendazole_names<-c("fenbendazole","fenbendazole, maropitant citrate, metronidazole, omeprazole, sucralfate
+","cerenia + fenbendazole + metronidazole + omeprazole + sucralfate
+","panacur","safe-guard")
+```
+
+Lifetime
+
+```{r}
+#NSAID
+NSAID_ever<- medications %>%
+  mutate(NSAID_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
+                            })) %>%
+  mutate(NSAID_ever= ifelse(NSAID_ever, 1, 0)) %>%
+  arrange(subject_id, desc(NSAID_ever)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, NSAID_ever)
+
+#steroid
+steroid_ever<- medications %>%
+  mutate(steroid_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
+                            })) %>%
+  mutate(steroid_ever = ifelse(steroid_ever, 1, 0)) %>%
+  arrange(subject_id, desc(steroid_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, steroid_ever)
+#fenbendazole
+fenbendazole_ever <- medications %>%
+  mutate(fenbendazole_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
+                            })) %>%
+  mutate(fenbendazole_ever = ifelse(fenbendazole_ever, 1, 0)) %>%
+  arrange(subject_id, desc(fenbendazole_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, fenbendazole_ever)
+```
+
+5y prior
+
+```{r}
+
+#NSAID
+NSAID_5y <-medications_5y %>%
+  ungroup()%>%
+  mutate(NSAID_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
+                            })) %>%
+  mutate(NSAID_5y = ifelse(NSAID_5y, 1, 0)) %>%
+  arrange(subject_id, desc(NSAID_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, NSAID_5y)
+
+#steroid
+steroid_5y <- medications_5y %>%
+    ungroup()%>%
+  mutate(steroid_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
+                            })) %>%
+  mutate(steroid_5y = ifelse(steroid_5y, 1, 0)) %>%
+  arrange(subject_id, desc(steroid_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, steroid_5y)
+#fenbendazole
+fenbendazole_5y <-medications_5y %>%
+    ungroup()%>%
+  mutate(fenbendazole_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
+                            1, 
+                            function(row) {
+                              # Check each column in the row for a match with NSAID_names
+                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
+                            })) %>%
+  mutate(fenbendazole_5y = ifelse(fenbendazole_5y, 1, 0)) %>%
+  arrange(subject_id, desc(fenbendazole_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
+  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
+  select(subject_id, fenbendazole_5y)
+```
+
+Combine these dfs
+
+```{r}
+#all med counts of interest
+meds_5y_lifetime <- meds_wide_quart_5y %>% left_join (meds_wide_quart_lifetime,by="subject_id")
+
+#specific drugs of interest
+combined_df <- reduce(list(NSAID_ever,NSAID_5y,steroid_ever,steroid_5y,fenbendazole_ever,fenbendazole_5y), full_join, by = "subject_id")
+
+#combine both of these
+meds_5y_lifetime_NSAID_steroid_fenbendazole <- meds_5y_lifetime %>%
+  left_join(combined_df,by="subject_id")
+
+
+#add onto the comorbs and all other variables df
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs %>% left_join(meds_5y_lifetime_NSAID_steroid_fenbendazole,by="subject_id")
+```
+
+#### Examine also an NSAID number of times variable
+
+```{r}
+# use HSA medications df to get list of NSAIDs in df
+table(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients)
+NSAID_meds <- c("carprofen","meloxicam","firocoxib","deracoxib","flurbiprofen","ketoprofen")
+
+medications_5y  <- medications_5y  %>%
+  mutate(NSAID_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(NSAID_meds, collapse = "|")),
+    "NSAID_yes",
+    "NSAID_no"
+  ))
+
+#a count of these for each dog exc if NSAID no then just NSAID no
+NSAID_5y_meds_per_dog <- medications_5y  %>%
+  group_by(subject_id, NSAID_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY NSAID_yes value then remove the NSAID_no row/s for that subject id
+  # Step 1: Get subject_ids that have NSAID_yes
+NSAID_yes_subjects <- NSAID_5y_meds_per_dog %>%
+  filter(NSAID_use == "NSAID_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep NSAID_yes rows or NSAID_no only if no NSAID_yes exists for that dog
+NSAID_5y_meds_per_dog_clean <- NSAID_5y_meds_per_dog %>%
+  filter(NSAID_use == "NSAID_yes" | !(subject_id %in% NSAID_yes_subjects))
+
+#calculate NSAID yes quartiles
+NSAID_yes <- NSAID_5y_meds_per_dog_clean %>%
+  filter(NSAID_use=="NSAID_yes")
+
+NSAID_summary <- NSAID_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+
+NSAID_5y_meds_per_dog_clean_quartiles <- NSAID_5y_meds_per_dog_clean %>%
+  mutate(NSAID_quantile = case_when(
+    NSAID_use == "NSAID_no" ~ "no_NSAID_admin",
+    NSAID_use == "NSAID_yes" & count <= 1 ~ "Q1(1)",
+    NSAID_use == "NSAID_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
+    NSAID_use == "NSAID_yes" & count > 2 & count <= 3 ~ "Q3(2-3)",
+    NSAID_use == "NSAID_yes" & count > 3 ~ "Q4(3-8)"
+  ))
+#then filt down to unique single row for each dog of its count or NSAID no, then join back to the 3044 dogs and if no count or no NSAID no then "no_NSAID_recorded_in_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds %>% left_join(NSAID_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in NSAID_quantile column with "no_med_records_this_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>%
+    mutate(NSAID_quantile = replace_na(NSAID_quantile, "no_med_use_recorded"))
+
+#ditch count column 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID%>%
+  dplyr::select(c(-"count"))
+#rename NSAID_quantile to make clear its a 5y column
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>%
+  rename(NSAID_5y_quantiles = NSAID_quantile)
+
+```
+
+#### Examine also a steroid number of times variable
+
+```{r}
+steroids <- c(
+  "prednisone",
+  "predisolone acetate",
+  "trimeprazine tartrate, prednisone",
+  "triamcinolone acetonide",
+  "methylpredisolone",
+  "hydrocortisone, gentamicin sulfate, miconazole nitrate",
+  "burow's solution, hydrocortisone",
+  "dexamethasone, miconazole nitrate",
+  "dimethyl sulfoxide, fluocinolone acetonide",
+  "hydrocortisone",
+  "dexamethasone, enrofloxacin, ketoconazole, tris-edta",
+  "beclomethasone, clotrimazole, neomycin sulfate",
+  "dexamethasone, ketoconazole, tris-edta",
+  "acetic acid, boric acid, ceramide complex, hydrocortisone, ketoconazole",
+  "betamethasone",
+  "mometasone furoate",
+  "dexamethasone",
+  "betamethasone",
+  "hydrocortisone",
+  "prednisolone",
+  "methylprednisolone",
+  "triamcinolone acetonide",
+  "difluprednate",
+  "fluticasone",
+  "dexamethasone, miconazole nitrate",
+  "amikacin sulfate, dexamethasone",
+  "dexamethasone, methylprednisolone",
+  "dexamethasone, triamcinolone acetonide",
+  "hydrocortisone, ketoconazole",
+  "dexamethasone, ketoconazole, phytosphingosine",
+  "dexamethasone, diphenhydramine",
+  "betamethasone, clotrimazole, gentamicin sulfate, mometasone furoate",
+  "dimethyl sulfoxide, fluocinolone acetonide, gentamicin sulfate, miconazole nitrate",
+  "dimethyl sulfoxide, flunixin, fluocinolone acetonide",
+  "hydrocortisone, troleandomycin",
+  "Dexamethasone",
+  "Betamethasone",
+  "dexamethasone",
+  "betamethasone",
+  "hydrocortisone",
+  "menthol, hydrocortisone",
+  "dexamethasone, ketoconazole",
+  "dexamethasone, enrofloxacin",
+  "dexamethasone, dimethyl sulfoxide, enrofloxacin, lidocaine",
+  "dexamethasone, enrofloxacin, ketoconazole",
+  "dexamethasone, penicillin",
+  "dexamethasone, tobramycin",
+  "betamethasone, ofloxacin",
+  "chloramphenicol, dexamethasone",
+  "betamethasone, chloramphenicol, ketoconazole",
+  "enrofloxacin, dexamethasone, tris-edta",
+  "dexamethasone, miconazole nitrate, neomycin sulfate, nystatin, thiostrepton, triamcinolone acetonide",
+  "betamethasone, burow's solution, gentamicin sulfate, hydrocortisone, miconazole nitrate",
+  "ketoconazole, hydrocortisone",
+  "bacitracin, hydrocortisone",
+  "dexamethasone, miconazole nitrate, tris-edta",
+  "chlorhexidine gluconate, dexamethasone",
+  "dexamethasone, enrofloxacin, tris-edta",
+  "dexamethasone, enrofloxacin, silver sulfadiazine",
+  "dexamethasone, miconazole nitrate, neomycin sulfate, polymyxin b, prednisolone acetate, thiabendazole",
+  "betamethasone, enrofloxacin",
+  "dexamethasone, ear cleaner (epi-otic advanced), enrofloxacin",
+  "betamethasone, tobramycin"
+)
+
+```
+
+Use steroids list to do counting now
+
+```{r}
+# use HSA medications df to get list of NSAIDs in df
+table(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients_100)
+unique(medications_5y $medication_ingredients)
+
+
+medications_5y  <- medications_5y  %>%
+  mutate(steroid_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(steroids, collapse = "|")),
+    "steroid_yes",
+    "steroid_no"
+  ))
+
+#a count of these for each dog exc if steroid no then just steroid no
+steroid_5y_meds_per_dog <- medications_5y  %>%
+  group_by(subject_id, steroid_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY steroid_yes value then remove the steroid_no row/s for that subject id
+  # Step 1: Get subject_ids that have steroid_yes
+steroid_yes_subjects <- steroid_5y_meds_per_dog %>%
+  filter(steroid_use == "steroid_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep steroid_yes rows or steroid_no only if no steroid_yes exists for that dog
+steroid_5y_meds_per_dog_clean <- steroid_5y_meds_per_dog %>%
+  filter(steroid_use == "steroid_yes" | !(subject_id %in% steroid_yes_subjects))
+
+#calculate steroid yes quartiles
+steroid_yes <- steroid_5y_meds_per_dog_clean %>%
+  filter(steroid_use=="steroid_yes")
+
+steroid_summary <- steroid_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+
+steroid_5y_meds_per_dog_clean_quartiles <- steroid_5y_meds_per_dog_clean %>%
+  mutate(steroid_quantile = case_when(
+    steroid_use == "steroid_no" ~ "no_steroid_admin",
+    steroid_use == "steroid_yes" & count <= 1 ~ "Q1(1)",
+    steroid_use == "steroid_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
+    steroid_use == "steroid_yes" & count > 2 & count <= 3 ~ "Q3(2-3)",
+    steroid_use == "steroid_yes" & count > 3 ~ "Q4(3-17)"
+  ))
+#then filt down to unique single row for each dog of its count or steroid no, then join back to the 3044 dogs and if no count or no steroid no then "no_steroid_recorded_in_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>% left_join(steroid_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>%
+    mutate(steroid_quantile = replace_na(steroid_quantile, "no_med_use_recorded"))
+
+#ditch count column 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid%>%
+  dplyr::select(c(-"count"))
+#rename steroid_quantile to make clear its a 5y column
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>%
+  rename(steroid_5y_quantiles = steroid_quantile)
+```
+
+For MCT want to do:
+
+prednisone
+
+prednisolone
+
+lokivetmab
+
+oclatinib
+
+(and trade names too)
+
+Interim write to csv
+
+```{r}
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_variables_dataset_interim.csv")
+```
+
+## Reproduction variables - still to do
+
+Load in repro datasets
+
+```{r}
+# female information
+repro_hx_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_female.csv")
+# not using df as hasnt been updated in past year or so of GRLS datasets so dont think being maintained spay_details <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/details_spay_before_heat.csv")
+#join spay details to repro hx female sheet
+
+repro_heats_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv")
+#male 
+repro_hx_male <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_male.csv")
+
+repro_hx_hormones <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv")
+#all empty cells encoded as NA
+repro_hx_female <- repro_hx_female %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+repro_hx_male <- repro_hx_male %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+repro_heats_female <- repro_heats_female %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+repro_hx_hormones <- repro_hx_hormones %>%
+  mutate_if(~any(. == ""), na_if, "")
+
+#what are the columns available in df
+colnames(repro_hx_female)
+colnames(repro_hx_male)
+colnames(repro_heats_female)
+colnames(repro_hx_hormones)
+
+#dog profile also contains neuter date and neuter status
+profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+```
+
+First adding basic neuter info to the dataset = neuter status and age at neuter
+
+```{r}
+profile <- profile %>%
+  dplyr::select(c(subject_id,sex_status,spay_neuter_date,birth_date))
+
+
+profile <- profile %>% 
+  mutate(sex=recode(
+    sex_status,"Spayed Female"="F", "Intact Female" = "F", "Neutered Male" = "M",
+    "Intact Male" = "M")
+  )
+#neuter status
+profile <- profile%>%
+  mutate(neuter=recode(
+    sex_status, "Spayed Female"="Neutered", "Neutered Male"="Neutered","Intact Female"= "Entire", "Intact Male" = "Entire")
+  )
+#calculate age at neuter
+profile$birth_date2 <- as.Date(profile$birth_date)
+profile$spay_neuter_date2 <- as.Date(profile$spay_neuter_date)
+
+
+profile <- profile %>%
+mutate(
+    age_at_neuter_years = case_when(
+      is.na(spay_neuter_date2) ~ "not_neutered",
+      #age at neuter if negative value replace with age = 0
+
+      time_length(interval(birth_date2, spay_neuter_date2), "years") < 0 ~ "0",
+      TRUE ~ as.character(round(time_length(interval(birth_date2, spay_neuter_date2), "years"), 1))
+    )
+  )
+profile_abr <- profile %>%
+  dplyr::select(subject_id,neuter, sex, birth_date2, age_at_neuter_years,spay_neuter_date2)
+
+
+
+## add back onto df
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>% left_join(profile_abr, by="subject_id")
+```
+
+Info on number of seasons etc
+
+```{r}
+repro_status <-bind_rows(repro_hx_female,repro_hx_male)
+
+#add dog profile
+demog_neut <- repro_status %>%
+  left_join(profile_abr, by="subject_id")
+demog_neut <- demog_neut%>% 
+  group_by(subject_id)%>%
+  fill(c(spay_neuter_date2,neutered_reason),.direction="downup")
+
+
+demog_neut <- demog_neut %>% 
+  mutate_if(is.character, ~ ifelse(is.na(.), "not_recorded", .))
+
+demog_neut$record_date2 <- as.Date(demog_neut$record_date)
+
+
+```
+
+### Age at first heat variable
+
+```{r}
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/240103_GRLS_functions.qmd")
+#3 inputs required
+first_exposure_point <- function(data, exposure_column, record_date) {
+  exposure_col <- enquo(exposure_column)
+  date_col <- enquo(record_date)
+  col_name <- paste0(quo_name(exposure_col), "_first_exposure_date")
+  
+  data %>%
+    mutate(
+      !!col_name := if_else(
+        !!exposure_col == 1 & !is.na(!!date_col),
+        as.character(!!date_col),
+        NA_character_
+      )
+    ) %>%
+    group_by(subject_id) %>%  # assuming your ID column is subject_id
+    mutate(
+      !!col_name := min(!!sym(col_name), na.rm = TRUE)
+    ) %>%
+    ungroup()
+}
+
+
+neut_age_seasons2<- first_exposure_point(demog_neut,heat_last_year,record_date2)
+neut_age_seasons3  <- first_exposure_age2(neut_age_seasons2,"heat_last_year_first_exposure_date", "birth_date2")
+
+neut_age_seasons3 <- neut_age_seasons3 %>%
+  rename(age_first_heat_years=heat_last_year_first_exposure_date_age_years)
+  
+```
+
+### Num heats before neutering
+
+```{r}
+neut_age_seasons4 <- num_exposures(neut_age_seasons3,"heat_last_year","record_date2","spay_neuter_date2")
+```
+
+### Ever pregnant variable
+
+```{r}
+#pregnancy before neuter Y N
+neut_age_seasons5<- neut_age_seasons4 %>%
+  group_by(subject_id) %>%
+  mutate(preg_pre_neuter=ifelse(any(!is.na(age_at_neuter_years) & no_pregnancy_last_year==1,na.rm=TRUE),1,0))    
+```
+
+### Males ever bred from variable
+
+```{r}
+
+neut_age_M <- neut_age_seasons5 %>%
+  mutate(
+    mated_pre_neuter = if_else(sex == "M" & neuter == "Neutered" & 
+                                  any(!is.na(age_at_neuter_years) & intact_naturally_bred_last_year == 1),
+                                1,
+                                0)
+  )
+
+```
+
+### Tidying up of repro data so all values are valid for sex/neuter status e.g males dont have number of pregnancy 0 but just number of pregnancy - not applciable or similar
+
+```{r}
+neut_data_single_row <- neut_age_M %>%
+  distinct(subject_id,.keep_all = TRUE)
+
+#check female variables not include males
+table(neut_data_single_row$age_first_heat_years)
+#males should not have a variable value (it will be 0)
+M <- neut_data_single_row %>%
+  filter(sex=="M")
+#if male then replace all Os with NA
+neut_data_single_row <- neut_data_single_row %>%
+  mutate(
+    across(
+      c(age_first_heat_years, heat_last_year_num_exposures, preg_pre_neuter),  # <- your female-specific columns
+      ~ if_else(sex == "M", NA, .)
+    )
+  )
+#check male variables not include females - there are none of these
+
+#check neut variables not including entire dogs
+neut_data_single_row <- neut_data_single_row %>%
+  mutate(
+    across(
+      c(age_first_heat_years, heat_last_year_num_exposures, preg_pre_neuter,mated_pre_neuter),  # <- neut-specific columns
+      ~ if_else(neuter == "Entire", NA, .)
+    )
+  )
+#keep relevant cols
+neut_data_single_row <- neut_data_single_row %>%
+  dplyr::select(1,37:42,47:50)
+
+
+```
+
+### Time between neuter date and cancer diagnosis/endpoint date variable 
+
+perform this when only single row per dog rather than all the repro rows as in the prev dfs
+
+```{r}
+#add neut data to the main df then calculate 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering %>% left_join(neut_data_single_row,by="subject_id")
+#delete dupe columns
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering2 %>%
+  dplyr::select(-c(neuter.x,sex.x,birth_date2.x,record_date2.x,age_at_neuter_years.x,spay_neuter_date2.x))
+#remove the .y suffix from the columns now
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering2 <-
+  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering2 %>%
+  rename(sex= sex.y,
+         neuter = neuter.y,
+         birth_date2 = birth_date2.y,
+         age_at_neuter_years = age_at_neuter_years.y,
+         record_date2 = record_date2.y,
+         spay_neuter_date2 = spay_neuter_date2.y)
+#calculate time between spay_neuter_date2 and end date
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering2 %>%
+mutate(
+    time_between_neuter_endpoint_diagnosis_years = case_when(
+      is.na(spay_neuter_date2) ~ "not_neutered",
+      #age at neuter if negative value replace with age = 0
+
+      time_length(interval(spay_neuter_date2,end_date), "years") < 0 ~ "0",
+      TRUE ~ as.character(round(time_length(interval(spay_neuter_date2, end_date), "years"), 1))
+    )
+  )
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3 %>%
+mutate(
+    time_between_neuter_endpoint_diagnosis_months = case_when(
+      is.na(spay_neuter_date2) ~ "not_neutered",
+      #age at neuter if negative value replace with age = 0
+
+      time_length(interval(spay_neuter_date2,end_date), "months") < 0 ~ "0",
+      TRUE ~ as.character(round(time_length(interval(spay_neuter_date2, end_date), "months"), 1))
+    )
+  )
+```
+
+### Age at endpoint diagnosis
+
+```{r}
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3 %>%
+  mutate(
+    birth_date2 = as.Date(birth_date2, format = "%Y-%m-%d"),
+    end_date2= as.Date(end_date, format = "%Y-%m-%d")
+  ) %>%
+  mutate(age_at_final_date = as.numeric(interval(birth_date2, end_date2) / years(1)))
+
+
+```
+
+## Weight and height data 5y prior to endpoint
+
+```{r}
+###add in weight and BCS data for the dogs
+dog_weight <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical.csv")
+dog_weight <- dog_weight %>%
+  dplyr::select(c(subject_id,year_in_study,height,weight,purina_body_condition_score))
+#remerge back to big df 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight <-  dog_weight%>%
+  left_join(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3,by="subject_id")
+###for record years 5y prior to endpoint record year do an average of weight
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
+}
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight2 <- 
+  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight %>%
+  mutate(year_in_study_diagnosis_or_final_record_year = as.numeric(year_in_study_diagnosis_or_final_record_year)) %>%
+  group_by(subject_id) %>%
+  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
+  mutate(
+    count_rows = n(),
+    avg_weight_5y_prior_endpoint = if (count_rows[1] >= 5) mean(weight, na.rm = TRUE) else NA_real_,
+    avg_height_5y_prior_endpoint = if (count_rows[1] >= 5) mean(height, na.rm = TRUE) else NA_real_,
+    median_weight_5y_prior_endpoint = if (count_rows[1] >= 5) median(weight, na.rm = TRUE) else NA_real_,   
+    median_weight_5y_prior_endpoint_any_records = median(weight, na.rm = TRUE),
+    median_height_5y_prior_endpoint = if (count_rows[1] >= 5) median(height, na.rm = TRUE) else NA_real_,
+    median_height_5y_prior_endpoint_any_records = median(height, na.rm = TRUE),
+    ,
+    avg_purina_BCS_5y_prior_endpoint = if (count_rows[1] >= 5) mean(purina_body_condition_score, na.rm = TRUE) else NA_real_,
+    mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score)
+  ) %>%
+  ungroup()
+
+
+```
+
+tidy these to remove outliers and convert to kg and cm (but not going to do quartiles/biological splits etc. - leave for student to decide how to split)
+
+```{r}
+#avg weight to kg
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight2 %>%
+  mutate(avg_weight_5y_prior_endpoint_kg = avg_weight_5y_prior_endpoint * 0.453)
+
+#### remove weight values for dogs that have their age at final date as <18m (ie. non adult weights) = 6 dogs
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3 %>%
+  mutate(avg_weight_5y_prior_endpoint_kg = if_else(age_at_final_date < 1.5, NA_real_, avg_weight_5y_prior_endpoint_kg))
+
+#median weight
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3 %>%
+  mutate(median_weight_5y_prior_endpoint_kg = median_weight_5y_prior_endpoint * 0.453)
+
+#### remove weight values for dogs that have their age at final date as <18m (ie. non adult weights) = 6 dogs
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3 %>%
+  mutate(median_weight_5y_prior_endpoint_kg = if_else(age_at_final_date < 1.5, NA_real_, median_weight_5y_prior_endpoint_kg))
+
+#avg height to cm
+
+#avg height to cm
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3 %>%
+  mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
+
+#### remove height values for dogs that have their age at final date as <18m (ie. non adult heights) = 6 dogs
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4 %>%
+  mutate(avg_height_5y_prior_endpoint_cm = if_else(age_at_final_date < 1.5, NA_real_, avg_height_5y_prior_endpoint_cm))
+#median
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight3 %>%
+  mutate(median_height_5y_prior_endpoint_cm = median_height_5y_prior_endpoint * 2.54)
+
+#### remove height values for dogs that have their age at final date as <18m (ie. non adult heights) = 6 dogs
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4 %>%
+  mutate(median_height_5y_prior_endpoint_cm = if_else(age_at_final_date < 1.5, NA_real_, median_height_5y_prior_endpoint_cm))
+
+
+#keep only distinct rows
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4 %>%
+  distinct(subject_id,.keep_all = TRUE)
+
+#for some reason, losing records of ~23 dogs with this distinct function - take weight data and re-add to last 3044 df
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_abr <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4 %>%
+  dplyr::select(subject_id,277:287)
+
+#rejoin back
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_unique<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3 %>% left_join(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_abr,by="subject_id")
+```
+
+```{r}
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_unique,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_variables_dataset_interim.csv")
+```
+
+## Activity 
+
+taken from this script-GRLS activity classifcation method_modified.qmd
+
+Loading in datasets:
+
+```{r}
+#activity data from study y 1 and 2
+activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
+#check # dogs in it
+act_1_2 <- unique(activity_sy1_2$subject_id)
+#activity data from study y 3 + 
+activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
+act_3_plus<- unique(activity_sy3_beyond$subject_id)
+#activity overview dataset
+activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+act_over<-unique(activity_overview$subject_id)
+```
+
+### Early years dataset variable creation
+
+```{r}
+
+#create a new column of total activity to include both lead walk and off lead activity
+activity_sy1_2 <- activity_sy1_2 %>%
+  mutate(total_activity_duration = paste(walk_duration,aerobic_duration,  sep = "_")) %>%
+  mutate(total_activity_freq= paste(walk_frequency,aerobic_frequency,sep="_")) %>%
+  mutate(total_activity_intensity =paste(walk_pace,aerobic_pace,sep="_"))
+
+
+#duration recoding
+  
+less_than_30min <- c("_10-30 minutes", "10-30 minutes_","Less than 10 minutes_","Less than 10 minutes_Less than 10 minutes","_Less than 10 minutes","10-30 minutes_Less than 10 minutes")
+#
+between_31_60min <-c("_30-60 minutes","10-30 minutes_30-60 minutes","30-60 minutes_","Less than 10 minutes_10-30 minutes","10-30 minutes_10-30 minutes","30-60 minutes_Less than 10 minutes","Less than 10 minutes_30-60 minutes","30-60 minutes_10-30 minutes")
+#
+between_61_90min<- c("Greater than 60 minutes_","_Greater than 60 minute","10-30 minutes_Greater than 60 minutes","Greater than 60 minutes_10-30 minutes","_Greater than 60 minutes","Greater than 60 minutes_Less than 10 minutes","Greater than 60 minutes_Less than 10 minutes","Less than 10 minutes_Greater than 60 minutes")
+#
+between_91_120min <- c("Greater than 60 minutes_30-60 minutes","30-60 minutes_Greater than 60 minutes","30-60 minutes_30-60 minutes")
+#
+more_than_120min<- c("Greater than 60 minutes_Greater than 60 minutes")
+
+all_groups <- c(less_than_30min,between_31_60min,between_61_90min,
+                between_91_120min,more_than_120min)
+
+# Find any cateogories that are not in any group
+duration <- setdiff(activity_sy1_2$total_activity_duration, all_groups)
+
+# Display unclassified clinical signs
+print(duration)
+
+
+#recode in df
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_duration_regroup = case_when(
+      total_activity_duration %in% less_than_30min ~ "less_than_30min",
+      total_activity_duration %in% between_31_60min ~ "between_31_60min",
+      total_activity_duration %in% between_61_90min ~ "between_61_90min",
+      total_activity_duration %in% between_91_120min ~ "between_91_120min",
+      total_activity_duration %in% more_than_120min ~ "more_than_120min",
+      TRUE ~ "no_duration_recorded" # For values not in any group
+    )
+  )
+
+
+
+#frequency recoding
+never <- c("Never_","Never_Less than once/month") 
+less_than_weekly <- c("Less than once/month_","Less than once/month_Less than once/month", "Less than once/month_Less than once/week","Less than once/week_Less than once/month","Never_Less than once/week","Less than once/week_",
+                      "Less than once/week_Less than once/week")
+min_weekly<-c("Once or twice/week_Once or twice/week","Once or twice/week_","Never_Once or twice/week","Once or twice/week_Less than once/month",
+              "Once or twice/week_Less than once/week","Less than once/week_Once or twice/week","Less than once/month_Once or twice/week")
+      
+daily<-c("Once/day_","Less than once/week_Once/day","Never_Once/day", "Once or twice/week_Once/day","Once/day_Once or twice/week","Once/day_Less than once/week",
+         "Once/day_Less than once/month","Once/day_Once or twice/week",
+         "Once/day_Less than once/week", "Once/day_Less than once/month",
+         "Once or twice/week_Once/day","Less than once/month_Once/day"
+         )
+multi_daily <-c("Once/day_Once/day","Once/day_More than once a day","More than once a day_","Once or twice/week_More than once a day","Less than once/month_More than once a day","More than once a day_Once/day","Never_More than once a day","More than once a day_Less than once/month","More than once a day_Once or twice/week","Less than once/week_More than once a day","More than once a day_More than once a day",
+                "More than once a day_Less than once/week")
+
+all_groups_freq <- c(never,less_than_weekly,min_weekly,daily,multi_daily)
+freq <- setdiff(activity_sy1_2$total_activity_freq, all_groups_freq)
+
+# Display unclassified freq
+print(freq)
+
+#recode in df
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_freq_regroup = case_when(
+      total_activity_freq %in% never ~ "never",
+      total_activity_freq %in% less_than_weekly ~ "less_than_weekly",
+      total_activity_freq %in% min_weekly ~ "min_weekly",
+      total_activity_freq %in% daily ~ "daily",
+      total_activity_freq %in% multi_daily ~ "multi_daily",
+      TRUE ~ "no_freq_recorded" # For values not in any group
+    )
+  )
+#create recoded freq column
+
+#intensity recoding
+low_only <-c("_Bursts of exercise less than 30% of the time","Slow_","Slow_Bursts of exercise less than 30% of the time"
+             )
+moderate <-c("Average_","_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Brisk_","Brisk_Bursts of exercise less than 30% of the time","Average_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Jog_","Average_Bursts of exercise less than 30% of the time","Jog_Bursts of exercise less than 30% of the time","Brisk_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Slow_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)")
+high <-c(" _Engages in strenuous exercise most of the time (greater than 60%)","Run_","Average_Engages in strenuous exercise most of the time (greater than 60%)","Brisk_Engages in strenuous exercise most of the time (greater than 60%)","_Engages in strenuous exercise most of the time (greater than 60%)","Jog_Engages in strenuous exercise most of the time (greater than 60%)","Run_Engages in strenuous exercise most of the time (greater than 60%)","Run_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)", "Slow_Engages in strenuous exercise most of the time (greater than 60%)",
+         "Jog_Engages in moderate exercise (greater than 30% of the time but less than 60% of the time)","Run_Bursts of exercise less than 30% of the time")
+
+all_groups_int <- c(low_only,moderate,high)
+int <- setdiff(activity_sy1_2$total_activity_intensity, all_groups_int)
+print(int)
+
+
+#create recoded intensity column
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_intensity_regroup = case_when(
+      total_activity_intensity %in% low_only ~ "low_int",
+      total_activity_intensity %in% moderate ~ "mod_int",
+      total_activity_intensity %in% high ~ "high_int",
+      TRUE ~ "no_int_recorded" # For values not in any group
+    )
+  )
+
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_duration_regroup_num = case_when(
+      total_activity_duration %in% less_than_30min ~ "20",
+      total_activity_duration %in% between_31_60min ~ "40",
+      total_activity_duration %in% between_61_90min ~ "60",
+      total_activity_duration %in% between_91_120min ~ "80",
+      total_activity_duration %in% more_than_120min ~ "100",
+      TRUE ~ "0" # For values not in any group
+    )
+  )
+
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_freq_regroup_num = case_when(
+      total_activity_freq %in% never ~ "20",
+      total_activity_freq %in% less_than_weekly ~ "40",
+      total_activity_freq %in% min_weekly ~ "60",
+      total_activity_freq %in% daily ~ "80",
+      total_activity_freq %in% multi_daily ~ "100",
+      TRUE ~ "0" # For values not in any group
+    )
+  )
+
+
+
+
+#create recoded intensity column
+activity_sy1_2 <- activity_sy1_2  %>%
+  mutate(
+    total_activity_intensity_regroup_num = case_when(
+      total_activity_intensity %in% low_only ~ "33.3",
+      total_activity_intensity %in% moderate ~ "66.7",
+      total_activity_intensity %in% high ~ "100",
+      TRUE ~ "0" # For values not in any group
+    )
+  )
+
+
+
+#create column for USDA activity <30min or >30 min
+activity_sy1_2 <- activity_sy1_2 %>%
+  mutate(USDA_30min = case_when (
+    total_activity_duration_regroup %in% c("less_than_30min") ~ "below_USDA",  total_activity_duration_regroup %in% c("between_31_60min", "between_61_90min","between_91_120min","more_than_120min") ~ "more_than_USDA", 
+                                 TRUE ~ NA ))
+
+#create column for UKKC recommendaiton <2h but cannot do this one so >1h
+activity_sy1_2 <- activity_sy1_2 %>%
+  mutate(activity_1h_min = case_when (
+total_activity_duration_regroup %in% c("less_than_30min","between_31_60min") ~ "below_1h",  total_activity_duration_regroup %in% c("between_61_90min","between_91_120min","more_than_120min") ~ "more_than_1h", 
+                                 TRUE ~ NA ))
+
+
+
+activity_sy1_2 <- activity_sy1_2 %>%
+  mutate(activity_KC_2h_min = case_when (
+total_activity_duration_regroup %in% c("less_than_30min","between_31_60min","between_61_90min","between_91_120min") ~ "below_KC",  total_activity_duration_regroup %in% c("more_than_120min") ~ "more_than_KC", 
+                                 TRUE ~ NA ))
+
+#convert to numeric for score systems
+activity_sy1_2 <- activity_sy1_2 %>%
+  mutate(across(24:26, as.numeric))
+
+totals_avg <- activity_sy1_2 %>%
+  group_by(subject_id) %>%
+  summarise(
+    avg_activity_duration = (mean(sum(total_activity_duration_regroup_num, na.rm = TRUE)) /
+                              (n() * 100)) * 100,
+    avg_activity_intensity = (mean(sum(total_activity_intensity_regroup_num, na.rm = TRUE)) /
+                              (n() * 100)) * 100,
+    avg_activity_freq = (mean(sum(total_activity_freq_regroup_num, na.rm = TRUE)) /
+                              (n() * 100)) * 100
+
+  )
+
+# Join the average values back to the original dataset
+activity_sy1_2 <- activity_sy1_2 %>%
+  left_join(totals_avg, by = "subject_id")
+
+
+
+```
+
+### Create rest of life variables (SY3+)
+
+Recode pace and frequency (there is no duration in SY3+)
+
+```{r}
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  mutate(pace_num = case_when(
+    pace == "Slow walk" ~ 20,
+    pace == "Average walk" ~ 40,
+    pace == "Brisk walk" ~ 60,
+    pace == "Jog" ~ 80,
+    pace == "Run" ~ 100,
+    pace == "" ~ 0  # empty cells replace with 0 for calculation purposes
+  ))
+
+
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  mutate(frequency_num = case_when(
+    frequency == "Rarely" ~ 20,
+    frequency == "Monthly" ~ 40,
+    frequency == "Weekly" ~ 60,
+    frequency == "Daily" ~ 80,
+    frequency == "More than daily" ~ 100,
+    frequency == "" ~ 0  # empty cells replace with 0 for calculation purposes
+  ))
+
+totals_y3 <- activity_sy3_beyond %>%
+  group_by(subject_id) %>%
+  summarise(
+   # avg_activity_duration = (mean(duration_num, na.rm = TRUE)/
+    #                          (n() * 100)) * 100,
+    avg_activity_intensity = (mean(pace_num, na.rm = TRUE)/
+                              (n() * 100)) * 100,
+    avg_activity_freq=(mean(frequency_num,na.rm=TRUE)/
+                              (n() * 100)) * 100# Replace with your column
+  )
+
+
+
+
+# Join the totals back to the original dataset
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  left_join(totals_y3, by = "subject_id")
+```
+
+### Overview dataset for whole study period
+
+```{r}
+activity_overview <- activity_overview %>%
+  mutate(activity_level_num = case_when(
+    activity_level == "None" ~ 25,
+    activity_level == "Little" ~ 50,
+    activity_level == "Moderate" ~ 75,
+    activity_level == "Very active" ~ 100,
+    activity_level == "" ~ 0)
+    )
+
+
+
+totals <- activity_overview %>%
+  group_by(subject_id) %>%
+  summarise(mean_activity_level=(mean(activity_level_num, na.rm=TRUE)/(n() * 100)) * 100)
+                              
+
+# Join the totals back to the original dataset
+activity_overview <- activity_overview %>%
+  left_join(totals, by = "subject_id")
+```
+
+Combining all 3 datasets together for whole life of dog:
+
+```{r}
+activity_sy1_2_abr_3 <- activity_sy1_2 %>%
+  dplyr::select(c(subject_id,year_in_study, USDA_30min,activity_1h_min,activity_KC_2h_min,avg_activity_duration,avg_activity_intensity,avg_activity_freq))
+
+
+activity_sy3_beyond_abr_3 <- activity_sy3_beyond %>%
+  dplyr::select(c(subject_id,year_in_study,
+                  #frequency,pace,duration,frequency_num,pace_num,duration_num,<- not keeping as multi rows same year
+                  avg_activity_freq,avg_activity_intensity))
+
+activity_overview_abr_3 <- activity_overview %>%
+  dplyr::select(c(subject_id,year_in_study,mean_activity_level))
+
+
+activity_sy1_2_abr_3 <- activity_sy1_2_abr_3 %>%
+  distinct(subject_id, .keep_all = TRUE)  %>%
+ # mutate(study_year = "y1_2")%>%
+  rename_with(~ paste0(., "_sy1_2"), .cols = 3:8)%>%
+  dplyr::select(-c(year_in_study))
+#sy 3+ 
+activity_sy3_beyond_abr_3 <- activity_sy3_beyond_abr_3 %>%
+  distinct(subject_id,  .keep_all = TRUE)  %>%
+  #  mutate(study_year = "y3_on")%>%
+  rename_with(~ paste0(., "_sy3"), .cols = 3:4)%>%
+  dplyr::select(-c(year_in_study))
+  
+#overview
+activity_overview_abr_3 <- activity_overview_abr_3 %>%
+  distinct(subject_id, .keep_all = TRUE)  %>%
+ # mutate(study_year="all_years") %>%
+  rename_with(~ paste0(., "_overview"), .cols = 3:3)%>%
+  dplyr::select(-c(year_in_study))
+
+
+activity_all_3 <- activity_overview_abr_3 %>%
+  left_join(activity_sy1_2_abr_3, by= "subject_id")
+activity_all_3_3 <- activity_all_3 %>%
+  left_join(activity_sy3_beyond_abr_3,by="subject_id")
+
+
+```
+
+Add in all these variables to main df
+
+```{r}
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_unique <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_unique %>%
+  dplyr::select(-c(year_in_study.x,year_in_study.y,record_date.y))
+  #dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_unique %>%
+ # left_join(activity_all_3_3, by="subject_id")
+```
+
+### 5y prior to endpoint calculations
+
+Add the 3044 dogs to the multi rows of activity dataset:
+
+```{r}
+#keep SY0-2 and SY3 beyond same cols only
+activity_sy1_2_same <- activity_sy1_2 %>%
+  dplyr::select(c(subject_id,year_in_study,total_activity_intensity_regroup_num,total_activity_freq_regroup_num))
+#rename cols to match SY3
+activity_sy1_2_same <- activity_sy1_2_same %>%
+  rename(pace_num = total_activity_intensity_regroup_num, frequency_num = total_activity_freq_regroup_num)
+activity_sy3_same<- activity_sy3_beyond %>%
+    dplyr::select(c(subject_id,year_in_study,pace_num,frequency_num))
+
+activity_all_y_all_rows <- rbind(activity_sy1_2_same,activity_sy3_same)
+
+#join to cohort for 5y backwards calculations
+#abridge cohort to only keep relevant columns then join back to ~200 col df after
+cohort_abr <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity %>%
+  dplyr::select(c(subject_id,end_date2,lymphoma,year_in_study_diagnosis_or_final_record_year))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_all_rows <- activity_all_y_all_rows %>%
+  left_join(cohort_abr,by="subject_id")
+
+
+#many to many match from step above resolved by only keeping unique row for each patient
+#only singhle unique row per patient]
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_all_rows_2<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_all_rows[!duplicated(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_all_rows), ]
+
+#make sure year is in numeric
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_all_rows_2$year_in_study_diagnosis_or_final_record_year  <- as.numeric(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_all_rows_2$year_in_study_diagnosis_or_final_record_year )
+
+cohort_5y_prior <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_all_rows_2 %>%
+  group_by(subject_id) %>%
+  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
+  summarise(
+    avg_intensity_5y_prior_endpoint = mean(pace_num, na.rm = TRUE),
+    avg_frequency_5y_prior_endpoint = mean(frequency_num, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#combine all the activity data back again
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity %>% 
+  left_join(cohort_5y_prior, by="subject_id")
+
+
+```
+
+### Reclassify values like in HSA log reg (like moderate activity from numeric score etc
+
+```{r}
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_activity_duration_sy1_2 = as.numeric(as.character(avg_activity_duration_sy1_2))) %>%
+  mutate(avg_activity_duration_sy1_2_splits = case_when(
+    avg_activity_duration_sy1_2 <= 20 ~ "less_than_30min",
+    avg_activity_duration_sy1_2 >20 & avg_activity_duration_sy1_2 <= 40 ~ "between_30_60_min",
+    avg_activity_duration_sy1_2 >40 & avg_activity_duration_sy1_2<= 60 ~ "between_60_90_min",
+    avg_activity_duration_sy1_2 >60 & avg_activity_duration_sy1_2 <= 80 ~ "between_90_120_min",
+    avg_activity_duration_sy1_2 >80 & avg_activity_duration_sy1_2 <= 100 ~ "more_than_120_min"
+  ))
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_activity_freq_sy1_2 = as.numeric(as.character(avg_activity_freq_sy1_2))) %>%
+  mutate(avg_activity_freq_sy1_2_splits = case_when(
+    avg_activity_freq_sy1_2 <= 20 ~ "never",
+    avg_activity_freq_sy1_2 >20 & avg_activity_freq_sy1_2<= 40 ~ "less_than_weekly",
+    avg_activity_freq_sy1_2 >40 & avg_activity_freq_sy1_2<= 60 ~ "min_weekly",
+    avg_activity_freq_sy1_2 >60 & avg_activity_freq_sy1_2 <= 80 ~ "daily",
+    avg_activity_freq_sy1_2 >80 & avg_activity_freq_sy1_2<= 100 ~ "multi_daily"
+  ))
+
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_activity_intensity_sy1_2 = as.numeric(as.character(avg_activity_intensity_sy1_2))) %>%
+  mutate(avg_activity_intensity_sy1_2_splits = case_when(
+    avg_activity_intensity_sy1_2 <= 33.3 ~ "low",
+    avg_activity_intensity_sy1_2 >33.3 & avg_activity_intensity_sy1_2<= 66.7 ~ "moderate",
+    avg_activity_intensity_sy1_2 >66.7 & avg_activity_intensity_sy1_2<= 100 ~ "high",
+
+  ))
+
+#SY3 + intensity and freq
+
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_activity_freq_sy3 = as.numeric(as.character(avg_activity_freq_sy3))) %>%
+  mutate(avg_activity_freq_sy3_splits = case_when(
+    avg_activity_freq_sy3 <= 20 ~ "rarely",
+    avg_activity_freq_sy3 >20 & avg_activity_freq_sy3<= 40 ~ "monthly",
+    avg_activity_freq_sy3 >40 & avg_activity_freq_sy3<= 60 ~ "weekly",
+    avg_activity_freq_sy3 >60 & avg_activity_freq_sy3 <= 80 ~ "daily",
+    avg_activity_freq_sy3 >80 & avg_activity_freq_sy3<= 100 ~ "multi_daily"
+  ))
+
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_activity_intensity_sy3 = as.numeric(as.character(avg_activity_intensity_sy3))) %>%
+  mutate(avg_activity_intensity_sy3_splits = case_when(
+    avg_activity_intensity_sy3 <= 20 ~ "slow_walks",
+    avg_activity_intensity_sy3 >20 & avg_activity_intensity_sy3<= 40 ~ "average_walks",
+    avg_activity_intensity_sy3 >40 & avg_activity_intensity_sy3<= 60 ~ "brisk_walks",
+    avg_activity_intensity_sy3 >60 & avg_activity_intensity_sy3 <= 80 ~ "jogs",
+    avg_activity_intensity_sy3 >80 & avg_activity_intensity_sy3<= 100 ~ "runs"
+  ))
+
+
+
+#5y prior endpoint  freq
+
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_frequency_5y_prior_endpoint = as.numeric(as.character(avg_activity_freq_sy3))) %>%
+  mutate(avg_frequency_5y_prior_endpoint_splits = case_when(
+    avg_frequency_5y_prior_endpoint <= 20 ~ "rarely",
+    avg_frequency_5y_prior_endpoint >20 & avg_frequency_5y_prior_endpoint<= 40 ~ "monthly",
+    avg_frequency_5y_prior_endpoint >40 & avg_frequency_5y_prior_endpoint<= 60 ~ "weekly",
+    avg_frequency_5y_prior_endpoint >60 & avg_frequency_5y_prior_endpoint <= 80 ~ "daily",
+    avg_frequency_5y_prior_endpoint >80 &avg_frequency_5y_prior_endpoint<= 100 ~ "multi_daily"
+  ))
+#5y prior endpoint intensity
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_intensity_5y_prior_endpoint = as.numeric(as.character(avg_intensity_5y_prior_endpoint))) %>%
+  mutate(avg_intensity_5y_prior_endpoint_splits = case_when(
+    avg_intensity_5y_prior_endpoint <= 20 ~ "slow_walks",
+    avg_intensity_5y_prior_endpoint >20 & avg_intensity_5y_prior_endpoint<= 40 ~ "average_walks",
+    avg_intensity_5y_prior_endpoint >40 & avg_intensity_5y_prior_endpoint<= 60 ~ "brisk_walks",
+    avg_intensity_5y_prior_endpoint >60 & avg_intensity_5y_prior_endpoint <= 80 ~ "jogs",
+    avg_intensity_5y_prior_endpoint >80 & avg_intensity_5y_prior_endpoint<= 100 ~ "runs"
+  ))
+#recode into larger groupings e.g grouping together rarely + monthly for frequency
+#freq
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_activity_freq_sy3_splits_grouped = case_when(
+    avg_activity_freq_sy3_splits == "monthly" ~ "rarely",
+    avg_activity_freq_sy3_splits == "multi_daily"~"daily_or_more" ,
+    avg_activity_freq_sy3_splits == "daily" ~"daily_or_more" ,
+    avg_activity_freq_sy3_splits == "weekly" ~"weekly" ,
+    avg_activity_freq_sy3_splits == "rarely" ~ "rarely",
+  ))
+
+#intensity
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_activity_intensity_sy3_splits_grouped = case_when(
+    avg_activity_intensity_sy3_splits == "jogs" ~ "high_intensity",
+    avg_activity_intensity_sy3_splits == "runs" ~"high_intensity" ,
+    avg_activity_intensity_sy3_splits == "brisk_walks" ~"moderate_intensity",
+    avg_activity_intensity_sy3_splits =="average_walks" ~ "low_intensity",
+     avg_activity_intensity_sy3_splits =="slow_walks" ~ "low_intensity"
+  ))
+#5y prior freq
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_frequency_5y_prior_endpoint_splits_grouped = case_when(
+    avg_frequency_5y_prior_endpoint_splits == "monthly" ~ "rarely",
+    avg_frequency_5y_prior_endpoint_splits == "multi_daily"~"daily_or_more" ,
+    avg_frequency_5y_prior_endpoint_splits == "daily" ~"daily_or_more" ,
+    avg_frequency_5y_prior_endpoint_splits == "weekly" ~"weekly" ,
+    avg_frequency_5y_prior_endpoint_splits == "rarely" ~"rarely" ,
+  ))
+
+#5y prior intensity
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(avg_intensity_5y_prior_endpoint_splits_grouped = case_when(
+    avg_intensity_5y_prior_endpoint_splits == "jogs" ~ "high_intensity",
+    avg_intensity_5y_prior_endpoint_splits == "runs" ~"high_intensity" ,
+    avg_intensity_5y_prior_endpoint_splits == "brisk_walks" ~"moderate_intensity",
+    avg_intensity_5y_prior_endpoint_splits =="average_walks" ~ "low_intensity",
+    avg_intensity_5y_prior_endpoint_splits =="slow_walks" ~ "low_intensity"
+  ))
+```
+
+## Tidying up columns for final df
+
+-   need to ensure columns (where indicated) have the correct NA e.g dogs with no medical records have "no_medical_records_for_time_point" rather than NA/not_recorded etc
+
+```{r}
+#ensure this is replaced  by NA
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>%
+  mutate(across(everything(), as.character))%>%
+  mutate(across(everything(), ~na_if(.x, "")))
+
+
+char_cols <- sapply(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity2, is.character)
+sapply(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity2[, char_cols], function(x) length(unique(x)))
+
+
+lapply(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity2[, char_cols], unique)
+
+```
+
+Recoding:
+
+```{r}
+table(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity2$inflammatory_other_5y2)
+```
+
+```{r}
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity_tidied,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_variables_dataset.csv")
+```
