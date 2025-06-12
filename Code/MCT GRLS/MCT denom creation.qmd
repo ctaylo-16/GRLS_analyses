@@ -50,4 +50,93 @@ endpoints_profile2 <- endpoints_profile2 %>%
     TRUE ~ death_date              # Otherwise, use `death_date`
   ))
 
+
+#convert MCT dataset diagnosis dates into same format as dog profile df ie YYYY-MM-DD from M/D/YYYY
+MCT_subjectIDs$diagnosis_date <- format(as.Date(MCT_subjectIDs$diagnosis_date, format = "%m/%d/%Y"), "%Y-%m-%d")
+
+```
+
+Now make sure the cohort has 31/5/25 cut off date
+
+```{r}
+dog_profiles <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+#keep only columns we want for joining
+MCT_subject_IDs_abr <- MCT_subjectIDs %>%
+  dplyr::select(c(subject_id,diagnosis_date,had_MCT))
+#combine dog profile and MCT_subjectID df
+dog_profiles_MCT <- dog_profiles %>%
+  left_join(MCT_subject_IDs_abr,by="subject_id")
+
+#make sure had MCT column NAs are replaced with 0s
+dog_profiles_MCT <- dog_profiles_MCT %>%
+  mutate(had_MCT = if_else(subject_id %in% MCT_subject_IDs_abr$subject_id, 1, 0)
+  )
+#abridge to relevant columns
+dog_profiles_abr<- dog_profiles_MCT %>%
+  dplyr::select(c(subject_id,enrolled_date,birth_date,diagnosis_date,withdrawn_date,inactive_date,death_date,had_MCT))
+                
+#combine the withdrawn/inactive/death dates into one column for calculations
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(end_date = coalesce(diagnosis_date,death_date,withdrawn_date,inactive_date))
+dog_profiles_abr <- dog_profiles_abr %>%
+#make sure empty cells are definitely an NA not just blank for coalesce to work
+ mutate(
+    diagnosis_date = na_if(diagnosis_date,""),
+    withdrawn_date = na_if(withdrawn_date, ""),
+    death_date = na_if(death_date, ""),
+    inactive_date = na_if(inactive_date, "")
+  ) %>%
+  mutate(
+    # Convert to Date if needed (only if not already dates)
+    diagnosis_date=as.Date(diagnosis_date),
+    withdrawn_date = as.Date(withdrawn_date),
+    death_date = as.Date(death_date),
+    inactive_date = as.Date(inactive_date),
+    
+    # Prioritise diagnosis_date,death_date, then withdrawn, then unenrolled
+    end_date = coalesce(diagnosis_date,death_date, withdrawn_date, inactive_date)
+  )
+
+#for cells where dog has not got a value across any of these ie. no endpoint date - replace with 31/5/25
+sum(is.na(dog_profiles_abr$end_date)) 
+#~1112 dogs don't ahve endpoint
+dog_profiles_abr <- dog_profiles_abr %>%
+  mutate(end_date = replace_na(end_date, as.Date("2025-05-31")))
+#check none missing date now 
+sum(is.na(dog_profiles_abr$end_date)) 
+
+```
+
+Need to add in a final study year for each dog as well so using the meds data:
+
+-   cut off dates after 31/5/25 and then match our cohort to the final medsrow
+
+```{r}
+med_q <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv")
+#keep only record year cols
+med_q2 <- med_q %>%
+  dplyr::select(c(subject_id,year_in_study,record_date))
+
+#remove any rows with date 2025-01 or beyond - there are none in this df - goes up to end Nov but remember for future datasets eg MCT work 
+#now keep only max row for each dog
+med_q2 <- med_q2 %>%
+  group_by(subject_id) %>%
+  filter(year_in_study == max(year_in_study)) %>%
+  slice(1) %>% # In case of ties, keep the first row
+  ungroup() 
+
+
+
+
+
+med_q3 <- med_q2 %>%
+  rename(year_in_study_diagnosis_or_final_record_year = year_in_study)
+
+dates_and_MCT_diagnosis <- dog_profiles_abr %>% left_join(med_q3, by="subject_id")
+```
+
+Save to csv
+
+```{r}
+write.csv(dates_and_MCT_diagnosis,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/MCT_cohort_250531.csv")
 ```
