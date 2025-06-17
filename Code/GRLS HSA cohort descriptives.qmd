@@ -53,11 +53,116 @@ multi_HSA <- HSA_dogs2 %>%
 #incorp in survival time days - get date of diagnosis from endpoints and date of death from profile 
 profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
 profile <- profile %>%
-  dplyr::select(c(subject_id,enrolled_date,death_date,is_euthanized))
+  dplyr::select(c(subject_id,enrolled_date,death_date,is_euthanized,birth_date))
 
 HSA_dogs2 <- HSA_dogs2 %>%
   left_join(profile,by="subject_id")
 
+```
+
+## Time enrolled in study, median age at enrollment
+
+```{r}
+study_times <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date.csv")
+
+#link to dog profile to calc age at enrollment and time enrolled in study]
+
+study_times_HSA_dogs2 <- profile %>% left_join(study_times, by="subject_id")
+
+
+#calc difference between enrollment date and final date
+
+#all dogs
+study_times_HSA_dogs2 <- study_times_HSA_dogs2 %>%
+mutate(
+  start_date = as.Date(enrolled_date),
+  end_date = as.Date(final_date),
+  days_between = as.numeric(end_date -start_date)
+)
+
+study_times_HSA_dogs2 <- study_times_HSA_dogs2 %>%
+  mutate(
+    years_between = days_between / 365.25
+  )
+
+all_dogs <- study_times_HSA_dogs2 %>%
+  summarise(
+    median_years = median(years_between, na.rm = TRUE),
+    min_years = min(years_between, na.rm = TRUE),
+    max_years = max(years_between, na.rm = TRUE),
+    IQR_years = IQR(years_between, na.rm = TRUE),
+    q1_years = quantile(years_between, 0.25, na.rm = TRUE),
+    q3_years = quantile(years_between, 0.75, na.rm = TRUE)
+  )
+
+#HSA dogs
+HSA_dogs_summary <- study_times_HSA_dogs2 %>%
+  filter(had_HSA==1)%>%
+  summarise(
+    median_years = median(years_between, na.rm = TRUE),
+    min_years = min(years_between, na.rm = TRUE),
+    max_years = max(years_between, na.rm = TRUE),
+    IQR_years = IQR(years_between, na.rm = TRUE),
+    q1_years = quantile(years_between, 0.25, na.rm = TRUE),
+    q3_years = quantile(years_between, 0.75, na.rm = TRUE)
+  )
+
+#non-HSA dogs
+non_HSA_dogs_summary <- study_times_HSA_dogs2 %>%
+  filter(had_HSA==0)%>%
+  summarise(
+    median_years = median(years_between, na.rm = TRUE),
+    min_years = min(years_between, na.rm = TRUE),
+    max_years = max(years_between, na.rm = TRUE),
+    IQR_years = IQR(years_between, na.rm = TRUE),
+    q1_years = quantile(years_between, 0.25, na.rm = TRUE),
+    q3_years = quantile(years_between, 0.75, na.rm = TRUE)
+  )
+```
+
+Proportion of dogs still enrolled by Dec 31 2024
+
+```{r}
+#report number of dogs with Dec 31 2024 date
+still_enrolled <- study_times_HSA_dogs2 %>%
+  filter(final_date == "2024-12-31")
+```
+
+## Age
+
+```{r}
+non_HSA_dogs_summary_age <- cohort %>%
+  filter(had_HSA==0)%>%
+  summarise(
+    median_years = median(age_at_final_date, na.rm = TRUE),
+    min_years = min(age_at_final_date, na.rm = TRUE),
+    max_years = max(age_at_final_date, na.rm = TRUE),
+    IQR_years = IQR(age_at_final_date, na.rm = TRUE),
+    q1_years = quantile(age_at_final_date, 0.25, na.rm = TRUE),
+    q3_years = quantile(age_at_final_date, 0.75, na.rm = TRUE)
+  )
+
+
+HSA_dogs_summary_age <- cohort %>%
+  filter(had_HSA==1)%>%
+  summarise(
+    median_years = median(age_at_final_date, na.rm = TRUE),
+    min_years = min(age_at_final_date, na.rm = TRUE),
+    max_years = max(age_at_final_date, na.rm = TRUE),
+    IQR_years = IQR(age_at_final_date, na.rm = TRUE),
+    q1_years = quantile(age_at_final_date, 0.25, na.rm = TRUE),
+    q3_years = quantile(age_at_final_date, 0.75, na.rm = TRUE)
+  )
+
+all_HSA_dogs_summary_age <- cohort %>%
+  summarise(
+    median_years = median(age_at_final_date, na.rm = TRUE),
+    min_years = min(age_at_final_date, na.rm = TRUE),
+    max_years = max(age_at_final_date, na.rm = TRUE),
+    IQR_years = IQR(age_at_final_date, na.rm = TRUE),
+    q1_years = quantile(age_at_final_date, 0.25, na.rm = TRUE),
+    q3_years = quantile(age_at_final_date, 0.75, na.rm = TRUE)
+  )
 ```
 
 ## Haemangiosarcoma locations
@@ -158,6 +263,110 @@ location_summary <- location_df[, c("location","count","count_percent", "count_p
 print(location_summary)
 #write to csv for manuscript
 write.csv(location_summary,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_location_counts.csv")
+```
+
+Location barplot
+
+```{r}
+
+# Create the data
+location_data <- tribble(
+  ~Location, ~Number_percent,
+  "spleen", "252 (23.9)",
+  "cardiac", "240 (22.8)",
+  "lung", "170 (16.1)",
+  "liver", "155 (14.7)",
+  "kidney", "59 (5.6)",
+  "other", "31 (2.9)",
+  "skin", "17 (1.6)",
+  "omentum", "15 (1.4)",
+  "adrenal gland", "14 (1.3)",
+  "adipose tissue", "12 (1.1)",
+  "unknown", "12 (1.1)",
+  "muscle", "11 (1)",
+  "brain", "9 (0.9)",
+  "intestine", "9 (0.9)",
+  "pancreas", "7 (0.7)",
+  "bone", "6 (0.6)",
+  "diaphragm", "6 (0.6)",
+  "retroperitoneum", "6 (0.6)",
+  "bladder", "4 (0.4)",
+  "spine", "3 (0.3)",
+  "stomach", "3 (0.3)",
+  "thyroid", "3 (0.3)",
+  "esophagus", "2 (0.2)",
+  "lymph node", "2 (0.2)",
+  "mesentery", "2 (0.2)",
+  "spinal cord", "2 (0.2)",
+  "prostate area", "1 (0.1)"
+)
+
+location_data2 <- location_data
+
+# Extract count and percentage
+location_data <- location_data %>%
+  separate(Number_percent, into = c("Number", "Percent"), sep = " ", convert = TRUE) %>%
+  mutate(Percent = parse_number(Percent))
+
+# Plot
+ggplot(location_data, aes(x = fct_reorder(Location, Number), y = Number)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Distribution of Tumor Locations",
+    x = NULL,
+    y = "Number of Cases"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+```{r}
+# Extract count and percentage as separate numeric columns
+location_data2 <- location_data2 %>%
+  separate(Number_percent, into = c("Number", "Percent"), sep = " ", convert = TRUE) %>%
+  mutate(Percent = parse_number(Percent))
+
+# Plot
+ggplot(location_data2, aes(x = fct_reorder(Location, Number), y = Number)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0(Percent, "%")), 
+            hjust = -0.1, size = 4) +
+  coord_flip() +
+  labs(
+    title = "Haemangiosarcoma Locations by Frequency",
+    x = NULL,
+    y = "Number of Cases"
+  ) +
+  theme_minimal(base_size = 14) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15)))  # extra space for labels
+
+
+
+plot <- ggplot(location_data2, aes(x = fct_reorder(Location, Number), y = Number)) +
+  geom_col(fill = "grey30", width = 0.7) +
+  geom_text(aes(label = paste0(Percent, "%")), 
+            hjust = -0.1, size = 4.2) +
+  coord_flip() +
+  labs(
+    title = NULL,
+    x = NULL,
+    y = "Frequency of haemangiosarcoma locations"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title.y = element_text(size = 13),
+    axis.title.x = element_text(size = 13),
+    plot.margin = margin(10, 30, 10, 10),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2)))
+
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_barplot.tiff", plot = plot, width = 8, height = 6, dpi = 600)
+
 ```
 
 ## Haemangiosarcoma location MSTs

@@ -789,6 +789,16 @@ activity_overview <- activity_overview %>%
     activity_level == "Very active" ~ 100,
     activity_level == "" ~ 0)
     )
+
+
+activity_overview <- activity_overview %>%
+  mutate(activity_level_ordinal = case_when(
+    activity_level == "None" ~ 0,
+    activity_level == "Little" ~ 1,
+    activity_level == "Moderate" ~ 2,
+    activity_level == "Very active" ~ 3,
+    activity_level == "" ~ NA)
+    )
 ```
 
 Median activity level
@@ -803,6 +813,92 @@ totals <- activity_overview %>%
 # Join the totals back to the original dataset
 activity_overview <- activity_overview %>%
   left_join(totals, by = "subject_id")
+```
+
+### Ordinal activity level converted into mode/avg/median/min/max for early, rest, whole and 5y prior 
+
+```{r}
+activity_overview <- activity_overview %>%
+  mutate(activity_level_ordinal = case_when(
+    activity_level == "None" ~ 0,
+    activity_level == "Little" ~ 1,
+    activity_level == "Moderate" ~ 2,
+    activity_level == "Very active" ~ 3,
+    activity_level == "" ~ NA)
+    )
+#only 3 NAs
+```
+
+Early (SY0-2)
+
+```{r}
+# function to calculate mode as not built into summarise funct
+get_mode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+early_life_activity_overview <- activity_overview %>%
+  filter(year_in_study < 3) %>%
+  group_by(subject_id) %>%
+  summarise(
+    early_activity_mode = get_mode(activity_level_ordinal),
+    early_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
+    early_activity_median = median(activity_level_ordinal, na.rm = TRUE),
+    early_activity_min = min(activity_level_ordinal, na.rm = TRUE),
+    early_activity_max = max(activity_level_ordinal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+Rest (SY3 onwards)
+
+```{r}
+rest_life_activity_overview <- activity_overview %>%
+  filter(year_in_study > 2) %>%
+  group_by(subject_id) %>%
+  summarise(
+    rest_activity_mode = get_mode(activity_level_ordinal),
+    rest_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
+    rest_activity_median = median(activity_level_ordinal, na.rm = TRUE),
+    rest_activity_min = min(activity_level_ordinal, na.rm = TRUE),
+    rest_activity_max = max(activity_level_ordinal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+Whole (all records)
+
+```{r}
+whole_life_activity_overview <- activity_overview %>%
+  group_by(subject_id) %>%
+  summarise(
+    whole_activity_mode = get_mode(activity_level_ordinal),
+    whole_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
+    whole_activity_median = median(activity_level_ordinal, na.rm = TRUE),
+    whole_activity_min = min(activity_level_ordinal, na.rm = TRUE),
+    whole_activity_max = max(activity_level_ordinal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+Combine all 3
+
+```{r}
+early_rest_whole_activity_overview <- whole_life_activity_overview %>% left_join(early_life_activity_overview,by="subject_id") %>% left_join(rest_life_activity_overview, by="subject_id")
+
+#replace NAs with "records_not_available"
+early_rest_whole_activity_overview <- early_rest_whole_activity_overview %>%
+  mutate(across(2:16, ~ case_when(
+    is.na(.) ~ "no_activity_records_for_this_time_period",
+    TRUE ~ as.character(.)
+  )))
+
+
+write.csv(early_rest_whole_activity_overview,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/early_rest_whole_activity_level_classification.csv")
 ```
 
 #### Combine all the datasets:
@@ -940,6 +1036,35 @@ HSA_cohort_5y_prior <- HSA_cohort_activity_all_y_all_rows %>%
   )
 
 
+```
+
+Calculations only on activity overview level (none,little,mod,very_active)
+
+```{r}
+HSA_cohort_overview <- HSA_cohort %>%
+  left_join(activity_overview, by="subject_id")
+
+
+prior5y_activity_overview <- HSA_cohort_overview %>%
+  group_by(subject_id) %>%
+  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
+  summarise(
+    prior5y_activity_mode = get_mode(activity_level_ordinal),
+    prior5y_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
+    prior5y_activity_median = median(activity_level_ordinal, na.rm = TRUE),
+    prior5y_activity_min = min(activity_level_ordinal, na.rm = TRUE),
+    prior5y_activity_max = max(activity_level_ordinal, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+Combine this to the early/rest/whole 5y
+
+```{r}
+early_rest_whole_5y_activity_overview <- early_rest_whole_activity_overview %>%
+  left_join(prior5y_activity_overview,by="subject_id")
+
+write.csv(early_rest_whole_5y_activity_overview,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_early_rest_whole_5y_activity__level_classification.csv")
 ```
 
 Now join this back onto cohort data

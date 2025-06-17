@@ -344,6 +344,30 @@ merged_HSA_data <- merged_HSA_data %>%
 #merged_HSA_data <- merged_HSA_data %>%
 #  rename(study_year_first_chronic_inflam = study_year_first_chronic_inflam.x)
 
+
+#adding on simplified activty data created 250617 - only use activity level overview mode/avg/median/min/max for early,rest,whole,5y prior
+activity_level_overview <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_early_rest_whole_5y_activity__level_classification.csv")
+activity_level_overview <- activity_level_overview %>%
+  dplyr::select(-c(X))
+
+#convert data back to char 0=none, 1= little, 2=moderate 3= very active (and do the halves in between)
+activity_level_overview[] <- lapply(activity_level_overview,as.character)
+activity_level_overview<- activity_level_overview %>%
+  mutate(across(c(2,4:7,9:12,14:17,19:21), ~ case_when(
+    . == "0" ~ "none",
+    . == "0.5" ~ "none to little",
+    . == "1" ~ "little",
+    . == "1.5" ~ "little to moderate",
+    . == "2" ~ "moderate",
+    . == "2.5" ~ "moderate to very active",
+    . == "3" ~ "very active",
+    TRUE ~ .
+  )))
+
+
+#merge into main df
+merged_HSA_data2 <- merged_HSA_data %>%
+  left_join(activity_level_overview,by="subject_id")
 #write to csv
-write.csv(merged_HSA_data,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
+write.csv(merged_HSA_data2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
 ```
