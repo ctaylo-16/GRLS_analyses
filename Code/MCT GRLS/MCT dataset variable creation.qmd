@@ -2455,7 +2455,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   )))
 ```
 
-Lokivetmab
+#### Lokivetmab
 
 ```{r}
 #
@@ -2528,7 +2528,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   )))
 ```
 
-oclacitinib
+#### oclacitinib
 
 ```{r}
 oclacitinib <-c("oclacitinib","apoquel")
@@ -2600,10 +2600,154 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   )))
 ```
 
+#### Palladia/toceranib
+
+```{r}
+palladia <- c("palladia","toceranib", "toceranib phosphate")
+```
+
+```{r}
+medications_5y  <- medications_5y  %>%
+  mutate(palladia_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(palladia, collapse = "|")),
+    "palladia_yes",
+    "palladia_no"
+  ))
+
+#a count of these for each dog exc if palladia no then just palladia no
+palladia_5y_meds_per_dog <- medications_5y  %>%
+  group_by(subject_id, palladia_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY palladia_yes value then remove the palladia_no row/s for that subject id
+  # Step 1: Get subject_ids that have palladia_yes
+palladia_yes_subjects <- palladia_5y_meds_per_dog %>%
+  filter(palladia_use == "palladia_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep palladia_yes rows or palladia_no only if no palladia_yes exists for that dog
+palladia_5y_meds_per_dog_clean <- palladia_5y_meds_per_dog %>%
+  filter(palladia_use == "palladia_yes" | !(subject_id %in% palladia_yes_subjects))
+
+#calculate palladia yes quartiles
+palladia_yes <- palladia_5y_meds_per_dog_clean %>%
+  filter(palladia_use=="palladia_yes")
+
+palladia_summary <- palladia_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+#NB is not actually quartiles split
+#NB also the count column is counting rows for each dog, so the no_palladia_admins will also have a count for each medical row they DO NOT HAVE palladias for 
+palladia_5y_meds_per_dog_clean_quartiles <- palladia_5y_meds_per_dog_clean %>%
+  mutate(palladia_amount = case_when(
+    palladia_use == "palladia_no" ~ "no_palladia_admin",
+    palladia_use == "palladia_yes" ~ as.character(count)
+  ))
+#then filt down to unique single row for each dog of its count or palladia no, then join back to the 3044 dogs and if no count or no palladia no then "no_palladia_recorded_in_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib%>% left_join(palladia_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia %>%
+    mutate(palladia_amount = replace_na(palladia_amount, "no_med_use_recorded"))
+
+#ditch count column 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia%>%
+  dplyr::select(c(-"count"))
+#rename steroid_quantile to make clear its a 5y column
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia %>%
+  rename(palladia_5y_amount = palladia_amount)
+
+###redo indices asnew column
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia <-
+  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia %>%
+  mutate(across(263:264, ~ case_when(
+    is.na(.) ~ "no_medication_records_for_this_time_period",
+    TRUE ~ as.character(.)
+  )))
+```
+
+#### Masivet/masitinib
+
+```{r}
+masivet <-c("masitinib","masivet")
+```
+
+```{r}
+medications_5y  <- medications_5y  %>%
+  mutate(masivet_use = if_else(
+    str_detect(tolower(medication_ingredients), str_c(masivet, collapse = "|")),
+    "masivet_yes",
+    "masivet_no"
+  ))
+
+#a count of these for each dog exc if masivet no then just masivet no
+masivet_5y_meds_per_dog <- medications_5y  %>%
+  group_by(subject_id, masivet_use) %>%
+  summarise(count = n(), .groups = "drop")
+  #remove rows where if subject has ANY masivet_yes value then remove the masivet_no row/s for that subject id
+  # Step 1: Get subject_ids that have masivet_yes
+masivet_yes_subjects <- masivet_5y_meds_per_dog %>%
+  filter(masivet_use == "masivet_yes") %>%
+  pull(subject_id)
+
+# Step 2: Keep masivet_yes rows or masivet_no only if no masivet_yes exists for that dog
+masivet_5y_meds_per_dog_clean <- masivet_5y_meds_per_dog %>%
+  filter(masivet_use == "masivet_yes" | !(subject_id %in% masivet_yes_subjects))
+
+#calculate masivet yes quartiles
+masivet_yes <- masivet_5y_meds_per_dog_clean %>%
+  filter(masivet_use=="masivet_yes")
+
+masivet_summary <- masivet_yes %>%
+  summarise(
+    min=min(count),
+    Q1 = quantile(count, 0.25, na.rm = TRUE),
+    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
+    Q3 = quantile(count, 0.75, na.rm = TRUE),
+    max=max(count),
+    .groups = "drop"
+  )
+#NB is not actually quartiles split
+#NB also the count column is counting rows for each dog, so the no_masivet_admins will also have a count for each medical row they DO NOT HAVE masivets for 
+masivet_5y_meds_per_dog_clean_quartiles <- masivet_5y_meds_per_dog_clean %>%
+  mutate(masivet_amount = case_when(
+    masivet_use == "masivet_no" ~ "no_masivet_admin",
+    masivet_use == "masivet_yes" ~ as.character(count)
+  ))
+#then filt down to unique single row for each dog of its count or masivet no, then join back to the 3044 dogs and if no count or no masivet no then "no_masivet_recorded_in_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia%>% left_join(masivet_5y_meds_per_dog_clean_quartiles, by="subject_id")
+
+#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet %>%
+    mutate(masivet_amount = replace_na(masivet_amount, "no_med_use_recorded"))
+
+#ditch count column 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet %>%
+  dplyr::select(c(-"count"))
+#rename steroid_quantile to make clear its a 5y column
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet  %>%
+  rename(masivet_5y_amount = masivet_amount)
+
+###redo indices asnew column
+
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet  <-
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet  %>%
+  mutate(across(265:266, ~ case_when(
+    is.na(.) ~ "no_medication_records_for_this_time_period",
+    TRUE ~ as.character(.)
+  )))
+```
+
 Interim write to csv
 
 ```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset_interim.csv")
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset_interim.csv")
 ```
 
 ## Reproduction variables
@@ -2682,7 +2826,7 @@ profile_abr <- profile %>%
 
 
 ## add back onto df
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_neutering <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib %>% left_join(profile_abr, by="subject_id")
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet_neutering <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet %>% left_join(profile_abr, by="subject_id")
 ```
 
 Info on number of seasons etc
@@ -2843,7 +2987,7 @@ perform this when only single row per dog rather than all the repro rows as in t
 
 ```{r}
 #add neut data to the main df then calculate 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib %>% left_join(neut_data_single_row,by="subject_id")
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet %>% left_join(neut_data_single_row,by="subject_id")
 #delete dupe columns
 #dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 %>%
 #  dplyr::select(-c(neuter.x,sex.x,birth_date2.x,age_at_neuter_years.x,spay_neuter_date2.x))
@@ -2856,7 +3000,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
      #    age_at_neuter_years = age_at_neuter_years.y,
      #    spay_neuter_date2 = spay_neuter_date2.y)
 #calculate time between spay_neuter_date2 and end date
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet2 %>%
 mutate(
     time_between_neuter_endpoint_diagnosis_years = case_when(
       is.na(spay_neuter_date2) ~ "not_neutered",
@@ -2867,7 +3011,7 @@ mutate(
     )
   )
 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3 %>%
 mutate(
     time_between_neuter_endpoint_diagnosis_months = case_when(
       is.na(spay_neuter_date2) ~ "not_neutered",
@@ -2882,7 +3026,7 @@ mutate(
 ### Age at endpoint diagnosis
 
 ```{r}
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3 %>%
   mutate(
     birth_date2 = as.Date(birth_date2, format = "%Y-%m-%d"),
     end_date2= as.Date(end_date, format = "%Y-%m-%d")
@@ -2900,16 +3044,16 @@ dog_weight <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physic
 dog_weight <- dog_weight %>%
   dplyr::select(c(subject_id,year_in_study,height,weight,purina_body_condition_score))
 #remerge back to big df 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight <-  dog_weight%>%
-  left_join(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3,by="subject_id")
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight <-  dog_weight%>%
+  left_join(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3,by="subject_id")
 ###for record years 5y prior to endpoint record year do an average of weight
 get_mode <- function(x) {
   ux <- unique(x)
   ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
 }
 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight2 <- 
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight2 <- 
+  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight %>%
   mutate(year_in_study_diagnosis_or_final_record_year = as.numeric(year_in_study_diagnosis_or_final_record_year)) %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
@@ -2934,53 +3078,53 @@ tidy these to remove outliers and convert to kg and cm (but not going to do quar
 
 ```{r}
 #avg weight to kg
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight2 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight2 %>%
   mutate(avg_weight_5y_prior_endpoint_kg = avg_weight_5y_prior_endpoint * 0.453)
 
 #### remove weight values for dogs that have their age at final date as <18m (ie. non adult weights) = 6 dogs
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3 %>%
   mutate(avg_weight_5y_prior_endpoint_kg = if_else(age_at_final_date < 1.5, NA_real_, avg_weight_5y_prior_endpoint_kg))
 
 #median weight
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3 %>%
   mutate(median_weight_5y_prior_endpoint_kg = median_weight_5y_prior_endpoint * 0.453)
 
 #### remove weight values for dogs that have their age at final date as <18m (ie. non adult weights) = 6 dogs
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3 %>%
   mutate(median_weight_5y_prior_endpoint_kg = if_else(age_at_final_date < 1.5, NA_real_, median_weight_5y_prior_endpoint_kg))
 
 #avg height to cm
 
 #avg height to cm
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3 %>%
   mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
 
 #### remove height values for dogs that have their age at final date as <18m (ie. non adult heights) = 6 dogs
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_medsdog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4 %>%
   mutate(avg_height_5y_prior_endpoint_cm = if_else(age_at_final_date < 1.5, NA_real_, avg_height_5y_prior_endpoint_cm))
 #median
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight3 %>%
   mutate(median_height_5y_prior_endpoint_cm = median_height_5y_prior_endpoint * 2.54)
 
 #### remove height values for dogs that have their age at final date as <18m (ie. non adult heights) = 6 dogs
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4 %>%
   mutate(median_height_5y_prior_endpoint_cm = if_else(age_at_final_date < 1.5, NA_real_, median_height_5y_prior_endpoint_cm))
 
 
 #keep only distinct rows
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4 %>%
   distinct(subject_id,.keep_all = TRUE)
 
 #for some reason, losing records of ~23 dogs with this distinct function - take weight data and re-add to last 3044 df
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_abr <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
-  dplyr::select(subject_id,283:293)
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_abr <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4 %>%
+  dplyr::select(subject_id,295:297)
 
 #rejoin back
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 %>% left_join(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_abr,by="subject_id")
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_unique<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3 %>% left_join(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_abr,by="subject_id")
 ```
 
 ```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_variables_dataset_interim.csv")
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_unique,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset_interim.csv")
 ```
 
 ## Activity
@@ -3317,10 +3461,10 @@ activity_all_3_3 <- activity_all_3_3 %>%
 Add in all these variables to main df
 
 ```{r}
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_unique <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_unique %>%
   dplyr::select(-c(year_in_study.x,year_in_study.y,record_date.y))
   
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_unique %>%
  left_join(activity_all_3_3, by="subject_id")
 ```
 
@@ -3342,20 +3486,20 @@ activity_all_y_all_rows <- rbind(activity_sy1_2_same,activity_sy3_same)
 
 #join to cohort for 5y backwards calculations
 #abridge cohort to only keep relevant columns then join back to ~200 col df after
-cohort_abr <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity %>%
+cohort_abr <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity %>%
   dplyr::select(c(subject_id,end_date2,had_MCT,year_in_study_diagnosis_or_final_record_year))
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_all_rows <- activity_all_y_all_rows %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_all_rows <- activity_all_y_all_rows %>%
   left_join(cohort_abr,by="subject_id")
 
 
 #many to many match from step above resolved by only keeping unique row for each patient
 #only singhle unique row per patient]
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_all_rows_2<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_all_rows[!duplicated(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_all_rows), ]
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_all_rows_2<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_all_rows[!duplicated(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_all_rows), ]
 
 #make sure year is in numeric
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_all_rows_2$year_in_study_diagnosis_or_final_record_year  <- as.numeric(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_all_rows_2$year_in_study_diagnosis_or_final_record_year )
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_all_rows_2$year_in_study_diagnosis_or_final_record_year  <- as.numeric(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_all_rows_2$year_in_study_diagnosis_or_final_record_year )
 
-cohort_5y_prior <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_all_rows_2 %>%
+cohort_5y_prior <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_all_rows_2 %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
   summarise(
@@ -3365,12 +3509,12 @@ cohort_5y_prior <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_
   )
 
 #combine all the activity data back again
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity %>% 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity %>% 
   left_join(cohort_5y_prior, by="subject_id")
 
 #for any dogs with NAs recode "reocrds_not_available"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
-  mutate(across(287:295, ~case_when(
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
+  mutate(across(286:291, ~case_when(
       is.na(.) ~ "no_records_for_this_time_period",
     TRUE ~ as.character(.)  
   )))
@@ -3382,7 +3526,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 ### Reclassify values like in HSA log reg (like moderate activity from numeric score etc
 
 ```{r}
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity%>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity%>%
   mutate(avg_activity_duration_sy1_2 = as.numeric(as.character(avg_activity_duration_sy1_2))) %>%
   mutate(avg_activity_duration_sy1_2_splits = case_when(
     avg_activity_duration_sy1_2 <= 20 ~ "less_than_30min",
@@ -3392,7 +3536,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
     avg_activity_duration_sy1_2 >80 & avg_activity_duration_sy1_2 <= 100 ~ "more_than_120_min"
   ))
 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_activity_freq_sy1_2 = as.numeric(as.character(avg_activity_freq_sy1_2))) %>%
   mutate(avg_activity_freq_sy1_2_splits = case_when(
     avg_activity_freq_sy1_2 <= 20 ~ "never",
@@ -3403,7 +3547,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   ))
 
 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity%>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity%>%
   mutate(avg_activity_intensity_sy1_2 = as.numeric(as.character(avg_activity_intensity_sy1_2))) %>%
   mutate(avg_activity_intensity_sy1_2_splits = case_when(
     avg_activity_intensity_sy1_2 <= 33.3 ~ "low",
@@ -3414,8 +3558,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 
 #SY3 + intensity and freq
 
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_activity_freq_sy3 = as.numeric(as.character(avg_activity_freq_sy3))) %>%
   mutate(avg_activity_freq_sy3_splits = case_when(
     avg_activity_freq_sy3 <= 20 ~ "rarely",
@@ -3427,7 +3570,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   ))
 
 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_activity_intensity_sy3 = as.numeric(as.character(avg_activity_intensity_sy3))) %>%
   mutate(avg_activity_intensity_sy3_splits = case_when(
     avg_activity_intensity_sy3 <= 20 ~ "slow_walks",
@@ -3443,7 +3586,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 #5y prior endpoint  freq
 
 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_frequency_5y_prior_endpoint = as.numeric(as.character(avg_activity_freq_sy3))) %>%
   mutate(avg_frequency_5y_prior_endpoint_splits = case_when(
     avg_frequency_5y_prior_endpoint <= 20 ~ "rarely",
@@ -3454,7 +3597,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
     is.na(avg_frequency_5y_prior_endpoint) ~"no_records_for_this_time_period"
   ))
 #5y prior endpoint intensity
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_intensity_5y_prior_endpoint = as.numeric(as.character(avg_intensity_5y_prior_endpoint))) %>%
   mutate(avg_intensity_5y_prior_endpoint_splits = case_when(
     avg_intensity_5y_prior_endpoint <= 20 ~ "slow_walks",
@@ -3466,7 +3609,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   ))
 #recode into larger groupings e.g grouping together rarely + monthly for frequency
 #freq
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_activity_freq_sy3_splits_grouped = case_when(
     avg_activity_freq_sy3_splits == "monthly" ~ "rarely",
     avg_activity_freq_sy3_splits == "multi_daily"~"daily_or_more" ,
@@ -3477,7 +3620,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   ))
 
 #intensity
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_activity_intensity_sy3_splits_grouped = case_when(
     avg_activity_intensity_sy3_splits == "jogs" ~ "high_intensity",
     avg_activity_intensity_sy3_splits == "runs" ~"high_intensity" ,
@@ -3486,7 +3629,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
      avg_activity_intensity_sy3_splits =="slow_walks" ~ "low_intensity"
   ))
 #5y prior freq
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_frequency_5y_prior_endpoint_splits_grouped = case_when(
     avg_frequency_5y_prior_endpoint_splits == "monthly" ~ "rarely",
     avg_frequency_5y_prior_endpoint_splits == "multi_daily"~"daily_or_more" ,
@@ -3497,7 +3640,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   ))
 
 #5y prior intensity
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity<-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity<-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   mutate(avg_intensity_5y_prior_endpoint_splits_grouped = case_when(
     avg_intensity_5y_prior_endpoint_splits == "jogs" ~ "high_intensity",
     avg_intensity_5y_prior_endpoint_splits == "runs" ~"high_intensity" ,
@@ -3513,16 +3656,16 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 -   need to ensure columns (where indicated) have the correct NA e.g dogs with no medical records have "no_medical_records_for_time_point" rather than NA/not_recorded etc
 
 ```{r}
-colnames(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity)
+colnames(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity)
 
 #remove unnecessary columns:
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity %>%
   dplyr::select(-c(record_date.x,X))
 
-sum(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2))
+sum(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity2))
 
 #check which columns have most NAs and decide how best to replace
-na_summary <- colSums(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2))
+na_summary <- colSums(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity2))
 
 na_summary_df <- data.frame(
   column = names(na_summary),
@@ -3534,15 +3677,15 @@ na_summary_df
 #majority of NAs are fine e.g in date withdrawn column
 
 #ensure the rest are replaced by NAs, doing sequentially to ignore date columns which keep messing up the is.na conversion
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity2 %>%
   mutate(across(2:21, ~ replace(., is.na(.), "records_not_available")))
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
-  mutate(across(36:260, ~ replace(., is.na(.), "records_not_available")))
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
-  mutate(across(273:304, ~ replace(., is.na(.), "records_not_available")))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 %>%
+  mutate(across(36:262, ~ replace(., is.na(.), "records_not_available")))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 %>%
+  mutate(across(276:300, ~ replace(., is.na(.), "records_not_available")))
 
 #check NAs now
-na_summary2 <- colSums(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3))
+na_summary2 <- colSums(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3))
 
 na_summary_df2 <- data.frame(
   column = names(na_summary2),
@@ -3554,15 +3697,15 @@ na_summary_df2
 
 
 #manually fix avg_weight_5y_prior_endpoint and MDI_quintile
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- 
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
-  mutate(avg_weight_5y_prior_endpoint = replace(avg_weight_5y_prior_endpoint, 
-                                                 is.na(avg_weight_5y_prior_endpoint), 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 <- 
+  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 %>%
+  mutate(avg_weight_5y_prior_endpoint = replace(avg_weight_5y_prior_endpoint_kg, 
+                                                 is.na(avg_weight_5y_prior_endpoint_kg), 
                                                  "records_not_available"))
 
 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied <- 
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity_tidied <- 
+  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity3 %>%
   mutate(MDI_quintile = replace(MDI_quintile, 
                                                  is.na(MDI_quintile), 
                                                  "records_not_available"))
@@ -3571,5 +3714,5 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 ```
 
 ```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset.csv")
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_palladia_masivet3_weight4_activity_endpoint_activity_tidied,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset.csv")
 ```

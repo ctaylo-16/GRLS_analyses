@@ -1587,6 +1587,7 @@ all_cancers <- c("adrenal_tumor","basal_cell_tumor","bile_duct_tumor","bladder_t
                  "histiocytic_sarcoma","kidney_tumor","liver_tumor","lung_tumor","mast_cell_tumor","melanmoma","multiple_myeloma","nasal_tumor","osteosarcoma","pancreatic_tumor","perianal_adenoma","pituitary_tumor","plasma_cell_tumor","plasmacytoma","prostate_tumor","soft_tissue_sarcoma","splenic_tumor","squamous_cell_carcinoma","stomach_intestinal_tumor","testicular_tumor","thymoma","thyroid_tumor")
 malig_cancers <- c("hemangiosarcoma",
   "histiocytic_sarcoma",  "melanoma", "multiple_myeloma", "osteosarcoma", "pancreatic_tumor", "plasma_cell_tumor", "plasmacytoma", "soft_tissue_sarcoma", "squamous_cell_carcinoma")
+#dont think appropriate to use this list of benign cancers as many are just location not type of cancer = exclude
 benign_cancers <- c("adrenal_tumor", "basal_cell_tumor", "bile_duct_tumor", "bladder_tumor", "brain_spinal_cord_tumor", "breast_or_mammary_tumor", "eye_tumor", "hair_matrix_tumor", "heart_tumor", "kidney_tumor", "liver_tumor", "lung_tumor", "mast_cell_tumor", "nasal_tumor", "perianal_adenoma", "pituitary_tumor", "prostate_tumor", "splenic_tumor", "stomach_intestinal_tumor", "testicular_tumor", "thymoma", "thyroid_tumor")
 
 ```
