@@ -1316,6 +1316,7 @@ Lowest AIC for:
 -   all have AIC lower than the splits above so sub in perhaps the prior 5y mode ?
 
 -   BCS whole value
+
     -   only not_recorded category sig = not retained
 
 ```{r}

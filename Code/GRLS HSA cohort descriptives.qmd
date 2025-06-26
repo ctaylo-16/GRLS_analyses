@@ -369,6 +369,13 @@ ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_barplo
 
 ```
 
+Count of how many dogs had \>1 tumour location recorded
+
+```{r}
+multi_locations <- HSA_dogs2 %>%
+  filter(grepl(",",location))
+```
+
 ## Haemangiosarcoma location MSTs
 
 Survival time days calculation
@@ -688,6 +695,21 @@ ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no
 
 ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other.tif", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
 
+```
+
+### Log rank to compare if visceral VS cutaneous MST sig different
+
+```{r}
+
+HSA_dogs4 <- HSA_dogs4 %>%
+  mutate(visceral_or_cutaneous = if_else(grepl("cut", tracked_condition, ignore.case = TRUE))
+
+
+
+survdiff(Surv(time = time_between_diagnosis_date_death_date_days, event = status) ~ visceral_or_cutaneous, data = HSA_dogs4)
+
+         
+           
 ```
 
 ## Incidence per 100 dog years
