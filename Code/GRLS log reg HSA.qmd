@@ -2864,7 +2864,7 @@ final_df[12, 2] <- "Weight not recorded"
 final_df[11,2]<-">35kg"
 final_df[7,2] <- "Female"
 final_df[8,2]<- "Male"
-final_df[1, 1] <- "Age at final date (Barry)"
+final_df[1, 1] <- "Age at final date"
 final_df[7, 1] <- "Sex"
 final_df[13,1] <- "Cancer recorded 5y prior to endpoint"
 final_df[9, 1] <- "Median adult weight 5y prior to endpoint (biological)"
@@ -3533,7 +3533,7 @@ df <- df %>%
 df <- df %>%
 mutate(
     NSAID_5y_quantiles = recode(as.character(NSAID_5y_quantiles),
-                          "no_NSAID_admin" = "NSAID not administered",
+                          "no_NSAID_admin" = "NSAID not prescribed",
                           "Q1(1)" = "1 time",
                           "Q2(1-2)" = "2 times",
                           "Q3(2-3)"="3 times",
@@ -3543,7 +3543,7 @@ mutate(
 
 df <- df %>%   
   mutate(NSAID_5y_quantiles = factor(NSAID_5y_quantiles,levels=c(
-    "NSAID not administered","1 time","2 times","3 times","4-11 times","No medical records in time period"
+    "NSAID not prescribed","1 time","2 times","3 times","4-11 times","No medical records in time period"
   )))
   
 #frequency activity quartile 
@@ -3616,7 +3616,7 @@ final_df[12, 2] <- "Weight not recorded"
 final_df[11,2]<-">35kg"
 final_df[7,2] <- "Female"
 final_df[8,2]<- "Male"
-final_df[1, 1] <- "Age at final date (Barry)"
+final_df[1, 1] <- "Age at final date"
 final_df[7, 1] <- "Sex"
 final_df[13,1] <- "Mode activity level 5y prior to endpoint"
 final_df[9, 1] <- "Median adult weight 5y prior to endpoint (biological)"
@@ -3631,7 +3631,7 @@ final_df[16,8]<-0
 
 
 final_df$category <- factor(final_df$category, 
-                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","Little","Moderate","Very active","Not recorded","No other cancer reported","Other cancer reported", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period",
+                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","Little","Moderate","Very active","Not recorded","No other cancer reported","Other cancer reported", "NSAID not prescribed", "1 time","2 times","3 times","4-11 times", "No medical records in time period",
                                     "GI comorb not present", "GI comorb present"))
 final_df$AutoNumber <- factor(final_df$AutoNumber, 
                         levels = c("1","2","3","4","5","6","7","8","9","10","11","12",

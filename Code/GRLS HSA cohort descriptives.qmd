@@ -58,6 +58,25 @@ profile <- profile %>%
 HSA_dogs2 <- HSA_dogs2 %>%
   left_join(profile,by="subject_id")
 
+
+#remove 3 rows from the HSA_dogs_2 that are dogs in the multi HSA list and have 2 seperate records with same date
+#dog with 2 cardiac records on same date -094-014074
+
+HSA_dogs2 <- HSA_dogs2 %>%
+  group_by(subject_id) %>%
+  filter(!(subject_id == "094-014074") | row_number() == 1) %>%
+  ungroup()
+#second dog with same issue - 	094-030098
+HSA_dogs2 <-HSA_dogs2 %>%
+    group_by(subject_id) %>%
+  filter(!(subject_id == "094-030098") | row_number() == 1) %>%
+  ungroup()
+
+#3rd dog with seperate definitive splenci and hepatic on same day,just keep one row - 094-004453
+HSA_dogs2 <-HSA_dogs2 %>%
+    group_by(subject_id) %>%
+  filter(!(subject_id == "094-004453") | row_number() == 1) %>%
+  ungroup()
 ```
 
 ## Time enrolled in study, median age at enrollment
@@ -273,8 +292,8 @@ Location barplot
 location_data <- tribble(
   ~Location, ~Number_percent,
   "spleen", "252 (23.9)",
-  "cardiac", "240 (22.8)",
-  "lung", "170 (16.1)",
+  "cardiac", "238 (22.7)",
+  "lung", "169 (16.1)",
   "liver", "155 (14.7)",
   "kidney", "59 (5.6)",
   "other", "31 (2.9)",
@@ -710,6 +729,24 @@ survdiff(Surv(time = time_between_diagnosis_date_death_date_days, event = status
 
          
            
+```
+
+Log rankf or all HSA locations
+
+```{r}
+surv_object <- Surv(time = HSA_dogs4$time_between_diagnosis_date_death_date_days, event = HSA_dogs4$status)
+
+logrank_test <- survdiff(surv_object ~ cancer_group, data = HSA_dogs4)
+logrank_test
+
+
+p_value <- 1 - pchisq(logrank_test$chisq, df = length(logrank_test$n) - 1)
+p_value
+
+#pairwise comparisons
+library(survminer)
+pairwise_survdiff(Surv(time_between_diagnosis_date_death_date_days, status) ~ cancer_group, data = HSA_dogs4)
+
 ```
 
 ## Incidence per 100 dog years
