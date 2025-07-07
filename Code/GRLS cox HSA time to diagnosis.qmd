@@ -166,7 +166,7 @@ cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
   "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior",
   "cooking_fuel_secondary_mode_5yrs_prior", "year_in_study_diagnosis_or_final_record_year",
   "region_name_mode_5yrs_prior", "state_mode_5yrs_prior", 
-  "final_date.y", "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","comorbidities_lifetime","study_year_first_chronic_inflam.x","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","comorbidities_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","comorbidities_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","orthopaedic","inflammatory_other","chronic_inflammatory","lifelong_comorb_present.x","lifelong_comorbidities","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present", "malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","had_HSA",
+  "final_date.y", "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","comorbidities_lifetime","study_year_first_chronic_inflam.x","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","comorbidities_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","comorbidities_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","orthopaedic","inflammatory_other","chronic_inflammatory","lifelong_comorb_present.x","lifelong_comorbidities","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present", "malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","had_HSA",
   "mean_activity_level_overview", "USDA_30min_sy1_2", "activity_1h_min_sy1_2",
   "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2",
   "avg_activity_intensity_sy1_2", "avg_activity_freq_sy1_2",
@@ -1189,7 +1189,7 @@ perform_univariable_analysis(
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
-"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present" ),
+"malig_cancers_count","all_cancers_count","all_cancers_YN",,"malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present" ),
   output_csv = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv",
   output_doc = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx"
 )
@@ -1281,7 +1281,7 @@ explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior",
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
-"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever" )
+"malig_cancers_count","all_cancers_count","all_cancers_YN",,"malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever" )
 dependent = "status_factor" # had HSA or no
 results <- cohort_abr %>%
   summary_factorlist(dependent, explanatory,
@@ -2179,17 +2179,10 @@ analyse_model(cox_model_44,cohort_abr_sig,cox_model_40a)
 
 -   malig, all - all cancer count and malig count is sig but malig lower AIC/BIC
 
--   benign, malig, all YN - malig and all are sig but count malig is lowest AIC
+-   malig, all YN - malig and all are sig but count malig is lowest AIC
 
 ```{r}
-cox_model_45a<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
- +avg_activity_duration_sy1_2_quartiles +neutered_reason+
-use_incense_or_candles_study_years_whole_life+gastrointestinal + benign_cancers_YN
 
-, data = cohort_abr_sig)
-
-
-analyse_model(cox_model_45a,cohort_abr_sig,cox_model_40a)
 
 
 cox_model_45b<- coxph(Surv(survival_time_days, status) ~  avg_weight_5y_prior_endpoint_quartiles + avg_purina_BCS_5y_prior_endpoint_quartiles + avg_frequency_5y_prior_endpoint_quartiles + quartile_anti_parasites_5y_prior_endpoint+sex
@@ -2555,7 +2548,7 @@ explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior",
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles",
-"malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"  )
+"malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"  )
 dependent = "status_factor" 
 results <- cohort_no_not_rec %>%
   summary_factorlist(dependent, explanatory,

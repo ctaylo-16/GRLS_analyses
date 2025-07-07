@@ -6,6 +6,12 @@ editor: visual
 
 ## GRLS clinic postcode to deprivation linkup
 
+Further info on MDI = https://www.census.gov/topics/income-poverty/poverty/about/related-sites/rates.html
+
+US equiv of UK IMD
+
+Using vet clinic zip codes/postal code to get a FIPS code then link this to county level MDI
+
 ```{r}
 library(tidyverse)
 #GRLS clinics
@@ -42,7 +48,7 @@ MDI_2019 <- MDI_2019 %>%
 
 ```
 
-Need to calculate quintiles for MDI 2019 across all counties and then apply this to our clinics
+Need to calculate quintiles for MDI 2019 rate across all counties and then apply this quintile value to our clinics
 
 ```{r}
 MDI_quintiles <- quantile(MDI_2019$MDI.rate, probs = seq(0, 1, 0.2))

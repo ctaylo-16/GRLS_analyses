@@ -6,6 +6,14 @@ editor: visual
 
 ## Environmental exposures for all endpoints
 
+Several datasets available from GRLS questionaires:
+
+-   environment_conditions - binary YN did they use X potential exposure chemical from O questrionaire
+
+-   environment_sleep_location - free text on bedding/crate/bed/furniture and where dogs slept
+
+-   
+
 ```{r}
 library(tidyverse)
 library(ggplot2)

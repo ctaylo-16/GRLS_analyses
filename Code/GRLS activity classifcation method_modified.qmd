@@ -815,7 +815,7 @@ activity_overview <- activity_overview %>%
   left_join(totals, by = "subject_id")
 ```
 
-### Ordinal activity level converted into mode/avg/median/min/max for early, rest, whole and 5y prior 
+### Ordinal activity level converted into mode/avg/median/min/max for early, rest, whole and 5y prior
 
 ```{r}
 activity_overview <- activity_overview %>%
