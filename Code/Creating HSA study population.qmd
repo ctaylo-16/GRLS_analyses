@@ -6,6 +6,8 @@ editor: visual
 
 ## HSA cohort for RF diagnosis
 
+Combining all datasets generated in seperate scripts (e.g. comorbdiities, medicaiton, activity, repro et.c) into one csv to take forward to tidying and analyses in models
+
 Cohort:
 
 -   All HSA cases and date of death
@@ -334,7 +336,7 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(251:318, ~ case_when(
+  mutate(across(243:310, ~ case_when(
     is.na(.) ~ "no_medication_records_for_this_time_period",
     as.character(.) == "drug_not_administered" ~ "no_medication_records_for_this_time_period",
     TRUE ~ as.character(.)

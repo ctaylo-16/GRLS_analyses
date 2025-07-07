@@ -1587,11 +1587,13 @@ all_cancers <- c("adrenal_tumor","basal_cell_tumor","bile_duct_tumor","bladder_t
                  "histiocytic_sarcoma","kidney_tumor","liver_tumor","lung_tumor","mast_cell_tumor","melanmoma","multiple_myeloma","nasal_tumor","osteosarcoma","pancreatic_tumor","perianal_adenoma","pituitary_tumor","plasma_cell_tumor","plasmacytoma","prostate_tumor","soft_tissue_sarcoma","splenic_tumor","squamous_cell_carcinoma","stomach_intestinal_tumor","testicular_tumor","thymoma","thyroid_tumor")
 malig_cancers <- c("hemangiosarcoma",
   "histiocytic_sarcoma",  "melanoma", "multiple_myeloma", "osteosarcoma", "pancreatic_tumor", "plasma_cell_tumor", "plasmacytoma", "soft_tissue_sarcoma", "squamous_cell_carcinoma")
-benign_cancers <- c("adrenal_tumor", "basal_cell_tumor", "bile_duct_tumor", "bladder_tumor", "brain_spinal_cord_tumor", "breast_or_mammary_tumor", "eye_tumor", "hair_matrix_tumor", "heart_tumor", "kidney_tumor", "liver_tumor", "lung_tumor", "mast_cell_tumor", "nasal_tumor", "perianal_adenoma", "pituitary_tumor", "prostate_tumor", "splenic_tumor", "stomach_intestinal_tumor", "testicular_tumor", "thymoma", "thyroid_tumor")
+
 
 ```
 
-Create YN and counts for all cancers, benign and malig
+Create YN and counts for all cancers and malig
+
+NB. indices may no longer work as have now removed benign cancer variables due to inaccuracies
 
 ```{r}
 comorbs_neoplasia_2 <- conditions_neoplasia %>%
@@ -1611,7 +1613,6 @@ comorbs_neoplasia_2 <- comorbs_neoplasia_2[complete.cases(comorbs_neoplasia_2[, 
 unique_cancer <- unique(comorbs_neoplasia_2$subject_id)
 comorbs_neoplasia_2$all_cancers_count_lifetime <- 0
 comorbs_neoplasia_2$malig_cancers_count_lifetime <- 0
-comorbs_neoplasia_2$benign_cancers_count_lifetime <- 0
 
 
 # Define the cancer columns indices (from index 2 to the last column)
@@ -1643,8 +1644,6 @@ comorbs_neoplasia_2 <- comorbs_neoplasia_2 %>%
   mutate(
     all_cancers_YN_lifetime = ifelse(all_cancers_count_lifetime >= 1, 1, 0),
     malig_cancers_YN_lifetime = ifelse(malig_cancers_count_lifetime >= 1, 1, 0),
-    benign_cancers_YN_lifetime = ifelse(benign_cancers_count_lifetime >= 1, 1, 0),
-
   )
 
 
@@ -1654,13 +1653,11 @@ cancer_count_summary <- comorbs_neoplasia_2 %>%
   group_by(subject_id) %>%
   summarise(
     malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
-    benign_cancers_count_lifetime = if_else(all(is.na(benign_cancers_count_lifetime)), 0, max(benign_cancers_count_lifetime, na.rm = TRUE)),
     all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
     malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
     all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
 
     malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
-    benign_cancers_YN_lifetime = if_else(all(is.na(benign_cancers_YN_lifetime)), 0, max(benign_cancers_YN_lifetime, na.rm = TRUE)),
     all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
     malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
     all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
@@ -1692,7 +1689,6 @@ unique_cancer2 <- unique(comorbs_neoplasia_3$subject_id)
 
 comorbs_neoplasia_3$all_cancers_count_5y <- 0
 comorbs_neoplasia_3$malig_cancers_count_5y <- 0
-comorbs_neoplasia_3$benign_cancers_count_5y <- 0
 
 
 # Define the cancer columns indices (from index 2 to the last column)
@@ -1712,11 +1708,6 @@ for (col_index in cancer_columns) {
   if (col_name %in% malig_cancers) {
     comorbs_neoplasia_3$malig_cancers_count_5y <- comorbs_neoplasia_3$malig_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
   }
-  
-  # Count for benign cancers
-  if (col_name %in% benign_cancers) {
-    comorbs_neoplasia_3$benign_cancers_count_5y <- comorbs_neoplasia_3$benign_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
-  }
 }
 
 #create Y N columns for each in addition to counts
@@ -1724,8 +1715,6 @@ comorbs_neoplasia_3 <- comorbs_neoplasia_3 %>%
   mutate(
     all_cancers_YN_5y = ifelse(all_cancers_count_5y >= 1, 1, 0),
     malig_cancers_YN_5y = ifelse(malig_cancers_count_5y >= 1, 1, 0),
-    benign_cancers_YN_5y = ifelse(benign_cancers_count_5y >= 1, 1, 0),
-
   )
 
 
@@ -1735,13 +1724,11 @@ cancer_count_summary_2 <- comorbs_neoplasia_3 %>%
   group_by(subject_id) %>%
   summarise(
     malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
-    benign_cancers_count_5y = if_else(all(is.na(benign_cancers_count_5y)), 0, max(benign_cancers_count_5y, na.rm = TRUE)),
     all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
     malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
     all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
 
     malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
-    benign_cancers_YN_5y = if_else(all(is.na(benign_cancers_YN_5y)), 0, max(benign_cancers_YN_5y, na.rm = TRUE)),
     all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
     malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
     all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
@@ -2387,7 +2374,7 @@ Interim write to csv
 write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_variables_dataset_interim.csv")
 ```
 
-## Reproduction variables 
+## Reproduction variables
 
 Load in repro datasets
 
@@ -3289,6 +3276,93 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
   ))
 ```
 
+### Ordinal activity level converted into mode/avg/median/min/max for early, rest, whole and 5y prior
+
+```{r}
+activity_overview <- activity_overview %>%
+  mutate(activity_level_ordinal = case_when(
+    activity_level == "None" ~ 0,
+    activity_level == "Little" ~ 1,
+    activity_level == "Moderate" ~ 2,
+    activity_level == "Very active" ~ 3,
+    activity_level == "" ~ NA)
+    )
+#only 3 NAs
+```
+
+Early (SY0-2)
+
+```{r}
+# function to calculate mode as not built into summarise funct
+get_mode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+early_life_activity_overview <- activity_overview %>%
+  filter(year_in_study < 3) %>%
+  group_by(subject_id) %>%
+  summarise(
+    early_activity_mode = get_mode(activity_level_ordinal),
+    early_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
+    early_activity_median = median(activity_level_ordinal, na.rm = TRUE),
+    early_activity_min = min(activity_level_ordinal, na.rm = TRUE),
+    early_activity_max = max(activity_level_ordinal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+Rest (SY3 onwards)
+
+```{r}
+rest_life_activity_overview <- activity_overview %>%
+  filter(year_in_study > 2) %>%
+  group_by(subject_id) %>%
+  summarise(
+    rest_activity_mode = get_mode(activity_level_ordinal),
+    rest_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
+    rest_activity_median = median(activity_level_ordinal, na.rm = TRUE),
+    rest_activity_min = min(activity_level_ordinal, na.rm = TRUE),
+    rest_activity_max = max(activity_level_ordinal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+Whole (all records)
+
+```{r}
+whole_life_activity_overview <- activity_overview %>%
+  group_by(subject_id) %>%
+  summarise(
+    whole_activity_mode = get_mode(activity_level_ordinal),
+    whole_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
+    whole_activity_median = median(activity_level_ordinal, na.rm = TRUE),
+    whole_activity_min = min(activity_level_ordinal, na.rm = TRUE),
+    whole_activity_max = max(activity_level_ordinal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+Combine all 3
+
+```{r}
+early_rest_whole_activity_overview <- whole_life_activity_overview %>% left_join(early_life_activity_overview,by="subject_id") %>% left_join(rest_life_activity_overview, by="subject_id")
+
+#replace NAs with "records_not_available"
+early_rest_whole_activity_overview <- early_rest_whole_activity_overview %>%
+  mutate(across(2:16, ~ case_when(
+    is.na(.) ~ "no_activity_records_for_this_time_period",
+    TRUE ~ as.character(.)
+  )))
+
+
+#join onto main df 
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity %>% left_join(early_rest_whole_activity_overview,by="subject_id")
+```
+
 ## Tidying up columns for final df
 
 -   need to ensure columns (where indicated) have the correct NA e.g dogs with no medical records have "no_medical_records_for_time_point" rather than NA/not_recorded etc
@@ -3320,7 +3394,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity3 %>%
   mutate(across(35:253, ~ replace(., is.na(.), "records_not_available")))
 dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity3 %>%
-  mutate(across(266:297, ~ replace(., is.na(.), "records_not_available")))
+  mutate(across(266:312, ~ replace(., is.na(.), "records_not_available")))
 
 #check NAs now
 na_summary2 <- colSums(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_neutering3_weight4_activity_endpoint_activity3))

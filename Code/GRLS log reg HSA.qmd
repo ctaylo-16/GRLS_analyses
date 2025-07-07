@@ -6,7 +6,7 @@ editor: visual
 
 ## HSA GRLS cohort
 
-HSA cases vs non-case control logistic regression
+HSA cases vs non-case cohort logistic regression
 
 ```{r}
 library(tidyverse)
@@ -34,6 +34,7 @@ library(crosstable)
 library(kableExtra)
 library(officer)
 library(flextable)
+# data was preliminarily tidied in GRLS cox HSA time to diagnosis script before changing to log reg analyses
 cohort_abr <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
 ```
 
@@ -121,7 +122,7 @@ cohort_abr <- cohort_abr %>%
   mutate(sex_neuter = paste(sex, neuter, sep = " "))
 
 
-#ensure not_recorded is default not baseline
+#ensure not_recorded is default not baseline for regression analyses as isnt a good comparison option
 convert_and_relevel <- function(df) {
   df <- df %>%
     mutate(across(where(is.character), ~ factor(.))) %>%  # Convert all character columns to factors
@@ -132,7 +133,7 @@ convert_and_relevel <- function(df) {
 # Apply to your dataset
 cohort_abr <- convert_and_relevel(cohort_abr)
 
-
+#set the levels i would like for comparison
 
 cohort_abr <- cohort_abr%>%
   mutate(heats_before_neutering_tercile = factor(heats_before_neutering_tercile, levels = c("0", "1-<=2", ">2-<=4", ">4-12","Intact Female","Male","not_recorded")))
@@ -146,7 +147,7 @@ cohort_abr <- cohort_abr%>%
 cohort_abr <- cohort_abr%>%
   mutate(mode_purina_BCS_5y_prior_endpoint = factor(mode_purina_BCS_5y_prior_endpoint, levels = c("5", "3", "4", "6","7","8","9","not_recorded")))
 
-#change BCS to be over underweight
+#change BCS to be reclassified as over underweight or ideal
 cohort_abr <- cohort_abr %>%
   mutate(mode_BCS_classify = case_when(
     mode_purina_BCS_5y_prior_endpoint == "1" ~"underweight",
@@ -250,6 +251,8 @@ for (i in cols_to_modify) {
 Activity datasets very challenging to explain the cut-offs quartile for interpretation so going to attempt to split into more biologically meaningful categories based on original script splits - C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS activity classifcation method_modified.qmd Columns to modify: - duration, freq and intensity SY1_2 - intensity freq SY3 beyond - intensity freq 5y prior
 
 Also going to group to more meaningful categories e.g slow and average walks together, rarely and monthly activity together
+
+NB. decided not to use these in manuscript but will keep here and use for future work on activity
 
 ```{r}
 #SY1 and 2
@@ -387,7 +390,7 @@ cohort_no_not_rec <- cohort_abr %>%
 
 ## Univariable logstic regression
 
--   Counts
+-   Counts of cases and non-cases and Chi sq for variables
 
 ```{r}
 dependent <- "had_HSA"
@@ -436,7 +439,7 @@ explanatory = c(
              "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
              "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
   #comorbidities
-  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present",
+  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA",
   #medications
   "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
@@ -467,6 +470,7 @@ univar_table2 <- cohort_abr %>%summary_factorlist(dependent, explanatory,
   p=TRUE,  add_dependent_label=TRUE,na_include = TRUE,column=TRUE)
 # View the results
 print(univar_table)
+#write this table to csv
 write.csv(univar_table,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.csv")
 
 #save as worddoc
@@ -493,9 +497,9 @@ print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_ta
 
 ```{r}
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/univar_log_reg_auto.R")
-
+#dependent var needs to be in factor
 cohort_abr$had_HSA <- as.factor(cohort_abr$had_HSA)
-
+#need these to be numeric variables
 cohort_abr <- cohort_abr %>%
   mutate(across(c(early_activity_mean, rest_activity_mean, whole_activity_mean,prior5y_activity_mean), as.numeric))
 
@@ -545,7 +549,7 @@ cohort_abr2 <- cohort_abr %>%
              "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
              "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
   #comorbidities
-  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present",
+  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA",
   #medications
   "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
@@ -848,10 +852,10 @@ doc <- doc %>%
 print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_all_repro_pops_tidied_table2.docx")
 ```
 
-Run univar log reg to only retain variables where they are sig not just due to NA/not recorded variable
+Run univar log reg to only retain variables where they are sig not just due to NA/not recorded variable - as want to only use these to take forward for multivar analysis
 
 ```{r}
-
+#code to check that a variable has at least 2 or more levels for log reg or else will produce errors
 check_levels <- function(df) {
   sapply(df, function(x) length(unique(na.omit(x))) >= 2)
 }
@@ -859,7 +863,7 @@ check_levels <- function(df) {
 # Example usage
 result <- check_levels(cohort_no_not_rec)
 
-# Print columns that do not meet the condition
+# Print columns that do not meet the condition so can not use them in select below
 names(result[result == FALSE])
 
 
@@ -912,7 +916,7 @@ cohort_no_not_rec<- cohort_no_not_rec %>%
              "use_moth_balls_exposed_5yrs_prior", "use_incense_or_candles_exposed_5yrs_prior", "smoke_exposure_exposed_5yrs_prior", 
              "any_treated_weeds_exposed_5yrs_prior", "any_treated_insects_exposed_5yrs_prior", "any_treated_fertilizer_exposed_5yrs_prior", 
   #comorbidities
-  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","benign_cancers_count","all_cancers_count","all_cancers_YN","benign_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present",
+  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA",
   #medications
   "half_anti_microbials_lifetime", "half_dietary_supplements_lifetime", 
              "half_enteric_lifetime", "half_fluid_metabolites_lifetime", "half_hormones_and_related_lifetime", "half_immunologicals_lifetime", 
@@ -935,7 +939,7 @@ cohort_no_not_rec<- cohort_no_not_rec %>%
 
 #remove drug not administered as an NA
 cols_to_modify <- 145:193  # adjust as needed
-
+#recode "no med records" to NA so that univar will run ignoring the missing data here
 for (i in cols_to_modify) {
   current_levels <- levels(cohort_no_not_rec[[i]])
   if ("no_medication_records_for_this_time_period" %in% current_levels) {
@@ -1019,7 +1023,7 @@ Correlated variables
 ```{r}
 corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue.csv")
 
-#ditch rows where variable 1 and 2 values are same as in another row :
+#ditch rows where variable 1 and 2 values are same as in another row = only have unique corr pairs listed
 corr_values2 <- corr_values %>%
   dplyr::select(-c(X))
 
@@ -1316,6 +1320,7 @@ Lowest AIC for:
 -   all have AIC lower than the splits above so sub in perhaps the prior 5y mode ?
 
 -   BCS whole value
+
     -   only not_recorded category sig = not retained
 
 ```{r}
@@ -2700,7 +2705,7 @@ print(plot2)
 
 Make nice and labelled forestplots of final model with correct levels of variables: - using code in this for HSA VC Cox model figures C:/Users/ctaylor18/GitHub/HSA-VC-survival-analyses/HSA-VC-survival-analyses/code/Figures for survival analyses of haemangiosarcoma cases in VC.qmd All years
 
-Data manip for plotting manually :
+Data manip for plotting manually, tidying up variable/category names and making sure baseline variable categories make sense :
 
 ```{r}
 cohort_abr_sig <- cohort_abr_sig %>%
@@ -3638,7 +3643,7 @@ final_df$AutoNumber <- factor(final_df$AutoNumber,
 
 
 
-
+#set these as numeric rather than char so that ggplot can use the values for plotting
 final_df$conf.high <- as.numeric(final_df$conf.high)
 final_df$conf.low <- as.numeric(final_df$conf.low)
 final_df$estimate <- as.numeric(final_df$estimate)  
@@ -3646,6 +3651,7 @@ final_df$estimate <- as.numeric(final_df$estimate)
 ```
 
 ```{r}
+#makes the OR forest plot bit of the figure
 p_mid <- 
   final_df |>
   ggplot(aes(y = fct_rev(AutoNumber))) +
@@ -3663,6 +3669,7 @@ p_mid <-
   )
 
 # Left plot with more spaced columns and adjusted xlim
+#makes the plot of the OR case-noncase table text
 p_left <- 
   final_df |>
   ggplot(aes(y = fct_rev(AutoNumber))) + 

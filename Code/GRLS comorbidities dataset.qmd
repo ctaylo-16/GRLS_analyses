@@ -62,6 +62,10 @@ comorbs_list <- colnames(comorbs_unique)
 
 #### Potential chronic inflam conditions e.g diabetes, rheumatoid arthritis, IBD
 
+Manually select which I think might be relevant - discussed with Sandra
+
+Main list of potential comorbs (NB. ones like flea/infectious need multi study years of it recorded for chronicity)
+
 ```{r}
 comorbs_to_find <-c("congestive_heart_failure",
   "cardiomyopathy",
