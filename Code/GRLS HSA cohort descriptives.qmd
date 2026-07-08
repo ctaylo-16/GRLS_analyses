@@ -6,6 +6,8 @@ editor: visual
 
 ## Haemangiosarcoma GRLS cohort descriptives and MST
 
+## NB. this is all (presumptive and confirmatory diagnosed) cases
+
 ```{r}
 library(tidyverse)
 library(dplyr)
@@ -519,14 +521,22 @@ summary(visceral$time_between_diagnosis_date_death_date_days)
 
 survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral)
 #probability of surviving to one year
+#NB needs to be set at 364 here as the single 365d case makes this not work as everyone has had the case by the 365d point
 summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral), times = 365.25)
+ 
+#1 year survival rate - doesnt work as all cases dead by 1y
+#survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral) %>% 
+ # tbl_survfit(
+  #  times = 365.25,
+  #  label_header = "**1-year survival (95% CI)**"
+ # )
 
-#1 year survival rate
-survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral) %>% 
-  tbl_survfit(
-    times = 365.25,
-    label_header = "**1-year survival (95% CI)**"
-  )
+
+nrow(visceral)
+
+summary(visceral$time_between_diagnosis_date_death_date_days)
+
+table(visceral$status, useNA = "ifany")
 
 #errors with above attempts to problem solve - not working
 fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral)
@@ -540,9 +550,16 @@ fit_df <- data.frame(
 )
 
 # Check the structure of the new data frame
-str(fit_df)
+str(fit)
 
-tbl_survfit(fit, times = 365.25, label_header = "**1-year survival (95% CI)**")
+report_time <- max(fit_df$time[fit_df$surv > 0])
+
+tbl_survfit(
+  fit,
+  times = report_time,
+  label_header = paste0("**Survival at ", report_time, " days (95% CI)**")
+)
+
 
 
 
@@ -708,7 +725,7 @@ time_in_study$time_between_enrolled_date_death_date_2_years <-as.numeric(time_in
 # Sum total dog-years
 total_dog_years <- sum(time_in_study$time_between_enrolled_date_death_date_2_years, na.rm = TRUE)
 
-# Number of cases
+# Number of dogs
 cases <- 490
 
 # Incidence rate per 100 dog-years
@@ -727,6 +744,657 @@ lower_rate <- (lower_limit / total_dog_years) * 100
 upper_rate <- (upper_limit / total_dog_years) * 100
 
 # Print results
-cat("Incidence rate per 100 dog-years:", round(incidence_rate, 3), "\n")
+cat("Incidence rate of first haemangiosarcoma diagnosis per 100 dog-years :", round(incidence_rate, 3), "\n")
 cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
+
+
+
+#incidence for multiple cases though:
+# Number of dogs
+cases <- 526
+
+# Incidence rate per 100 dog-years
+incidence_rate <- (cases / total_dog_years) * 100
+
+incidence_rate
+
+#95%CI 
+# Calculate 95% CI using Poisson distribution
+alpha <- 0.05
+
+lower_limit <- 0.5 * qchisq(alpha / 2, 2 * cases)   # lower bound for cases
+upper_limit <- 0.5 * qchisq(1 - alpha / 2, 2 * (cases + 1)) # upper bound for cases
+
+lower_rate <- (lower_limit / total_dog_years) * 100
+upper_rate <- (upper_limit / total_dog_years) * 100
+
+# Print results
+cat("Incidence rate of haemangiosarcoma per 100 dog-years:", round(incidence_rate, 3), "\n")
+cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
+
+```
+
+## Confirmed diagnoses descriptives and MST and incidence
+
+```{r}
+cohort_info_for_tiers <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+
+cohort_info_for_tiers<- cohort_info_for_tiers %>%
+  mutate(across(where(is.character), str_to_lower))%>%
+  select(subject_id, tracked_condition,tier_of_confidence)%>%
+   dplyr::filter(tier_of_confidence==1)%>%
+  dplyr::filter(str_detect(tracked_condition, "hemangios"))
+
+#create confirmed HSA cohort and then run analysis as above for that
+HSA_dogs_confirmed <- cohort_info_for_tiers %>%
+  left_join(HSA_dogs2, by="subject_id") %>%
+  rename(tracked_condition =tracked_condition.x)%>%
+  rename(tier_of_confidence = tier_of_confidence.x)
+```
+
+```{r}
+study_times <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date.csv")
+
+#link to dog profile to calc age at enrollment and time enrolled in study]
+
+study_times_HSA_dogs2_conf <- HSA_dogs_confirmed %>% left_join(study_times, by="subject_id")
+
+
+#calc difference between enrollment date and final date
+
+#all dogs
+study_times_HSA_dogs2_conf <- study_times_HSA_dogs2_conf %>%
+mutate(
+  start_date = as.Date(enrolled_date),
+  end_date = as.Date(final_date),
+  days_between = as.numeric(end_date -start_date)
+)
+
+study_times_HSA_dogs2_conf <- study_times_HSA_dogs2_conf %>%
+  mutate(
+    years_between = days_between / 365.25
+  )
+
+all_dogs_conf <- study_times_HSA_dogs2_conf %>%
+  summarise(
+    median_years = median(years_between, na.rm = TRUE),
+    min_years = min(years_between, na.rm = TRUE),
+    max_years = max(years_between, na.rm = TRUE),
+    IQR_years = IQR(years_between, na.rm = TRUE),
+    q1_years = quantile(years_between, 0.25, na.rm = TRUE),
+    q3_years = quantile(years_between, 0.75, na.rm = TRUE)
+  )
+
+#HSA dogs
+HSA_dogs_summary_conf <- study_times_HSA_dogs2_conf %>%
+  filter(had_HSA==1)%>%
+  summarise(
+    median_years = median(years_between, na.rm = TRUE),
+    min_years = min(years_between, na.rm = TRUE),
+    max_years = max(years_between, na.rm = TRUE),
+    IQR_years = IQR(years_between, na.rm = TRUE),
+    q1_years = quantile(years_between, 0.25, na.rm = TRUE),
+    q3_years = quantile(years_between, 0.75, na.rm = TRUE)
+  )
+
+
+```
+
+## Age
+
+```{r}
+
+
+
+HSA_dogs_summary_age_conf <- study_times_HSA_dogs2_conf %>%
+  summarise(
+    median_years = median(age_at_final_date, na.rm = TRUE),
+    min_years = min(age_at_final_date, na.rm = TRUE),
+    max_years = max(age_at_final_date, na.rm = TRUE),
+    IQR_years = IQR(age_at_final_date, na.rm = TRUE),
+    q1_years = quantile(age_at_final_date, 0.25, na.rm = TRUE),
+    q3_years = quantile(age_at_final_date, 0.75, na.rm = TRUE)
+  )
+```
+
+## Haemangiosarcoma locations
+
+```{r}
+#these are the broader locations -cardiac, splenic, visceral, cutaneous
+locations_main2 <- HSA_dogs_confirmed %>%
+  count(tracked_condition, name = "count") %>%
+  mutate(percent = round(100 * count / sum(count), 1)) %>%
+  arrange(desc(count))
+
+#create table count of ALL locations from locations column NB. more than one location per dog
+locations2 <- HSA_dogs_confirmed$location
+
+# Step 1: Replace " and " with commas to standardize delimiters
+locations_clean2 <- gsub(" and ", ", ", locations2, ignore.case = TRUE)
+
+# Step 2: Remove unwanted strings (e.g., "suspect", "presum", "likely", directional terms)
+# Use regex and ignore case for better coverage
+locations_clean2 <- tolower(locations_clean2)  # convert early for consistent matching
+locations_clean2 <- gsub("suspect[^,]*", "", locations_clean2)
+locations_clean2 <- gsub("presum[^,]*", "", locations_clean2)
+locations_clean2 <- gsub("likel[^,]*", "", locations_clean2)
+locations_clean2 <- gsub("probable[^,]*", "", locations_clean2)
+locations_clean2 <- gsub("\\bleft\\b", "", locations_clean2)
+locations_clean2 <- gsub("\\bright\\b", "", locations_clean2)
+
+# Optional: remove "mass on", "in the", etc. if those phrases occur
+locations_clean2 <- gsub("mass on ", "", locations_clean2)
+locations_clean2 <- gsub("in the ", "", locations_clean2)
+locations_clean2 <- gsub("area of ", "", locations_clean2)
+locations_clean2 <- gsub("\\s+", " ", locations_clean2)  # condense multiple spaces
+
+# Step 3: Split into individual locations by comma
+location_split2 <- strsplit(locations_clean2, ",")
+
+# Step 4: Trim and flatten into a vector
+all_locations2 <- trimws(unlist(location_split2))
+
+# Step 5: Standardize common synonyms (e.g., "cardiac", "ventricle" → "heart")
+all_locations2[all_locations2 %in% c("heart", "cardiac", "right atrial cavity", "ventricle", "right atrium","atrium","atrium/auricle","atrial","heart (atrium)","heart (ventricular wall)","heart (auricle)","subtle infiltration in section of atrium)","heart (mass","heart ( auricle)","ventricular free wall)","heart ( atrium)","heart ( auricle)", "near heart base","heart (atrium","heart (atrial tissue)" ,"heart (","heart base","heart; atrium","heart (interventricular septum just under the annulus of the posterior tricuspid valve leaflet)","myocardium/heart","myocardium","atrial cavity","atrio-ventricular groove", "atrium (","atrium of the heart","heart ( aricular)","heart; atrium","heart base","myocardium)","ventricle","heart ( auricle","ventricle)","auricle")] <- "heart"
+all_locations2[all_locations2 %in% c("skin (lower lip", "skin", "skin (abdomen)", "scrotum","dermal","haired skin")] <- "skin"
+all_locations2[all_locations2 %in% c("lungs", "lung", "thoracic cavity", "thorax","all lung lobes","lung.","lungs (","lungs (")] <- "lung"
+all_locations2[all_locations2 %in% c("liver", "hepatic","liver (","liver: disseminated hemangiosarcoma")] <- "liver"
+all_locations2[all_locations2 %in% c("spleen", "splenic","spleen (")] <- "spleen"
+all_locations2[all_locations2 %in% c("abdominal cavity", "abdomen")] <- "abdomen"
+all_locations2[all_locations2 %in% c("jejunum", "small intestine","intestinal serosa","intestines","small intestine (muscular wall)","small intestine (muscularis mucosa)")] <- "intestine"
+all_locations2[all_locations2 %in% c("kidneys", "kidney","kidney (possible)","bilateral kidneys"  )] <- "kidney"
+all_locations2[all_locations2 %in% c("retroperitoneal mass", "retroperitoneum ("  ,"retroperitoneal cavity","retroperitoneal","retroperitoneal space")] <- "retroperitoneum"
+all_locations2[all_locations2 %in% c("cerebellum","cerebreum","cerebrum","cerebellum)","brain (cerebrum","brain (cerebrum)")] <- "brain"
+all_locations2[all_locations2 %in% c("mesenteric adipose tissue","peripancreatic adipose","adipose tissue; cranial thigh","fibroadipose tissue:","fibroadipose tissue (","fat (mesentery?)","fat (tibial area)","adipose")] <- "adipose tissue"
+all_locations2[all_locations2 %in% c("gastric serosa","stomach (muscularis mucosa)")] <- "stomach"
+
+all_locations2[all_locations2 %in% c("to the urinary bladder caudal aspect of the abdomen","bladder","urinary bladder")] <- "bladder"
+all_locations2[all_locations2 %in% c("tricept","skeletal muscle/adipose tissue ","epaxial muscle","muscle","skeletal muscle/adipose tissue","muscle ( flank)","skeletal muscle")] <- "muscle"
+all_locations2[all_locations2 %in% c("adrenal")] <- "adrenal gland"
+all_locations2[all_locations2 %in% c("rib"," bone (proximal humerus)","bone (proximal humerus)","carpus","15 vertebral body","l5 vertebral body","tibial)","bone (proximal humerus)")] <- "bone"
+all_locations2[all_locations2 %in% c("muscle (diaphragm")] <- "diaphragm"
+#NB skin techincally cutis
+all_locations2[all_locations2 %in% c("subcutaneous","subcutaneous mass ( flank)","lateral mid thorax","subcutis")] <- "skin"
+all_locations2[all_locations2 %in% c("adrenal glands")] <- "adrenal gland"
+all_locations2[all_locations2 %in% c("mesentery/omentum","mesenetery")] <- "mesentery"
+#combine all the weird misc ones into "other" and "unknown"
+all_locations2[all_locations2 %in% c("abdomen)","abdominal fluid","abdominal mass","body wall","caudal abdominal mass","hindlimb amputation site","leg mass","mid abdomen -","mouth","mucosal lined tissue","side","shoulder mass", "shoulder/scapula","shoulder","front leg","thoaracic inlet","thoracic deep to scapula","chest","digit","abdomen")] <- "other"
+all_locations2[all_locations2 %in% c("(","masses","possibly spleen or liver","previously found in spleen","unspecified sites: tisse
+","spleen previously removed","unspecified sites: tisse")] <- "unknown"
+
+
+# Step 6: Remove empty strings (resulting from deleted words)
+all_locations2 <- all_locations2[all_locations2 != ""]
+
+
+
+# Step 7: Create and print counts
+location_counts2 <- sort(table(all_locations2), decreasing = TRUE)
+print(location_counts2)
+
+location_counts2 <- sort(table(all_locations2), decreasing = TRUE)
+
+
+# Convert to data.frame
+location_df2 <- as.data.frame(location_counts2)
+colnames(location_df2) <- c("location", "count")
+
+# Add percentage column
+location_df2$percent <- round(100 * location_df2$count / sum(location_df2$count), 1)
+
+# View result
+print(location_df2)
+
+# Combine count and percent into one column like "420 (80)"
+location_df2$count_percent <- paste0(location_df2$count, " (", location_df2$percent, ")")
+
+# Optional: keep just location and the combined column
+location_summary2 <- location_df2[, c("location","count","count_percent", "count_percent")]
+
+# View result
+print(location_summary2)
+#write to csv for manuscript
+write.csv(location_summary2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_location_counts_confirmed_cases.csv")
+```
+
+Location barplot
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(forcats)
+
+plot2<- location_df2 %>%
+  ggplot(aes(x = fct_reorder(location, count), y = count)) +
+  geom_col(fill = "grey30", colour = "black", width = 0.8) +
+  geom_text(aes(label = count_percent),
+            hjust = -0.15,
+            size = 4) +
+  coord_flip() +
+  expand_limits(y = max(location_df2$count) * 1.15) +
+  labs(
+    title = "Distribution of Confirmed Haemangiosarcoma Locations",
+    x = NULL,
+    y = "Number of cases"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.ticks = element_line(colour = "black"),
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_barplot_confirmed.tiff", plot = plot2, width = 8, height = 6, dpi = 600)
+
+```
+
+## Haemangiosarcoma location MSTs
+
+Survival time days calculation
+
+```{r}
+#funct to calc time between events
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
+
+#convert char dates to date format
+HSA_dogs_confirmed$diagnosis_date2 <- as.Date(HSA_dogs_confirmed$diagnosis_date)
+HSA_dogs_confirmed$death_date2 <- as.Date(HSA_dogs_confirmed$death_date)
+
+
+HSA_dogs3_conf <- age_calc(HSA_dogs_confirmed,"subject_id","diagnosis_date","death_date")
+
+#across all these rows replace any negative values with 0
+HSA_dogs3_conf <- HSA_dogs3_conf %>%
+  mutate(across(c(time_between_diagnosis_date_death_date_days,time_between_diagnosis_date_death_date_weeks,time_between_diagnosis_date_death_date_years,time_between_diagnosis_date_death_date_months), ~ as.numeric(.))) %>%   # convert to numeric
+  mutate(across(c(time_between_diagnosis_date_death_date_days,time_between_diagnosis_date_death_date_weeks,time_between_diagnosis_date_death_date_years,time_between_diagnosis_date_death_date_months), ~ ifelse(. < 0, 0, .))) # replace negatives with 0
+
+
+#need to create a status variable for calc MST - status by 31/12/24. 0 = censored, 1=dead
+#outcome where if do not have a death date = 0 and if do =1 
+HSA_dogs3_conf <- HSA_dogs3_conf %>%
+  mutate(outcome = if_else(time_between_diagnosis_date_death_date_days == "not recorded", 0, 1))
+
+
+
+column_name <- "outcome"
+
+HSA_dogs4_conf <- HSA_dogs3_conf %>%
+  mutate(status = ifelse(is.na(.data[[column_name]]), 0, 1))
+
+#ensure time between events are numeric
+HSA_dogs4_conf <- HSA_dogs4_conf %>%
+  mutate(across(c(time_between_diagnosis_date_death_date_days,time_between_diagnosis_date_death_date_weeks,time_between_diagnosis_date_death_date_years,time_between_diagnosis_date_death_date_months), as.numeric))
+
+```
+
+```{r}
+splenic_conf<- HSA_dogs4_conf %>%
+  filter(grepl("splen",tracked_condition))
+cardiac_conf <- HSA_dogs4_conf %>%
+  filter(grepl("card",tracked_condition))
+visceral_conf<- HSA_dogs4_conf %>%
+  filter(grepl("visc",tracked_condition))
+cutaneous_conf<- HSA_dogs4 %>%
+  filter(grepl("cut",tracked_condition))
+other_conf<- HSA_dogs4_conf %>%
+  filter(grepl("other",tracked_condition))
+
+```
+
+### All HSA
+
+```{r}
+survfit(Surv(HSA_dogs4_conf$time_between_diagnosis_date_death_date_days, HSA_dogs4_conf$status) ~ 1, data = HSA_dogs4_conf) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability of confirmed cases"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(HSA_dogs4_conf$time_between_diagnosis_date_death_date_days)
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = HSA_dogs4_conf)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = HSA_dogs4_conf), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = HSA_dogs4_conf) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(HSA_dogs4_conf$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+
+```
+
+### Splenic
+
+```{r}
+survfit(Surv(splenic_conf$time_between_diagnosis_date_death_date_days, splenic_conf$status) ~ 1, data = splenic_conf) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(splenic_conf$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic_conf)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic_conf), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic_conf) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(splenic_conf$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(splenic_conf$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Cardiac
+
+```{r}
+survfit(Surv(cardiac_conf$time_between_diagnosis_date_death_date_days, cardiac_conf$status) ~ 1, data = cardiac_conf) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(cardiac_conf$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac_conf)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac_conf), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac_conf) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(cardiac_conf$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(cardiac_conf$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Visceral
+
+```{r}
+survfit(Surv(visceral_conf$time_between_diagnosis_date_death_date_days, visceral_conf$status) ~ 1, data = visceral_conf) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(visceral_conf$time_between_diagnosis_date_death_date_days)
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral_conf)
+#probability of surviving to one year
+#NB needs to be set at 364 here as the single 365d case makes this not work as everyone has had the case by the 365d point
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral_conf), times = 365.25)
+ 
+#1 year survival rate - doesnt work as all cases dead by 1y
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral_conf) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+
+nrow(visceral_conf)
+
+summary(visceral_conf$time_between_diagnosis_date_death_date_days)
+
+table(visceral_conf$status, useNA = "ifany")
+
+#errors with above attempts to problem solve - not working
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral_conf)
+
+# Extract components
+fit_df <- data.frame(
+  time = fit$time,
+  surv = fit$surv,
+  lower = fit$lower,
+  upper = fit$upper
+)
+
+# Check the structure of the new data frame
+str(fit_df)
+
+report_time <- max(fit_df$time[fit_df$surv > 0])
+
+tbl_survfit(
+  fit,
+  times = report_time,
+  label_header = paste0("**Survival at ", report_time, " days (95% CI)**")
+)
+
+
+
+
+quantile(visceral_conf$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(visceral_conf$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Cutaneous
+
+```{r}
+survfit(Surv(cutaneous_conf$time_between_diagnosis_date_death_date_days, cutaneous_conf$status) ~ 1, data = cutaneous_conf) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(cutaneous_conf$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous_conf)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous_conf), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous_conf) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(cutaneous_conf$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(cutaneous_conf$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Other
+
+```{r}
+survfit(Surv(other_conf$time_between_diagnosis_date_death_date_days, other_conf$status) ~ 1, data = other_conf) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(other_conf$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = other_conf)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = other_conf), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = other_conf) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+```
+
+### Combined KM survival curve plot for all and all locations individual
+
+```{r}
+HSA_dogs4_conf <- HSA_dogs4_conf %>%
+  mutate(cancer_group = recode(tracked_condition,
+                               'hemangiosarcoma - visceral'="Visceral",
+                               'hemangiosarcoma - splenic'= "Splenic",
+                               'hemangiosarcoma - cardiac'="Cardiac",
+                               'hemangiosarcoma - cutaneous'="Cutaneous",
+                               'hemangiosarcoma - other/not specified'="Other")
+  )#
+
+
+#set levels for cancer_group
+HSA_dogs4_conf <- HSA_dogs4_conf%>%
+  mutate(cancer_group = factor(cancer_group, levels = c("Splenic","Cardiac"  ,"Visceral", "Cutaneous","Other")))
+
+# Fit the survival model
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ cancer_group, data = HSA_dogs4_conf)
+
+# Plot the Kaplan-Meier curves
+ggsurvplot(fit, data = HSA_dogs4_conf, palette = "Dark2", risk.table = TRUE)
+
+
+
+library(RColorBrewer)
+
+KM_plot_4 <- ggsurvplot(
+  fit, 
+  data = HSA_dogs4_conf,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Cancer Type",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_4
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_confirmed.svg", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_confirmed.pdf", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_confirmed.tif", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+
+
+
+#remove "other category from plot as fairly uninformative
+HSA_dogs5_conf <- HSA_dogs4_conf %>%
+  filter(cancer_group != "Other")
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ cancer_group, data = HSA_dogs5_conf)
+library(RColorBrewer)
+
+KM_plot_5 <- ggsurvplot(
+  fit, 
+  data = HSA_dogs5_conf,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Cancer Type",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_5
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other_conf.svg", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other_conf.pdf", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other_conf.tif", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+
+```
+
+## Incidence per 100 dog years
+
+Use profile dataset to calculate time between enrolled date and death_date OR 31st Dec 2024 if not dead yet
+
+```{r} 
+source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
+
+#add death date 31/12/24 for all dogs with no death date recorded into death_date_2
+profile <- profile %>%
+  mutate(death_date_2 = if_else(death_date == "", "2024-12-31", death_date))
+time_in_study <- age_calc(profile,"subject_id","enrolled_date","death_date_2")
+
+#link profile data to HSA dog 4 conf
+
+
+#as numeric
+time_in_study$time_between_enrolled_date_death_date_2_years <-as.numeric(time_in_study$time_between_enrolled_date_death_date_2_years)
+
+# Sum total dog-years
+total_dog_years <- sum(time_in_study$time_between_enrolled_date_death_date_2_years, na.rm = TRUE)
+
+# Number of dogs
+
+cases <- length(unique(HSA_dogs4_conf$subject_id))
+# Incidence rate per 100 dog-years
+incidence_rate <- (cases / total_dog_years) * 100
+
+incidence_rate
+
+#95%CI 
+# Calculate 95% CI using Poisson distribution
+alpha <- 0.05
+
+lower_limit <- 0.5 * qchisq(alpha / 2, 2 * cases)   # lower bound for cases
+upper_limit <- 0.5 * qchisq(1 - alpha / 2, 2 * (cases + 1)) # upper bound for cases
+
+lower_rate <- (lower_limit / total_dog_years) * 100
+upper_rate <- (upper_limit / total_dog_years) * 100
+
+# Print results
+cat("Incidence rate of first haemangiosarcoma diagnosis per 100 dog-years :", round(incidence_rate, 3), "\n")
+cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
+
+
+
+#incidence for multiple cases though:
+# Number of dogs
+cases <- length(HSA_dogs4_conf$subject_id)
+
+# Incidence rate per 100 dog-years
+incidence_rate <- (cases / total_dog_years) * 100
+
+incidence_rate
+
+#95%CI 
+# Calculate 95% CI using Poisson distribution
+alpha <- 0.05
+
+lower_limit <- 0.5 * qchisq(alpha / 2, 2 * cases)   # lower bound for cases
+upper_limit <- 0.5 * qchisq(1 - alpha / 2, 2 * (cases + 1)) # upper bound for cases
+
+lower_rate <- (lower_limit / total_dog_years) * 100
+upper_rate <- (upper_limit / total_dog_years) * 100
+
+# Print results
+cat("Incidence rate of haemangiosarcoma per 100 dog-years:", round(incidence_rate, 3), "\n")
+cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
+
 ```
