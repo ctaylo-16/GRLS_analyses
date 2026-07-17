@@ -143,7 +143,7 @@ non_HSA_dogs_summary_age <- cohort %>%
     q1_years = quantile(age_at_final_date, 0.25, na.rm = TRUE),
     q3_years = quantile(age_at_final_date, 0.75, na.rm = TRUE)
   )
-
+non_HSA_dogs_summary_age
 
 HSA_dogs_summary_age <- cohort %>%
   filter(had_HSA==1)%>%
@@ -156,6 +156,8 @@ HSA_dogs_summary_age <- cohort %>%
     q3_years = quantile(age_at_final_date, 0.75, na.rm = TRUE)
   )
 
+HSA_dogs_summary_age
+
 all_HSA_dogs_summary_age <- cohort %>%
   summarise(
     median_years = median(age_at_final_date, na.rm = TRUE),
@@ -165,6 +167,8 @@ all_HSA_dogs_summary_age <- cohort %>%
     q1_years = quantile(age_at_final_date, 0.25, na.rm = TRUE),
     q3_years = quantile(age_at_final_date, 0.75, na.rm = TRUE)
   )
+
+all_HSA_dogs_summary_age
 ```
 
 ## Haemangiosarcoma locations
@@ -269,7 +273,7 @@ write.csv(location_summary,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_
 
 Location barplot
 
-```{r}
+```{r,eval=FALSE,echo=FALSE}
 
 # Create the data
 location_data <- tribble(
@@ -323,15 +327,37 @@ ggplot(location_data, aes(x = fct_reorder(Location, Number), y = Number)) +
 ```
 
 ```{r}
-# Extract count and percentage as separate numeric columns
-location_data2 <- location_data2 %>%
-  separate(Number_percent, into = c("Number", "Percent"), sep = " ", convert = TRUE) %>%
-  mutate(Percent = parse_number(Percent))
+library(dplyr)
+library(ggplot2)
+library(forcats)
+
+plot2<- location_df %>%
+  ggplot(aes(x = fct_reorder(location, count), y = count)) +
+  geom_col(fill = "grey30", colour = "black", width = 0.8) +
+  geom_text(aes(label = count_percent),
+            hjust = -0.15,
+            size = 4) +
+  coord_flip() +
+  expand_limits(y = max(location_df$count) * 1.15) +
+  labs(
+    title = "Distribution of Haemangiosarcoma Locations",
+    x = NULL,
+    y = "Number of cases"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.ticks = element_line(colour = "black"),
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_barplot.tiff", plot = plot2, width = 8, height = 6, dpi = 600)
 
 # Plot
-ggplot(location_data2, aes(x = fct_reorder(Location, Number), y = Number)) +
+ggplot(location_df, aes(x = fct_reorder(location, count), y = count)) +
   geom_col(fill = "steelblue") +
-  geom_text(aes(label = paste0(Percent, "%")), 
+  geom_text(aes(label = paste0(percent, "%")), 
             hjust = -0.1, size = 4) +
   coord_flip() +
   labs(
@@ -344,9 +370,9 @@ ggplot(location_data2, aes(x = fct_reorder(Location, Number), y = Number)) +
 
 
 
-plot <- ggplot(location_data2, aes(x = fct_reorder(Location, Number), y = Number)) +
+plot <- ggplot(location_df, aes(x = fct_reorder(location, count), y = count)) +
   geom_col(fill = "grey30", width = 0.7) +
-  geom_text(aes(label = paste0(Percent, "%")), 
+  geom_text(aes(label = paste0(percent, "%")), 
             hjust = -0.1, size = 4.2) +
   coord_flip() +
   labs(
@@ -1147,11 +1173,11 @@ survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = vi
 summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral_conf), times = 365.25)
  
 #1 year survival rate - doesnt work as all cases dead by 1y
-survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral_conf) %>% 
-  tbl_survfit(
-    times = 365.25,
-    label_header = "**1-year survival (95% CI)**"
-  )
+#survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral_conf) %>% 
+ # tbl_survfit(
+ #   times = 365.25,
+ #   label_header = "**1-year survival (95% CI)**"
+ # )
 
 
 nrow(visceral_conf)
@@ -1369,7 +1395,7 @@ lower_rate <- (lower_limit / total_dog_years) * 100
 upper_rate <- (upper_limit / total_dog_years) * 100
 
 # Print results
-cat("Incidence rate of first haemangiosarcoma diagnosis per 100 dog-years :", round(incidence_rate, 3), "\n")
+cat("Incidence rate of first haemangiosarcoma diagnosis (definitive) per 100 dog-years :", round(incidence_rate, 3), "\n")
 cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
 
 
@@ -1394,7 +1420,7 @@ lower_rate <- (lower_limit / total_dog_years) * 100
 upper_rate <- (upper_limit / total_dog_years) * 100
 
 # Print results
-cat("Incidence rate of haemangiosarcoma per 100 dog-years:", round(incidence_rate, 3), "\n")
+cat("Incidence rate of haemangiosarcoma (definitive) per 100 dog-years:", round(incidence_rate, 3), "\n")
 cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
 
 ```
