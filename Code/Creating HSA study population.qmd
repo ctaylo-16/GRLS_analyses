@@ -355,7 +355,7 @@ activity_level_overview <- activity_level_overview %>%
 #convert data back to char 0=none, 1= little, 2=moderate 3= very active (and do the halves in between)
 activity_level_overview[] <- lapply(activity_level_overview,as.character)
 activity_level_overview<- activity_level_overview %>%
-  mutate(across(c(2,4:7,9:12,14:17,19:21), ~ case_when(
+  mutate(across(c(4:6,9:11,14:16,25:27), ~ case_when(
     . == "0" ~ "none",
     . == "0.5" ~ "none to little",
     . == "1" ~ "little",
@@ -370,6 +370,14 @@ activity_level_overview<- activity_level_overview %>%
 #merge into main df
 merged_HSA_data2 <- merged_HSA_data %>%
   left_join(activity_level_overview,by="subject_id")
+
+
+#drop all cols that end in .y or .x
+merged_HSA_data2 <- merged_HSA_data2 %>%
+ dplyr::select(
+    -ends_with(".x"),
+    -ends_with(".y")
+  )
 #write to csv
 write.csv(merged_HSA_data2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
 ```

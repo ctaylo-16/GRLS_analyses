@@ -339,7 +339,7 @@ cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
 ###setting "no_medication_records_for_this_time_periodistered" as bottom factor level for drug variables as think it actually means drug use not recorded so doesnt make a good baseline
 # Vector of the column names to modify
 
-cols_to_modify <- 182:249 
+cols_to_modify <- c(182:249,254,255) 
 
 for (i in cols_to_modify) {
   current_levels <- levels(cohort_abr_updated_weight2[[i]])
@@ -348,9 +348,47 @@ for (i in cols_to_modify) {
     cohort_abr_updated_weight2[[i]] <- factor(cohort_abr_updated_weight2[[i]], levels = new_levels)
   }
 }
+
+
+#ensure the avg weight is numeric
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
+  mutate(across(c(early_activity_mean, rest_activity_mean, whole_activity_mean,prior5y_activity_mean), as.numeric))
+
+
+
+mean_variables <- c(
+  "whole_activity_mean",
+  "early_activity_mean",
+  "rest_activity_mean",
+  "prior5y_activity_mean",
+  "avg_activity_duration_sy1_2",
+  "avg_activity_intensity_sy1_2",
+  "avg_activity_freq_sy1_2",
+  "avg_activity_freq_sy3",
+  "avg_activity_intensity_sy3",
+  "avg_intensity_5y_prior_endpoint",
+  "avg_frequency_5y_prior_endpoint",
+  "weight_biological",
+  "avg_height_5y_prior_endpoint"
+)
+
+
+sapply(
+  cohort_abr_updated_weight2[mean_variables],
+  class
+)
+
+analysis_df <- cohort_abr_updated_weight2%>%
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::all_of(mean_variables),
+      ~ as.numeric(as.character(.))
+    )
+  )
 ```
 
-```{cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%}
+```{r}
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
   mutate(across(c(early_activity_mean, rest_activity_mean, whole_activity_mean,prior5y_activity_mean), as.numeric))
 
 #swap not_recorded for NA and exclude from univar this way
@@ -562,34 +600,43 @@ exposure_families <- list(
   #------------------------------------------------------------
 
   dog_activity = c(
-    "mean_activity_level_overview",
-    "USDA_30min_sy1_2",
-    "activity_1h_min_sy1_2",
-    "activity_KC_2h_min_sy1_2",
+    activity = c(
 
-    "avg_activity_freq_sy1_2_quartile",
-    "avg_activity_duration_sy1_2_quartile",
-    "avg_activity_intensity_sy3_quartile",
-    "avg_activity_freq_sy3_quartile",
+  "mean_activity_level_overview",
 
-    "avg_frequency_5y_prior_endpoint_quartile",
-    "avg_intensity_5y_prior_endpoint_quartile",
+  "USDA_30min_sy1_2",
+  "activity_1h_min_sy1_2",
+  "activity_KC_2h_min_sy1_2",
 
-    "early_activity_mode",
-    "early_activity_mean",
-    "early_activity_median",
+  "whole_activity_mode",
+  "whole_activity_mean",
 
-    "rest_activity_mode",
-    "rest_activity_mean",
-    "rest_activity_median",
+  "early_activity_mode",
+  "early_activity_mean",
 
-    "whole_activity_mode",
-    "whole_activity_mean",
-    "whole_activity_median",
+  "rest_activity_mode",
+  "rest_activity_mean",
 
-    "prior5y_activity_mode",
-    "prior5y_activity_mean",
-    "prior5y_activity_median"
+  "prior5y_activity_mode",
+  "prior5y_activity_mean",
+
+  "avg_activity_duration_sy1_2",
+  "avg_activity_intensity_sy1_2",
+  "avg_activity_freq_sy1_2",
+
+  "avg_activity_freq_sy3",
+  "avg_activity_intensity_sy3",
+
+  "avg_intensity_5y_prior_endpoint",
+  "avg_frequency_5y_prior_endpoint",
+
+  "avg_activity_duration_sy1_2_quartile",
+  "avg_activity_freq_sy1_2_quartile",
+  "avg_activity_freq_sy3_quartile",
+  "avg_activity_intensity_sy3_quartile",
+  "avg_intensity_5y_prior_endpoint_quartile",
+  "avg_frequency_5y_prior_endpoint_quartile"
+)
   ),
 
   #------------------------------------------------------------

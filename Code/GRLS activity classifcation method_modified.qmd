@@ -1074,7 +1074,7 @@ activity_all_y_all_rows <- rbind(activity_sy1_2_same,activity_sy3_same)
 
 #join to HSA cohort for 5y backwards calculations
 HSA_cohort_activity_all_y_all_rows <- activity_all_y_all_rows %>%
-  left_join(HSA_cohort,by="subject_id")%>%
+  left_join(HSA_cohort_all,by="subject_id")%>%
   dplyr::select(-c("X"))
 
 

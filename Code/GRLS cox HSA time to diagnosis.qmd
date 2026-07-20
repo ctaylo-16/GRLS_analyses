@@ -38,7 +38,7 @@ library(finalfit)
 cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
 colnames(cohort)
 cohort <- cohort %>%
-  dplyr::select(-c(X,had_HSA.x.x.x,had_HSA.y.y, year_in_study_diagnosis_or_final_record_year.y.x,year_in_study_diagnosis_or_final_record_year.x.x,year_in_study_diagnosis_or_final_record_year.y.y,year_in_study_diagnosis_or_final_record_year.x,year_in_study_diagnosis_or_final_record_year.y))
+  dplyr::select(-c(X))
 #cohort <- cohort %>%
 #  rename(had_HSA = had_HSA.x)
 
@@ -159,19 +159,50 @@ print(cross_table_percent)
 
 ```{r}
 #tidy up redundant cols - not wanted for univar and those that are essentially duplicats
-cols_to_keep <- c("subject_id", "MDI_quintile",  "owner_MDI_quintile",
+cols_to_keep <- c("subject_id", "MDI_quintile", "final_date", "owner_MDI_quintile",
   "area_type_mode_5yrs_prior", "house_type_mode_5yrs_prior",
   "water_source_mode_5yrs_prior", "pipes_metal_any_mode_5yrs_prior",
   "pipes_plastic_any_mode_5yrs_prior", "heating_fuel_primary_mode_5yrs_prior",
   "cooking_fuel_primary_mode_5yrs_prior", "heating_fuel_secondary_mode_5yrs_prior",
   "cooking_fuel_secondary_mode_5yrs_prior", "year_in_study_diagnosis_or_final_record_year",
   "region_name_mode_5yrs_prior", "state_mode_5yrs_prior", 
-  "final_date.y", "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","comorbidities_lifetime","study_year_first_chronic_inflam.x","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","comorbidities_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","comorbidities_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","orthopaedic","inflammatory_other","chronic_inflammatory","lifelong_comorb_present.x","lifelong_comorbidities","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present", "malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","had_HSA",
-  "mean_activity_level_overview", "USDA_30min_sy1_2", "activity_1h_min_sy1_2",
-  "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2",
-  "avg_activity_intensity_sy1_2", "avg_activity_freq_sy1_2",
-  "avg_activity_freq_sy3", "avg_activity_intensity_sy3",
-  "avg_intensity_5y_prior_endpoint", "avg_frequency_5y_prior_endpoint",
+  "chronic_inflam_present_lifetime","number_comorbs_present_lifetime","comorbidities_lifetime","chronic_inflam_present_5y","number_comorbs_present_5y","comorbidities_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","comorbidities_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","orthopaedic","inflammatory_other","chronic_inflammatory","lifelong_comorbidities","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",
+  #"lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present", "malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA",
+  "had_HSA",
+    "mean_activity_level_overview",
+  "mode_activity_level_overview",
+  "USDA_30min",
+  "activity_1h_min",
+  "activity_KC_2h_min",
+  "avg_activity_duration_sy1_2",
+  "avg_activity_intensity_sy1_2",
+  "avg_activity_freq_sy1_2",
+  "avg_activity_freq_sy3",
+  "avg_activity_intensity_sy3",
+  "avg_intensity_5y_prior_endpoint",
+  "avg_frequency_5y_prior_endpoint",
+  "mode_intensity_5y_prior_endpoint",
+  "mode_frequency_5y_prior_endpoint",
+  "whole_activity_mode",
+  "whole_activity_mean",
+  "whole_activity_median",
+  "whole_activity_min",
+  "whole_activity_max",
+  "early_activity_mode",
+  "early_activity_mean",
+  "early_activity_median",
+  "early_activity_min",
+  "early_activity_max",
+  "rest_activity_mode",
+  "rest_activity_mean",
+  "rest_activity_median",
+  "rest_activity_min",
+  "rest_activity_max",
+  "prior5y_activity_mode",
+  "prior5y_activity_mean",
+  "prior5y_activity_median",
+  "prior5y_activity_min",
+  "prior5y_activity_max",
   "use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life",
   "use_hepa_filter_study_years_early_life", "use_moth_balls_study_years_early_life",
   "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life",
@@ -271,7 +302,7 @@ enrol_date <- enrol_date %>%
 cohort_abr<- cohort_abr%>%
   left_join(enrol_date,by="subject_id")
 cohort_abr <- cohort_abr %>%
-  mutate(final_date =as.Date(final_date.y,format="%Y-%m-%d"),
+  mutate(final_date =as.Date(final_date,format="%Y-%m-%d"),
          enrolled_date = as.Date(enrolled_date,format="%Y-%m-%d") )
   
   
@@ -1115,9 +1146,9 @@ perform_univariable_analysis(
              "cooking_fuel_secondary_mode_5yrs_prior", "region_mode_5y_prior"
             ,"chronic_inflam_present_lifetime","number_comorbs_present_lifetime","chronic_inflam_present.x","chronic_inflam_present_5y","number_comorbs_present_5y","chronic_inflam_present_no_min_year","number_comorbs_present_no_min_year","intestinal_parasitism","tick_borne_parasitism","other_parasitism","all_parasitism","infectious","immune_mediated","cardiovascular","gastrointestinal","inflammatory_other","orthopaedic","chronic_inflammatory","lifelong_comorb_present.x","lifelong_orthopaedic","lifelong_immune_mediated","lifelong_cardiovascular","lifelong_gastrointestinal","lifelong_inflammatory_other","lifelong_chronic_inflammatory","number_lifelong_comorbs_present",
             "USDA_30min_sy1_2", "activity_1h_min_sy1_2", 
-             "activity_KC_2h_min_sy1_2", "avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
- "avg_activity_freq_sy1_2_terciles", 
-             "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
+             "activity_KC_2h_min_sy1_2", #"avg_activity_duration_sy1_2_quartiles",#"avg_activity_intensity_sy1_2_terciles",
+ #"avg_activity_freq_sy1_2_terciles", 
+     #        "avg_activity_freq_sy3_terciles", "avg_activity_intensity_sy3_quartiles", "avg_intensity_5y_prior_endpoint_quartiles", "avg_frequency_5y_prior_endpoint_quartiles", 
              "use_aerosol_study_years_early_life", "use_air_cleaner_study_years_early_life", "use_hepa_filter_study_years_early_life", 
              "use_moth_balls_study_years_early_life", "use_incense_or_candles_study_years_early_life", "smoke_exposure_study_years_early_life", 
        #      "any_treated_weeds_study_years_early_life", "any_treated_insects_study_years_early_life", #"any_treated_fertilizer_study_years_early_life", 
@@ -1145,11 +1176,11 @@ perform_univariable_analysis(
             # "any_treated_fertilizer_sum_whole_life",
  "hours_of_smoke_early_life_total_dosage_terciles", "hours_of_smoke_rest_of_life_total_dosage_terciles", 
              "hours_of_smoke_whole_life_total_dosage_terciles", "in.the.garage_YN_study_years_early_life", "in.the.house_YN_study_years_early_life", 
-             "outside_YN_study_years_early_life",  "in.the.house_YN_sum_early_life_terciles", 
-             "in.the.garage_YN_study_years_rest_of_life", "in.the.house_YN_study_years_rest_of_life", "outside_YN_study_years_rest_of_life", 
-              "in.the.house_YN_sum_rest_of_life_quartiles",  
+             "outside_YN_study_years_early_life", 
+            # "in.the.garage_YN_study_years_rest_of_life", "in.the.house_YN_study_years_rest_of_life", "outside_YN_study_years_rest_of_life", 
+              #"in.the.house_YN_sum_rest_of_life_quartiles",  
              "in.the.garage_YN_study_years_whole_life", "in.the.house_YN_study_years_whole_life", "outside_YN_study_years_whole_life", 
-             "in.the.house_YN_sum_whole_life_quartiles",  
+            # "in.the.house_YN_sum_whole_life_quartiles",  
              "majority_sleep_location_lifetime",  "main_lifestyle_category", 
  "main_lifestyle_category_mode_5yrs_prior", "sleep_location_mode_5yrs_prior", 
              "use_aerosol_exposed_5yrs_prior", "use_air_cleaner_exposed_5yrs_prior", "use_hepa_filter_exposed_5yrs_prior", 
@@ -1189,7 +1220,7 @@ perform_univariable_analysis(
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
-"malig_cancers_count","all_cancers_count","all_cancers_YN",,"malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever","lymphoma_present","carcinoma_present","sarcoma_present","melanoma_present","adenocarcinoma_present","mast_cell_tumor_present" ),
+"NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"),
   output_csv = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv",
   output_doc = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx"
 )
@@ -1281,7 +1312,7 @@ explanatory = c("MDI_quintile","owner_MDI_quintile","area_type_mode_5yrs_prior",
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
-"malig_cancers_count","all_cancers_count","all_cancers_YN",,"malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever" )
+"malig_cancers_count","all_cancers_count","all_cancers_YN","malig_cancers_YN","all_cancers_count_no_HSA","malig_cancers_count_no_HSA","malig_cancers_YN_no_HSA","all_cancers_YN_no_HSA","NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever" )
 dependent = "status_factor" # had HSA or no
 results <- cohort_abr %>%
   summary_factorlist(dependent, explanatory,
@@ -1321,10 +1352,31 @@ multivar_variables <- lrt_pvalues %>%
   filter(lrt_pvalue <= 0.2) %>%
   distinct(variable)
 cols_to_keep = multivar_variables$variable
-cols_to_keep <- append(cols_to_keep, "status")
-cols_to_keep <- append(cols_to_keep, "survival_time_days")
-cols_to_keep <- append(cols_to_keep, "status_factor")
-cohort_abr_sig <- cohort_abr[,cols_to_keep]
+#cols_to_keep <- append(cols_to_keep, "status")
+#cols_to_keep <- append(cols_to_keep, "survival_time_days")
+#cols_to_keep <- append(cols_to_keep, "status_factor")
+#cohort_abr_sig <- cohort_abr[,cols_to_keep]
+
+
+cols_to_keep <- c(
+  multivar_variables$variable,
+  "status",
+  "survival_time_days",
+  "status_factor"
+)
+
+missing_cols <- setdiff(cols_to_keep, names(cohort_abr))
+
+if(length(missing_cols) > 0){
+  cat("Ignoring missing columns:\n")
+  print(missing_cols)
+}
+
+cols_to_keep <- intersect(cols_to_keep, names(cohort_abr))
+
+cohort_abr_sig <- cohort_abr[, cols_to_keep]
+
+
 
 lrt_pvalues$pval <- sprintf("%.20f", lrt_pvalues$lrt_pvalue)
 ```
@@ -1341,7 +1393,7 @@ Assess which variables are correlated:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:82), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
+create_corr_matrix(cohort_abr_sig,c(1:68), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
 ```
 
 ### Correlated variables:
