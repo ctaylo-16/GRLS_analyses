@@ -345,19 +345,19 @@ activity_sy1_2 <- activity_sy1_2  %>%
 
 
 #frequency recoding
-never <- c("Never_","Never_Less than once/month") 
+never <- c("Never_","Never_Less than once/month","never") 
 less_than_weekly <- c("Less than once/month_","Less than once/month_Less than once/month", "Less than once/month_Less than once/week","Less than once/week_Less than once/month","Never_Less than once/week","Less than once/week_",
-                      "Less than once/week_Less than once/week")
+                      "Less than once/week_Less than once/week","less_than_weekly", "Monthly","Rarely")
 min_weekly<-c("Once or twice/week_Once or twice/week","Once or twice/week_","Never_Once or twice/week","Once or twice/week_Less than once/month",
-              "Once or twice/week_Less than once/week","Less than once/week_Once or twice/week","Less than once/month_Once or twice/week")
+              "Once or twice/week_Less than once/week","Less than once/week_Once or twice/week","Less than once/month_Once or twice/week","min_weekly","Weekly")
       
 daily<-c("Once/day_","Less than once/week_Once/day","Never_Once/day", "Once or twice/week_Once/day","Once/day_Once or twice/week","Once/day_Less than once/week",
          "Once/day_Less than once/month","Once/day_Once or twice/week",
          "Once/day_Less than once/week", "Once/day_Less than once/month",
-         "Once or twice/week_Once/day","Less than once/month_Once/day"
+         "Once or twice/week_Once/day","Less than once/month_Once/day","daily","Daily"
          )
 multi_daily <-c("Once/day_Once/day","Once/day_More than once a day","More than once a day_","Once or twice/week_More than once a day","Less than once/month_More than once a day","More than once a day_Once/day","Never_More than once a day","More than once a day_Less than once/month","More than once a day_Once or twice/week","Less than once/week_More than once a day","More than once a day_More than once a day",
-                "More than once a day_Less than once/week")
+                "More than once a day_Less than once/week","multi_daily","More than daily")
 
 all_groups_freq <- c(never,less_than_weekly,min_weekly,daily,multi_daily)
 freq <- setdiff(activity_sy1_2$total_activity_freq, all_groups_freq)
@@ -533,7 +533,17 @@ activity_sy1_2 <- activity_sy1_2 %>%
 Average across the study years score:
 
 ```{r}
+#mode function
+get_mode <- function(x) {
+  x <- x[!is.na(x)]
 
+  if (length(x) == 0) {
+    return(NA)
+  }
+
+  values <- unique(x)
+  values[which.max(tabulate(match(x, values)))]
+}
 
 
 totals_avg <- activity_sy1_2 %>%
@@ -544,14 +554,23 @@ totals_avg <- activity_sy1_2 %>%
     avg_activity_intensity = (mean(sum(total_activity_intensity_regroup_num, na.rm = TRUE)) /
                               (n() * 100)) * 100,
     avg_activity_freq = (mean(sum(total_activity_freq_regroup_num, na.rm = TRUE)) /
-                              (n() * 100)) * 100
+                              (n() * 100)) * 100,
+    mode_activity_duration_early =
+      get_mode(total_activity_duration_regroup),
+
+    mode_activity_intensity_early =
+      get_mode(total_activity_intensity_regroup),
+
+    mode_activity_frequency_early =
+      get_mode(total_activity_freq_regroup),
+
+    .groups = "drop"
 
   )
 
 # Join the average values back to the original dataset
 activity_sy1_2 <- activity_sy1_2 %>%
   left_join(totals_avg, by = "subject_id")
-
 ```
 
 #### Summary stats of these new variables:
@@ -685,6 +704,13 @@ activity_sy3_beyond <- activity_sy3_beyond %>%
     pace == "Run" ~ 100,
     pace == "" ~ 0  # empty cells replace with 0 for calculation purposes
   ))
+
+
+activity_sy3_beyond <- activity_sy3_beyond%>%
+  mutate(pace = case_when (
+pace %in% c("Average walk","Slow walk") ~ "low_int",  pace %in% c("Brisk walk","Jog") ~ "mod_int", pace %in% c("Run") ~ "high_int", 
+
+                                 TRUE ~ NA ))
 ```
 
 Recode duration to numbers:
@@ -716,7 +742,20 @@ activity_sy3_beyond <- activity_sy3_beyond %>%
   ))
 ```
 
+Ensure frequency values match the S1-2 values
+
 ```{r}
+activity_sy3_beyond <- activity_sy3_beyond %>%
+  mutate(
+    frequency = case_when(
+      frequency %in% never ~ "never",
+      frequency %in% less_than_weekly ~ "less_than_weekly",
+      frequency %in% min_weekly ~ "min_weekly",
+      frequency %in% daily ~ "daily",
+      frequency %in% multi_daily ~ "multi_daily",
+      TRUE ~ "no_freq_recorded" # For values not in any group
+    )
+  )
 
 ```
 
@@ -731,7 +770,10 @@ totals_y3 <- activity_sy3_beyond %>%
     avg_activity_intensity = (mean(pace_num, na.rm = TRUE)/
                               (n() * 100)) * 100,
     avg_activity_freq=(mean(frequency_num,na.rm=TRUE)/
-                              (n() * 100)) * 100# Replace with your column
+                              (n() * 100)) * 100,# Replace with your column
+    mode_activity_intensity_rest = get_mode(pace),
+    mode_activity_freq_rest=get_mode(frequency),
+    mode_activity_level_rest=get_mode(activity_level)
   )
 
 
@@ -804,15 +846,18 @@ activity_overview <- activity_overview %>%
 Median activity level
 
 ```{r}
-
 totals <- activity_overview %>%
   group_by(subject_id) %>%
-  summarise(mean_activity_level=(mean(activity_level_num, na.rm=TRUE)/(n() * 100)) * 100)
-                              
+  summarise(
+    mean_activity_level = (mean(activity_level_num, na.rm = TRUE) / (n() * 100)) * 100,
+    mode_activity_level = get_mode(activity_level),
+    .groups = "drop"
+  )
 
 # Join the totals back to the original dataset
 activity_overview <- activity_overview %>%
   left_join(totals, by = "subject_id")
+
 ```
 
 ### Ordinal activity level converted into mode/avg/median/min/max for early, rest, whole and 5y prior
@@ -842,7 +887,7 @@ early_life_activity_overview <- activity_overview %>%
   filter(year_in_study < 3) %>%
   group_by(subject_id) %>%
   summarise(
-    early_activity_mode = get_mode(activity_level_ordinal),
+    early_activity_mode = get_mode(activity_level),
     early_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
     early_activity_median = median(activity_level_ordinal, na.rm = TRUE),
     early_activity_min = min(activity_level_ordinal, na.rm = TRUE),
@@ -859,7 +904,7 @@ rest_life_activity_overview <- activity_overview %>%
   filter(year_in_study > 2) %>%
   group_by(subject_id) %>%
   summarise(
-    rest_activity_mode = get_mode(activity_level_ordinal),
+    rest_activity_mode = get_mode(activity_level),
     rest_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
     rest_activity_median = median(activity_level_ordinal, na.rm = TRUE),
     rest_activity_min = min(activity_level_ordinal, na.rm = TRUE),
@@ -875,7 +920,7 @@ Whole (all records)
 whole_life_activity_overview <- activity_overview %>%
   group_by(subject_id) %>%
   summarise(
-    whole_activity_mode = get_mode(activity_level_ordinal),
+    whole_activity_mode = get_mode(activity_level),
     whole_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
     whole_activity_median = median(activity_level_ordinal, na.rm = TRUE),
     whole_activity_min = min(activity_level_ordinal, na.rm = TRUE),
@@ -890,13 +935,27 @@ Combine all 3
 ```{r}
 early_rest_whole_activity_overview <- whole_life_activity_overview %>% left_join(early_life_activity_overview,by="subject_id") %>% left_join(rest_life_activity_overview, by="subject_id")
 
+
+#incorporate in the mode values generated for SY1_2 for activity duration, intensity and frequency and SY3+ for freq and intensity and level
+mode_values_sy1_2 <- activity_sy1_2 %>%
+  dplyr::select(c(subject_id,mode_activity_duration_early,mode_activity_intensity_early,mode_activity_frequency_early))%>%
+  distinct(subject_id, .keep_all = TRUE)
+mode_values_sy3_beyond <- activity_sy3_beyond %>%
+  dplyr::select(c(subject_id,mode_activity_intensity_rest,mode_activity_freq_rest,mode_activity_level_rest)) %>%
+  distinct(subject_id, .keep_all = TRUE)
+
+#combine the mode values and join into the overview
+mode_combined <- mode_values_sy1_2 %>%left_join( mode_values_sy3_beyond,by="subject_id")
+
+#add these onto the early_rest_whole df
+early_rest_whole_activity_overview <- early_rest_whole_activity_overview %>%left_join(mode_combined,by="subject_id")
+
 #replace NAs with "records_not_available"
 early_rest_whole_activity_overview <- early_rest_whole_activity_overview %>%
-  mutate(across(2:16, ~ case_when(
+  mutate(across(2:22, ~ case_when(
     is.na(.) ~ "no_activity_records_for_this_time_period",
     TRUE ~ as.character(.)
   )))
-
 
 write.csv(early_rest_whole_activity_overview,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/early_rest_whole_activity_level_classification.csv")
 ```
@@ -907,22 +966,21 @@ Modify further to create final single values for early life activity, rest of li
 
 ```{r}
 activity_sy1_2_abr_3 <- activity_sy1_2 %>%
-  dplyr::select(c(subject_id,year_in_study, USDA_30min,activity_1h_min,activity_KC_2h_min,avg_activity_duration,avg_activity_intensity,avg_activity_freq))
+  dplyr::select(c(subject_id,year_in_study, USDA_30min,activity_1h_min,activity_KC_2h_min,avg_activity_duration,avg_activity_intensity,avg_activity_freq,mode_activity_duration_early,mode_activity_frequency_early,mode_activity_intensity_early))
 
 
 activity_sy3_beyond_abr_3 <- activity_sy3_beyond %>%
   dplyr::select(c(subject_id,year_in_study,
-                  #frequency,pace,duration,frequency_num,pace_num,duration_num,<- not keeping as multi rows same year
-                  avg_activity_freq,avg_activity_intensity))
+                  avg_activity_freq,avg_activity_intensity,mode_activity_intensity_rest,mode_activity_freq_rest,mode_activity_level_rest))
 
 activity_overview_abr_3 <- activity_overview %>%
-  dplyr::select(c(subject_id,year_in_study,mean_activity_level))
+  dplyr::select(c(subject_id,year_in_study,mean_activity_level,mode_activity_level))
 
 
 activity_sy1_2_abr_3 <- activity_sy1_2_abr_3 %>%
   distinct(subject_id, .keep_all = TRUE)  %>%
  # mutate(study_year = "y1_2")%>%
-  rename_with(~ paste0(., "_sy1_2"), .cols = 3:8)%>%
+  rename_with(~ paste0(., "_sy1_2"), .cols = 6:8)%>%
   dplyr::select(-c(year_in_study))
 #sy 3+ 
 activity_sy3_beyond_abr_3 <- activity_sy3_beyond_abr_3 %>%
@@ -935,7 +993,7 @@ activity_sy3_beyond_abr_3 <- activity_sy3_beyond_abr_3 %>%
 activity_overview_abr_3 <- activity_overview_abr_3 %>%
   distinct(subject_id, .keep_all = TRUE)  %>%
  # mutate(study_year="all_years") %>%
-  rename_with(~ paste0(., "_overview"), .cols = 3:3)%>%
+  rename_with(~ paste0(., "_overview"), .cols = 3:4)%>%
   dplyr::select(-c(year_in_study))
 ```
 
@@ -1001,14 +1059,18 @@ Calculate activity 5y prior to endpoint
 ```{r}
 #keep SY0-2 and SY3 beyond same cols only
 activity_sy1_2_same <- activity_sy1_2 %>%
-  dplyr::select(c(subject_id,year_in_study,total_activity_intensity_regroup_num,total_activity_freq_regroup_num))
+  dplyr::select(c(subject_id,year_in_study,total_activity_intensity_regroup_num,total_activity_intensity_regroup,total_activity_freq_regroup,total_activity_freq_regroup_num))
 #rename cols to match SY3
 activity_sy1_2_same <- activity_sy1_2_same %>%
-  rename(pace_num = total_activity_intensity_regroup_num, frequency_num = total_activity_freq_regroup_num)
+  rename(pace_num = total_activity_intensity_regroup_num, pace=total_activity_intensity_regroup, frequency_num = total_activity_freq_regroup_num,frequency = total_activity_freq_regroup)
 activity_sy3_same<- activity_sy3_beyond %>%
-    dplyr::select(c(subject_id,year_in_study,pace_num,frequency_num))
+    dplyr::select(c(subject_id,year_in_study,pace,pace_num,frequency,frequency_num))
 
 activity_all_y_all_rows <- rbind(activity_sy1_2_same,activity_sy3_same)
+
+
+
+
 
 #join to HSA cohort for 5y backwards calculations
 HSA_cohort_activity_all_y_all_rows <- activity_all_y_all_rows %>%
@@ -1032,6 +1094,8 @@ HSA_cohort_5y_prior <- HSA_cohort_activity_all_y_all_rows %>%
   summarise(
     avg_intensity_5y_prior_endpoint = (mean(sum(pace_num, na.rm = TRUE))/(n() * 100)) * 100,
     avg_frequency_5y_prior_endpoint = (mean(sum(frequency_num, na.rm = TRUE))/(n() * 100)) * 100,
+    mode_intensity_5y_prior_endpoint=get_mode(pace),
+    mode_frequency_5y_prior_endpoint=get_mode(frequency),
     .groups = "drop"
   )
 
@@ -1049,7 +1113,7 @@ prior5y_activity_overview <- HSA_cohort_overview %>%
   group_by(subject_id) %>%
   filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5)) %>%
   summarise(
-    prior5y_activity_mode = get_mode(activity_level_ordinal),
+    prior5y_activity_mode = get_mode(activity_level),
     prior5y_activity_mean = mean(activity_level_ordinal, na.rm = TRUE),
     prior5y_activity_median = median(activity_level_ordinal, na.rm = TRUE),
     prior5y_activity_min = min(activity_level_ordinal, na.rm = TRUE),
@@ -1065,6 +1129,10 @@ early_rest_whole_5y_activity_overview <- early_rest_whole_activity_overview %>%
   left_join(prior5y_activity_overview,by="subject_id")
 
 write.csv(early_rest_whole_5y_activity_overview,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_early_rest_whole_5y_activity__level_classification.csv")
+```
+
+```{r}
+
 ```
 
 Now join this back onto cohort data

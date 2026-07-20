@@ -35,7 +35,7 @@ library(kableExtra)
 library(officer)
 library(flextable)
 # data was preliminarily tidied in GRLS cox HSA time to diagnosis script before changing to log reg analyses
-cohort_abr_updated_weight2 <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
+cohort_abr <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
 ```
 
 ## Updated weight data
@@ -74,7 +74,7 @@ median_weight <- weight_df %>%
   )
 
 #add into main df and see how different values are
-cohort_abr_updated_weight2_updated_weight <- cohort_abr_updated_weight2 %>%
+cohort_abr_updated_weight2<- cohort_abr %>%
   left_join(median_weight, by="subject_id")
 
 
@@ -82,7 +82,7 @@ cohort_abr_updated_weight2_updated_weight <- cohort_abr_updated_weight2 %>%
   
   
 summarise(
-  cohort_abr_updated_weight2_updated_weight,
+  cohort_abr_updated_weight2,
   old_mean = mean(as.numeric(na_if(median_weight_5y_prior_endpoint_kg, "not_recorded")), na.rm = TRUE),
   old_median = median(as.numeric(na_if(median_weight_5y_prior_endpoint_kg, "not_recorded")), na.rm = TRUE),
   old_q1 = quantile(as.numeric(na_if(median_weight_5y_prior_endpoint_kg, "not_recorded")), 0.25, na.rm = TRUE),
@@ -96,7 +96,7 @@ summarise(
 
 
 #remove old weight rows from df
-cohort_abr_updated_weight2_updated_weight2 <- cohort_abr_updated_weight2_updated_weight %>%
+cohort_abr_updated_weight2<- cohort_abr_updated_weight2 %>%
   dplyr::select(-c("median_weight_5y_prior_endpoint_kg","avg_weight_5y_prior_endpoint_kg","avg_weight_5y_prior_endpoint_kg_outliers_removed","median_weight_5y_prior_endpoint_any_records_kg","median_weight_5y_prior_endpoint_kg_outliers_removed","median_weight_5y_prior_endpoint_any_records_kg","median_weight_5y_prior_endpoint_any_records_kg_outliers_removed",
                   "avg_weight_5y_prior_endpoint_quartiles",
                   "median_weight_5y_prior_endpoint_kg_outliers_removed_quartiles","avg_weight_5y_prior_endpoint_kg_biological","median_weight_5y_prior_endpoint_any_records_kg_outliers_removed_biological",
@@ -105,7 +105,7 @@ cohort_abr_updated_weight2_updated_weight2 <- cohort_abr_updated_weight2_updated
 
 #now recode the new weight data into quartiles
 cuts <- quantile(
-  cohort_abr_updated_weight2_updated_weight2$median_weight_5y_prior_endpoint_updated,
+  cohort_abr_updated_weight2$median_weight_5y_prior_endpoint_updated,
   probs = c(0, 0.25, 0.5, 0.75, 1),
   na.rm = TRUE
 )
@@ -117,7 +117,7 @@ labels <- c(
   paste0(round(cuts[4], 1), "–", round(cuts[5], 1), " kg")
 )
 
-cohort_abr_updated_weight2_updated_weight2 <- cohort_abr_updated_weight2_updated_weight2 %>%
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2%>%
   mutate(
     weight_quartile = case_when(
       is.na(median_weight_5y_prior_endpoint_updated) ~ "not_recorded",
@@ -136,7 +136,7 @@ cohort_abr_updated_weight2_updated_weight2 <- cohort_abr_updated_weight2_updated
 
 
 #also creating a 'biological' weight variable
-cohort_abr_updated_weight2_updated_weight2 <- cohort_abr_updated_weight2_updated_weight2 %>%
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
   mutate(
     weight_biological = case_when(
       is.na(median_weight_5y_prior_endpoint_updated) ~ "not_recorded",
@@ -277,6 +277,7 @@ cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
     mode_purina_BCS_5y_prior_endpoint == "7" ~"overweight",
     mode_purina_BCS_5y_prior_endpoint == "8" ~"overweight",
     mode_purina_BCS_5y_prior_endpoint == "9" ~"overweight",
+    mode_purina_BCS_5y_prior_endpoint == "not_recorded" ~"not_recorded"
   ))
 
 #set age levels
@@ -320,6 +321,21 @@ cohort_abr_updated_weight2 <- cohort_abr_updated_weight2%>%
 
 cohort_abr_updated_weight2 <- cohort_abr_updated_weight2%>%
   mutate(ecto_5y_quantiles = factor(ecto_5y_quantiles, levels = c("no_ecto_admin", "Q1(1)", "Q2(1-2)", "Q3(2-4)","Q4(4-17)","no_med_use_recorded")))
+
+
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2%>%
+  mutate(weight_biological = factor(weight_biological, levels = c("≤25 kg", ">25–≤35 kg", ">35 kg", "not_recorded")))
+
+
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2%>%
+  mutate(mode_BCS_classify = factor(mode_BCS_classify, levels = c("ideal", "underweight", "overweight", "not_recorded")))
+
+
+#ensure the avg weight is numeric
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
+  mutate(across(c(early_activity_mean, rest_activity_mean, whole_activity_mean,prior5y_activity_mean), as.numeric))
+
+
 ###setting "no_medication_records_for_this_time_periodistered" as bottom factor level for drug variables as think it actually means drug use not recorded so doesnt make a good baseline
 # Vector of the column names to modify
 
@@ -334,129 +350,7 @@ for (i in cols_to_modify) {
 }
 ```
 
-Activity dataset edits:
-
-```{r}
-#SY1 and 2
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_activity_duration_sy1_2 = as.numeric(as.character(avg_activity_duration_sy1_2))) %>%
-  mutate(avg_activity_duration_sy1_2_splits = case_when(
-    avg_activity_duration_sy1_2 <= 20 ~ "less_than_30min",
-    avg_activity_duration_sy1_2 >20 & avg_activity_duration_sy1_2 <= 40 ~ "between_30_60_min",
-    avg_activity_duration_sy1_2 >40 & avg_activity_duration_sy1_2<= 60 ~ "between_60_90_min",
-    avg_activity_duration_sy1_2 >60 & avg_activity_duration_sy1_2 <= 80 ~ "between_90_120_min",
-    avg_activity_duration_sy1_2 >80 & avg_activity_duration_sy1_2 <= 100 ~ "more_than_120_min"
-  ))
-
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_activity_freq_sy1_2 = as.numeric(as.character(avg_activity_freq_sy1_2))) %>%
-  mutate(avg_activity_freq_sy1_2_splits = case_when(
-    avg_activity_freq_sy1_2 <= 20 ~ "never",
-    avg_activity_freq_sy1_2 >20 & avg_activity_freq_sy1_2<= 40 ~ "less_than_weekly",
-    avg_activity_freq_sy1_2 >40 & avg_activity_freq_sy1_2<= 60 ~ "min_weekly",
-    avg_activity_freq_sy1_2 >60 & avg_activity_freq_sy1_2 <= 80 ~ "daily",
-    avg_activity_freq_sy1_2 >80 & avg_activity_freq_sy1_2<= 100 ~ "multi_daily"
-  ))
-
-
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_activity_intensity_sy1_2 = as.numeric(as.character(avg_activity_intensity_sy1_2))) %>%
-  mutate(avg_activity_intensity_sy1_2_splits = case_when(
-    avg_activity_intensity_sy1_2 <= 33.3 ~ "low",
-    avg_activity_intensity_sy1_2 >33.3 & avg_activity_intensity_sy1_2<= 66.7 ~ "moderate",
-    avg_activity_intensity_sy1_2 >66.7 & avg_activity_intensity_sy1_2<= 100 ~ "high",
-
-  ))
-
-#SY3 + intensity and freq
-
-
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_activity_freq_sy3 = as.numeric(as.character(avg_activity_freq_sy3))) %>%
-  mutate(avg_activity_freq_sy3_splits = case_when(
-    avg_activity_freq_sy3 <= 20 ~ "rarely",
-    avg_activity_freq_sy3 >20 & avg_activity_freq_sy3<= 40 ~ "monthly",
-    avg_activity_freq_sy3 >40 & avg_activity_freq_sy3<= 60 ~ "weekly",
-    avg_activity_freq_sy3 >60 & avg_activity_freq_sy3 <= 80 ~ "daily",
-    avg_activity_freq_sy3 >80 & avg_activity_freq_sy3<= 100 ~ "multi_daily"
-  ))
-
-
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_activity_intensity_sy3 = as.numeric(as.character(avg_activity_intensity_sy3))) %>%
-  mutate(avg_activity_intensity_sy3_splits = case_when(
-    avg_activity_intensity_sy3 <= 20 ~ "slow_walks",
-    avg_activity_intensity_sy3 >20 & avg_activity_intensity_sy3<= 40 ~ "average_walks",
-    avg_activity_intensity_sy3 >40 & avg_activity_intensity_sy3<= 60 ~ "brisk_walks",
-    avg_activity_intensity_sy3 >60 & avg_activity_intensity_sy3 <= 80 ~ "jogs",
-    avg_activity_intensity_sy3 >80 & avg_activity_intensity_sy3<= 100 ~ "runs"
-  ))
-
-
-
-#5y prior endpoint  freq
-
-
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_frequency_5y_prior_endpoint = as.numeric(as.character(avg_activity_freq_sy3))) %>%
-  mutate(avg_frequency_5y_prior_endpoint_splits = case_when(
-    avg_frequency_5y_prior_endpoint <= 20 ~ "rarely",
-    avg_frequency_5y_prior_endpoint >20 & avg_frequency_5y_prior_endpoint<= 40 ~ "monthly",
-    avg_frequency_5y_prior_endpoint >40 & avg_frequency_5y_prior_endpoint<= 60 ~ "weekly",
-    avg_frequency_5y_prior_endpoint >60 & avg_frequency_5y_prior_endpoint <= 80 ~ "daily",
-    avg_frequency_5y_prior_endpoint >80 &avg_frequency_5y_prior_endpoint<= 100 ~ "multi_daily"
-  ))
-#5y prior endpoint intensity
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_intensity_5y_prior_endpoint = as.numeric(as.character(avg_intensity_5y_prior_endpoint))) %>%
-  mutate(avg_intensity_5y_prior_endpoint_splits = case_when(
-    avg_intensity_5y_prior_endpoint <= 20 ~ "slow_walks",
-    avg_intensity_5y_prior_endpoint >20 & avg_intensity_5y_prior_endpoint<= 40 ~ "average_walks",
-    avg_intensity_5y_prior_endpoint >40 & avg_intensity_5y_prior_endpoint<= 60 ~ "brisk_walks",
-    avg_intensity_5y_prior_endpoint >60 & avg_intensity_5y_prior_endpoint <= 80 ~ "jogs",
-    avg_intensity_5y_prior_endpoint >80 & avg_intensity_5y_prior_endpoint<= 100 ~ "runs"
-  ))
-#recode into larger groupings e.g grouping together rarely + monthly for frequency
-#freq
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_activity_freq_sy3_splits_grouped = case_when(
-    avg_activity_freq_sy3_splits == "monthly" ~ "rarely",
-    avg_activity_freq_sy3_splits == "multi_daily"~"daily_or_more" ,
-    avg_activity_freq_sy3_splits == "daily" ~"daily_or_more" ,
-    avg_activity_freq_sy3_splits == "weekly" ~"weekly" ,
-    avg_activity_freq_sy3_splits == "rarely" ~ "rarely",
-  ))
-
-#intensity
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_activity_intensity_sy3_splits_grouped = case_when(
-    avg_activity_intensity_sy3_splits == "jogs" ~ "high_intensity",
-    avg_activity_intensity_sy3_splits == "runs" ~"high_intensity" ,
-    avg_activity_intensity_sy3_splits == "brisk_walks" ~"moderate_intensity",
-    avg_activity_intensity_sy3_splits =="average_walks" ~ "low_intensity",
-     avg_activity_intensity_sy3_splits =="slow_walks" ~ "low_intensity"
-  ))
-#5y prior freq
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_frequency_5y_prior_endpoint_splits_grouped = case_when(
-    avg_frequency_5y_prior_endpoint_splits == "monthly" ~ "rarely",
-    avg_frequency_5y_prior_endpoint_splits == "multi_daily"~"daily_or_more" ,
-    avg_frequency_5y_prior_endpoint_splits == "daily" ~"daily_or_more" ,
-    avg_frequency_5y_prior_endpoint_splits == "weekly" ~"weekly" ,
-    avg_frequency_5y_prior_endpoint_splits == "rarely" ~"rarely" ,
-  ))
-
-#5y prior intensity
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
-  mutate(avg_intensity_5y_prior_endpoint_splits_grouped = case_when(
-    avg_intensity_5y_prior_endpoint_splits == "jogs" ~ "high_intensity",
-    avg_intensity_5y_prior_endpoint_splits == "runs" ~"high_intensity" ,
-    avg_intensity_5y_prior_endpoint_splits == "brisk_walks" ~"moderate_intensity",
-    avg_intensity_5y_prior_endpoint_splits =="average_walks" ~ "low_intensity",
-    avg_intensity_5y_prior_endpoint_splits =="slow_walks" ~ "low_intensity"
-  ))
-
-cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
+```{cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%}
   mutate(across(c(early_activity_mean, rest_activity_mean, whole_activity_mean,prior5y_activity_mean), as.numeric))
 
 #swap not_recorded for NA and exclude from univar this way
@@ -669,6 +563,9 @@ exposure_families <- list(
 
   dog_activity = c(
     "mean_activity_level_overview",
+    "USDA_30min_sy1_2",
+    "activity_1h_min_sy1_2",
+    "activity_KC_2h_min_sy1_2",
 
     "avg_activity_freq_sy1_2_quartile",
     "avg_activity_duration_sy1_2_quartile",
@@ -703,7 +600,7 @@ exposure_families <- list(
     "weight_biological",
     "weight_quartile",
     "avg_height_5y_prior_endpoint_quartiles",
-    "avg_purina_BCS_5y_prior_endpoint_quartiles",
+   # "avg_purina_BCS_5y_prior_endpoint_quartiles", <- doesnt really make sense to do avg when its a whole number value 
     "mode_BCS_classify"
   ),
 
@@ -725,26 +622,6 @@ exposure_families <- list(
     "mated_pre_neuter",
     "num_breeding_before_neutering_terciles",
     "ever_bred_from"
-  ),
-
-  #------------------------------------------------------------
-  # MEDICATION TYPES: BROAD OVERVIEW
-  #------------------------------------------------------------
-
-  medication_types = c(
-    "half_anti_inflam_lifetime",
-    "half_anti_microbials_lifetime",
-    "half_dietary_supplements_lifetime",
-    "half_enteric_lifetime",
-    "half_hormones_and_related_lifetime",
-    "half_immunologicals_lifetime",
-    "half_neurological_lifetime",
-    "half_anti_parasites_lifetime",
-    "half_anti_septics_lifetime",
-    "half_cardio_respiratory_lifetime",
-    "half_diuretics_lifetime",
-    "half_anti_hist_lifetime",
-    "half_anti_viral_lifetime"
   ),
 
   #------------------------------------------------------------
@@ -2056,6 +1933,12 @@ crude_results_formatted <- crude_results %>%
     exposure,
     term
   )
+
+
+#write to csv
+write.csv(crude_results_formatted,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_family_grouped.csv")
+
+"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table2.docx"
 ```
 
 Table per family
