@@ -869,7 +869,7 @@ assign_quartiles <- function(df, columns) {
     df[[paste0(col, "_quartile")]] <- factor(df[[paste0(col, "_quartile")]], levels = c(quartile_labels, "not_recorded"))
     
     # Drop the temporary rank column
-    df <- df %>% select(-paste0(col, "_n"))
+    df <- df %>% dplyr::select(-paste0(col, "_n"))
   }
   
   return(df)

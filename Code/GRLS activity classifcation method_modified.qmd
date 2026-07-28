@@ -686,11 +686,11 @@ From this dataset use:
 
 -   pace and frequency
 
--   duration (albeit with lots missing)
+Study doesnt record duration of exercise for SY3 beyond??
 
 ### Data manipulation
 
-#### Total activity pace, duration and frequency over SY3-\>end
+#### Total activity pace (will become intensity later for modelling) and frequency over SY3-\>end
 
 Recode pace to numbers:
 
@@ -930,6 +930,36 @@ whole_life_activity_overview <- activity_overview %>%
 
 ```
 
+Whilst have got the whole life acitivity intensity from activity overview dataset also want to calculate frequency by combining SY1_2 and SY3 beyond dfs as have made frequency a consistent variable across them:
+
+```{r}
+#keep SY0-2 and SY3 beyond same cols only
+activity_sy1_2_same <- activity_sy1_2 %>%
+  dplyr::select(c(subject_id,year_in_study,total_activity_intensity_regroup_num,total_activity_intensity_regroup,total_activity_freq_regroup,total_activity_freq_regroup_num))
+#rename cols to match SY3
+activity_sy1_2_same <- activity_sy1_2_same %>%
+  rename(pace_num = total_activity_intensity_regroup_num, pace=total_activity_intensity_regroup, frequency_num = total_activity_freq_regroup_num,frequency = total_activity_freq_regroup)
+activity_sy3_same<- activity_sy3_beyond %>%
+    dplyr::select(c(subject_id,year_in_study,pace,pace_num,frequency,frequency_num))
+
+
+
+early_rest <- bind_rows(activity_sy1_2_same,activity_sy3_same)
+
+
+early_rest_modes <- early_rest %>%
+  group_by(subject_id) %>%
+  summarise(
+    whole_mode_pace = get_mode(pace),
+    whole_mode_frequency = get_mode(frequency)
+  )
+
+
+#now add onto that whole life activity overview level df
+whole_life_activity_overview <- whole_life_activity_overview %>%
+  left_join(early_rest_modes, by="subject_id")
+```
+
 Combine all 3
 
 ```{r}
@@ -952,7 +982,7 @@ early_rest_whole_activity_overview <- early_rest_whole_activity_overview %>%left
 
 #replace NAs with "records_not_available"
 early_rest_whole_activity_overview <- early_rest_whole_activity_overview %>%
-  mutate(across(2:22, ~ case_when(
+  mutate(across(2:24, ~ case_when(
     is.na(.) ~ "no_activity_records_for_this_time_period",
     TRUE ~ as.character(.)
   )))

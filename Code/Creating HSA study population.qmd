@@ -355,7 +355,7 @@ activity_level_overview <- activity_level_overview %>%
 #convert data back to char 0=none, 1= little, 2=moderate 3= very active (and do the halves in between)
 activity_level_overview[] <- lapply(activity_level_overview,as.character)
 activity_level_overview<- activity_level_overview %>%
-  mutate(across(c(4:6,9:11,14:16,25:27), ~ case_when(
+  mutate(across(c(4:6,10:13,15:18,26:29), ~ case_when(
     . == "0" ~ "none",
     . == "0.5" ~ "none to little",
     . == "1" ~ "little",
@@ -371,6 +371,11 @@ activity_level_overview<- activity_level_overview %>%
 merged_HSA_data2 <- merged_HSA_data %>%
   left_join(activity_level_overview,by="subject_id")
 
+#rename had_HSA.x to had_HSA and final_date.y to final_date
+merged_HSA_data2 <- merged_HSA_data2%>%
+  dplyr::rename(
+    final_date = final_date.x
+  )
 
 #drop all cols that end in .y or .x
 merged_HSA_data2 <- merged_HSA_data2 %>%
