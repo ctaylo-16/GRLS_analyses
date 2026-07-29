@@ -34,6 +34,8 @@ library(crosstable)
 library(kableExtra)
 library(officer)
 library(flextable)
+library(writexl)
+library(readr)
 # data was preliminarily tidied in GRLS cox HSA time to diagnosis script before changing to log reg analyses
 cohort_abr <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
 ```
@@ -1274,7 +1276,8 @@ exposure_families <- list(
     "weight_quartile",
     "avg_height_5y_prior_endpoint_quartiles",
    # "avg_purina_BCS_5y_prior_endpoint_quartiles", <- doesnt really make sense to do avg when its a whole number value 
-    "mode_BCS_classify"
+    "mode_BCS_classify",
+   "mode_purina_BCS_5y_prior_endpoint"
   ),
 
   #------------------------------------------------------------
@@ -1283,6 +1286,7 @@ exposure_families <- list(
 
   reproductive_exposures = c(
     "age_at_neuter_years_quartiles",
+    "early_neuter_groups",
     "mismating_ever",
     "neutered_reason",
     "neutered_ever_bred",
@@ -1336,7 +1340,9 @@ exposure_families <- list(
     "half_hormones_and_related_lifetime",
     "quartile_hormones_and_related_lifetime",
     "half_hormones_and_related_5y_prior_endpoint",
-    "quartile_hormones_and_related_5y_prior_endpoint",
+    "quartile_hormones_and_related_5y_prior_endpoint"
+  ),
+  steroids=c(
     "steroid_ever",
     "steroid_5y"
   ),
@@ -1591,8 +1597,12 @@ usable_exposure_families <- split(
 mean_avg_variables <- names(analysis_df)[
   stringr::str_detect(
     names(analysis_df),
+    stringr::regex("mean|avg", ignore_case = TRUE)
+  ) &
+  !stringr::str_detect(
+    names(analysis_df),
     stringr::regex(
-      "mean|avg",
+      "quart|quantile|tercile|categor|class",
       ignore_case = TRUE
     )
   )
@@ -1858,7 +1868,7 @@ write_csv(
 )
 ```
 
-### Univariable
+### Univariable models
 
 ```{r}
 fit_crude_exposure_model <- function(
@@ -2914,10 +2924,3071 @@ crude_results_table3 <- crude_results_table2 %>%
   )
 ```
 
-Need to ensure correct reference level (need to re
+Need to ensure correct reference level (need to refactorise at start before this analysis)
 
 ```{r}
-install.packages(c("writexl", "readr", "officer", "flextable"))
+ft <- flextable(crude_results_table3) %>%
+  theme_booktabs() %>%
+  bold(part = "header") %>%
+  fontsize(size = 8, part = "all") %>%
+  align(align = "left", part = "all") %>%
+  valign(valign = "top", part = "all") %>%
+  autofit() %>%
+  set_table_properties(
+    layout = "autofit",
+    width = 1
+  )
+
+doc <- read_docx() %>%
+  body_add_par(
+    "Crude logistic regression results",
+    style = "heading 1"
+  ) %>%
+  body_add_flextable(ft) %>%
+  body_end_section_landscape()
+
+print(
+  doc,
+  target = "crude_results_table.docx"
+)
+
+output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+
+writexl::write_xlsx(
+  list("Crude results" = crude_results_table3),
+  file.path(output_folder, "crude_results_table.xlsx")
+)
+
+readr::write_excel_csv(
+  crude_results_table3,
+  file.path(output_folder, "crude_results_table.csv"),
+  na = ""
+)
+
+print(
+  doc,
+  target = file.path(output_folder, "crude_results_table.docx")
+)
 ```
 
-factorise at start before this analysis
+#### Univariable output interpretation:
+
+Rules:
+
+-   if significant not just for the "not_recorded" value
+
+-   p\<0.2 for LRT and family FDR \<0.1 to consider and then consider against variables within exposure family if multiple significant
+
+-   Looking for consistent association across a variable e.g. in quartiles is it increasing as dose incrases etc.
+
+Built environment/socioeconomic
+
+-   primary heating fuel source 5y prior
+
+-   region mode 5y prior
+
+-   aerosol use rest of life
+
+-   incense/candles rest of life
+
+-   smoke early life
+
+-   weed treatment rest of life and whole life and 5y prior
+
+-   insect treatment rest and whole life and 5y prior
+
+-   fertiliser treatment rest and whole and 5y prior
+
+Lifestyle sleep location
+
+-   main lifestyle category ever and 5y prior
+
+-   outside sleep location early life and whole life
+
+Dog activity
+
+-   mode activity level overview (whole life dataset) - NB mean is also sig but not normall distriution etc and its the numericising of a categorical information thing so ignore
+
+-   mode intensity 5y prior endpoint
+
+-   mode frequency 5y prior
+
+-   whole life and rest of life mode intensity
+
+BCS/weight
+
+-   none are significant if we exclude the not_recorded variable
+
+Repro exposures
+
+-   age at neuter quartiles
+
+-   early neuter groups
+
+-   rest of repro variables, the only sig ones are due to putting "Entire" as a reason in a neuter variable or similar
+
+NSAID
+
+-   ever administered and 5y prior and 5y prior quantiles and lifetime quartiles
+
+Antimicrobials
+
+-   none
+
+Dietary
+
+-   half dietary supplements lifetime and 5y prior endpoint
+
+Hormones
+
+-   none
+
+Steroid
+
+-   none, only due to missing category
+
+Immunologicals
+
+-   quartiles lifetime and 5y prior
+
+Neurologicals
+
+-   none
+
+Anti-parasites
+
+-   half and quarter antiparasites lifetime and 5y prior
+
+-   ectoparasite 5y prior quantile and endo 5y prior quantile
+
+-   fenbendazole ever and 5y prior
+
+Antiseptics
+
+-   none
+
+Cardiorespiratory
+
+-   none
+
+Diuretics
+
+-   none
+
+Anti-histamines
+
+-   none
+
+Anti-virals
+
+-   none
+
+Comorbidities
+
+-   chronic inflam comor present
+
+Creating several further univariable models with only complete cases retained to assess if significance only driven by missing data for the following:
+
+(also running the age at neuter etc to exclude entire dogs)
+
+```{r}
+candidate_exposure_families <- list(
+
+  #---------------------------------------------------------------------------
+  # BUILT ENVIRONMENT / SOCIOECONOMIC
+  #---------------------------------------------------------------------------
+
+  built_environment_socioeconomic = c(
+    "heating_fuel_primary_mode_5yrs_prior",
+    "region_mode_5y_prior"
+  ),
+
+  #---------------------------------------------------------------------------
+  # HOUSEHOLD CHEMICAL EXPOSURE
+  #---------------------------------------------------------------------------
+
+  household_chemical_exposure = c(
+    "use_aerosol_study_years_rest_of_life",
+    "use_incense_or_candles_study_years_rest_of_life",
+    "smoke_exposure_study_years_early_life",
+
+    "any_treated_weeds_study_years_rest_of_life",
+    "any_treated_weeds_study_years_whole_life",
+    "any_treated_weeds_exposed_5yrs_prior",
+
+    "any_treated_insects_study_years_rest_of_life",
+    "any_treated_insects_study_years_whole_life",
+    "any_treated_insects_exposed_5yrs_prior",
+
+    "any_treated_fertilizer_study_years_rest_of_life",
+    "any_treated_fertilizer_study_years_whole_life",
+    "any_treated_fertilizer_exposed_5yrs_prior"
+
+    # Optional liberal candidate:
+    # "use_hepa_filter_study_years_rest_of_life"
+  ),
+
+  #---------------------------------------------------------------------------
+  # LIFESTYLE / SLEEP LOCATION
+  #---------------------------------------------------------------------------
+
+  lifestyle_sleep_location = c(
+    "main_lifestyle_category",
+    "main_lifestyle_category_mode_5yrs_prior",
+    "outside_YN_study_years_early_life",
+    "outside_YN_study_years_whole_life"
+  ),
+
+  #---------------------------------------------------------------------------
+  # DOG ACTIVITY
+  #---------------------------------------------------------------------------
+
+  dog_activity = c(
+    "mode_activity_level_overview",
+    "mode_intensity_5y_prior_endpoint",
+    "mode_frequency_5y_prior_endpoint",
+    "whole_activity_mode",
+    "rest_activity_mode"
+  ),
+
+  #---------------------------------------------------------------------------
+  # REPRODUCTIVE EXPOSURES
+  #---------------------------------------------------------------------------
+
+  reproductive_exposures = c(
+    "age_at_neuter_years_quartiles",
+    "early_neuter_groups"
+  ),
+
+  #---------------------------------------------------------------------------
+  # NSAIDS / ANTI-INFLAMMATORIES
+  #---------------------------------------------------------------------------
+
+  nsaids_anti_inflammatories = c(
+    "NSAID_ever",
+    "NSAID_5y",
+    "NSAID_5y_quantiles",
+    "quartile_anti_inflam_lifetime"
+  ),
+
+  #---------------------------------------------------------------------------
+  # DIETARY SUPPLEMENTS
+  #---------------------------------------------------------------------------
+
+  dietary_supplements = c(
+    "half_dietary_supplements_lifetime",
+    "half_dietary_supplements_5y_prior_endpoint"
+  ),
+
+  #---------------------------------------------------------------------------
+  # IMMUNOLOGICALS
+  #---------------------------------------------------------------------------
+
+  immunologicals = c(
+    "quartile_immunologicals_lifetime",
+    "quartile_immunologicals_5y_prior_endpoint"
+  ),
+
+  #---------------------------------------------------------------------------
+  # ANTI-PARASITES
+  #---------------------------------------------------------------------------
+
+  anti_parasites = c(
+    "half_anti_parasites_lifetime",
+    "quartile_anti_parasites_lifetime",
+    "half_anti_parasites_5y_prior_endpoint",
+    "quartile_anti_parasites_5y_prior_endpoint",
+    "ecto_5y_quantiles",
+    "endo_5y_quantiles",
+    "fenbendazole_ever",
+    "fenbendazole_5y"
+  ),
+
+  #---------------------------------------------------------------------------
+  # CHRONIC INFLAMMATORY COMORBIDITY
+  #---------------------------------------------------------------------------
+
+  chronic_inflammatory_comorbidity = c(
+    "comorb_chronic_inflam_all"
+  )
+)
+candidate_variables <- unique(
+  unlist(
+    candidate_exposure_families,
+    use.names = FALSE
+  )
+)
+
+missing_candidate_variables <- setdiff(
+  candidate_variables,
+  names(analysis_df)
+)
+
+missing_candidate_variables
+```
+
+Complete cases by converting missing record sback to NA
+
+```{r}
+missing_category_labels <- c(
+  "not_recorded",
+  "not recorded",
+  "no_med_use_recorded",
+  "no_medication_records_for_this_time_period",
+  "No medication use recorded",
+  "No medication records for this time period",
+  "no_int_recorded",
+  "no_activity_records_for_this_time_period",
+  "drug_not_administered",
+ "no_activity_records_for_this_time_period"
+
+)
+
+
+remove_missing_categories <- function(
+    x,
+    extra_missing = character(0)
+) {
+
+  missing_values <- c(
+    missing_category_labels,
+    extra_missing
+  )
+
+  if (is.factor(x)) {
+
+    original_levels <- levels(x)
+    x_character <- as.character(x)
+
+    x_character[
+      x_character %in% missing_values
+    ] <- NA_character_
+
+    factor(
+      x_character,
+      levels = setdiff(
+        original_levels,
+        missing_values
+      )
+    )
+
+  } else if (is.character(x)) {
+
+    x[
+      x %in% missing_values
+    ] <- NA_character_
+
+    factor(x)
+
+  } else {
+
+    x
+  }
+}
+```
+
+```{r}
+analysis_cc <- analysis_df %>%
+  mutate(
+    had_HSA = as.integer(
+      as.character(had_HSA)
+    )
+  ) %>%
+  mutate(
+    across(
+      all_of(candidate_variables),
+      remove_missing_categories
+    )
+  )
+
+#ditching entire category in neuter age
+analysis_cc <- analysis_cc %>%
+  mutate(
+    age_at_neuter_years_quartiles =
+      remove_missing_categories(
+        age_at_neuter_years_quartiles,
+        extra_missing = "Entire"
+      )
+  )
+```
+
+Running complete case models for these variables:
+
+```{r}
+fit_crude_complete_case <- function(
+    data,
+    exposure,
+    exposure_family,
+    outcome = "had_HSA"
+) {
+
+  # Select only the outcome and this particular exposure
+  model_data <- data[
+    ,
+    c(outcome, exposure),
+    drop = FALSE
+  ]
+
+  # Exposure-specific complete cases
+  model_data <- model_data[
+    complete.cases(model_data),
+    ,
+    drop = FALSE
+  ]
+
+  # Remove factor levels left empty after excluding missing values
+  model_data <- droplevels(model_data)
+  
+  # Use treatment contrasts so categorical exposures give one OR per level
+if (is.factor(model_data[[exposure]])) {
+  model_data[[exposure]] <- factor(
+    as.character(model_data[[exposure]]),
+    levels = levels(model_data[[exposure]]),
+    ordered = FALSE
+  )
+}
+
+  # Ensure character exposures are factors
+  if (is.character(model_data[[exposure]])) {
+    model_data[[exposure]] <- factor(
+      model_data[[exposure]]
+    )
+  }
+
+  n_model <- nrow(model_data)
+
+  cases <- sum(
+    model_data[[outcome]] == 1,
+    na.rm = TRUE
+  )
+
+  controls <- sum(
+    model_data[[outcome]] == 0,
+    na.rm = TRUE
+  )
+
+  # Check that model is estimable
+  if (
+    n_model == 0 ||
+    dplyr::n_distinct(model_data[[outcome]]) < 2 ||
+    dplyr::n_distinct(model_data[[exposure]]) < 2
+  ) {
+
+    return(
+      tibble::tibble(
+        exposure_family = exposure_family,
+        exposure = exposure,
+        term = NA_character_,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        OR = NA_real_,
+        CI_lower = NA_real_,
+        CI_upper = NA_real_,
+        wald_z = NA_real_,
+        wald_p = NA_real_,
+        overall_LRT_chisq = NA_real_,
+        overall_LRT_df = NA_real_,
+        overall_LRT_p = NA_real_,
+        converged = FALSE,
+        warning = "Insufficient outcome or exposure variation"
+      )
+    )
+  }
+
+  full_formula <- reformulate(
+    exposure,
+    response = outcome
+  )
+
+  full_model <- tryCatch(
+    glm(
+      full_formula,
+      data = model_data,
+      family = binomial()
+    ),
+    error = function(e) e
+  )
+
+  if (inherits(full_model, "error")) {
+
+    return(
+      tibble::tibble(
+        exposure_family = exposure_family,
+        exposure = exposure,
+        term = NA_character_,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        OR = NA_real_,
+        CI_lower = NA_real_,
+        CI_upper = NA_real_,
+        wald_z = NA_real_,
+        wald_p = NA_real_,
+        overall_LRT_chisq = NA_real_,
+        overall_LRT_df = NA_real_,
+        overall_LRT_p = NA_real_,
+        converged = FALSE,
+        warning = conditionMessage(full_model)
+      )
+    )
+  }
+
+  null_model <- glm(
+    as.formula(
+      paste(outcome, "~ 1")
+    ),
+    data = model_data,
+    family = binomial()
+  )
+
+  lrt <- anova(
+    null_model,
+    full_model,
+    test = "LRT"
+  )
+
+  coefficient_table <- summary(
+    full_model
+  )$coefficients
+
+  # Remove the intercept
+  coefficient_table <- coefficient_table[
+    rownames(coefficient_table) != "(Intercept)",
+    ,
+    drop = FALSE
+  ]
+
+  estimates <- coefficient_table[, "Estimate"]
+  standard_errors <- coefficient_table[, "Std. Error"]
+
+  tibble::tibble(
+    exposure_family = exposure_family,
+    exposure = exposure,
+    term = rownames(coefficient_table),
+
+    n = n_model,
+    cases = cases,
+    controls = controls,
+
+    OR = exp(estimates),
+
+    CI_lower = exp(
+      estimates - 1.96 * standard_errors
+    ),
+
+    CI_upper = exp(
+      estimates + 1.96 * standard_errors
+    ),
+
+    wald_z = coefficient_table[, "z value"],
+    wald_p = coefficient_table[, "Pr(>|z|)"],
+
+    overall_LRT_chisq = lrt$Deviance[2],
+    overall_LRT_df = lrt$Df[2],
+    overall_LRT_p = lrt$`Pr(>Chi)`[2],
+
+    converged = full_model$converged,
+
+    warning = ifelse(
+      full_model$converged,
+      NA_character_,
+      "Model did not converge"
+    )
+  )
+}
+candidate_lookup <- purrr::imap_dfr(
+  candidate_exposure_families,
+  function(variables, family_name) {
+
+    tibble::tibble(
+      exposure_family = family_name,
+      exposure = variables
+    )
+  }
+)
+
+
+crude_cc_results <- purrr::map2_dfr(
+  candidate_lookup$exposure,
+  candidate_lookup$exposure_family,
+
+  function(exposure_name, family_name) {
+
+    fit_crude_complete_case(
+      data = analysis_cc,
+      exposure = exposure_name,
+      exposure_family = family_name,
+      outcome = "had_HSA"
+    )
+  }
+)
+
+crude_cc_overall_p <- crude_cc_results %>%
+  distinct(
+    exposure_family,
+    exposure,
+    overall_LRT_p
+  ) %>%
+  group_by(exposure_family) %>%
+  mutate(
+    LRT_p_FDR_within_family = p.adjust(
+      overall_LRT_p,
+      method = "BH"
+    )
+  ) %>%
+  ungroup() %>%
+  mutate(
+    LRT_p_FDR_global = p.adjust(
+      overall_LRT_p,
+      method = "BH"
+    )
+  )
+
+
+crude_cc_results <- crude_cc_results %>%
+  select(
+    -any_of(
+      c(
+        "LRT_p_FDR_within_family",
+        "LRT_p_FDR_global"
+      )
+    )
+  ) %>%
+  left_join(
+    crude_cc_overall_p,
+    by = c(
+      "exposure_family",
+      "exposure",
+      "overall_LRT_p"
+    )
+  )
+
+format_p <- function(x, digits = 3) {
+  dplyr::case_when(
+    is.na(x) ~ "",
+    x < 0.001 ~ "<0.001",
+    TRUE ~ formatC(
+      x,
+      format = "f",
+      digits = digits
+    )
+  )
+}
+
+format_count_percent <- function(count, denominator) {
+  dplyr::case_when(
+    is.na(count) |
+      is.na(denominator) |
+      denominator == 0 ~ "",
+
+    TRUE ~ sprintf(
+      "%d (%.1f%%)",
+      as.integer(count),
+      100 * count / denominator
+    )
+  )
+}
+
+first_non_missing <- function(x) {
+  x <- x[!is.na(x)]
+
+  if (length(x) == 0) {
+    NA
+  } else {
+    x[[1]]
+  }
+}
+
+make_cc_level_counts <- function(
+    data,
+    exposure,
+    exposure_family,
+    outcome = "had_HSA"
+) {
+
+  model_data <- data[
+    ,
+    c(outcome, exposure),
+    drop = FALSE
+  ]
+
+  model_data <- model_data[
+    complete.cases(model_data),
+    ,
+    drop = FALSE
+  ]
+
+  model_data <- droplevels(model_data)
+
+  x <- model_data[[exposure]]
+  y <- model_data[[outcome]]
+
+  # Convert characters, logical variables and ordered factors
+  # to ordinary unordered factors
+  if (is.character(x) || is.logical(x)) {
+    x <- factor(x)
+  }
+
+  if (is.ordered(x)) {
+    x <- factor(
+      as.character(x),
+      levels = levels(x),
+      ordered = FALSE
+    )
+  }
+
+  total_cases <- sum(y == 1, na.rm = TRUE)
+  total_non_cases <- sum(y == 0, na.rm = TRUE)
+
+  # Categorical factor exposure
+  if (is.factor(x)) {
+
+    exposure_levels <- levels(x)
+
+    tab <- table(
+      factor(x, levels = exposure_levels),
+      factor(y, levels = c(0, 1))
+    )
+
+    return(
+      tibble::tibble(
+        exposure_family = exposure_family,
+        exposure = exposure,
+        Category = exposure_levels,
+        category_order = seq_along(exposure_levels),
+        model_type = "factor",
+        reference_level = exposure_levels[[1]],
+        comparison_level = NA_character_,
+        outcome_0 = as.integer(tab[, "0"]),
+        outcome_1 = as.integer(tab[, "1"]),
+        total_cases = total_cases,
+        total_non_cases = total_non_cases
+      )
+    )
+  }
+
+  distinct_values <- sort(unique(x))
+
+  # Numeric binary exposure such as 0/1
+  if (
+    is.numeric(x) &&
+      length(distinct_values) == 2
+  ) {
+
+    x_factor <- factor(
+      x,
+      levels = distinct_values
+    )
+
+    tab <- table(
+      x_factor,
+      factor(y, levels = c(0, 1))
+    )
+
+    return(
+      tibble::tibble(
+        exposure_family = exposure_family,
+        exposure = exposure,
+        Category = as.character(distinct_values),
+        category_order = seq_along(distinct_values),
+        model_type = "binary_numeric",
+        reference_level =
+          as.character(distinct_values[[1]]),
+        comparison_level =
+          as.character(distinct_values[[2]]),
+        outcome_0 = as.integer(tab[, "0"]),
+        outcome_1 = as.integer(tab[, "1"]),
+        total_cases = total_cases,
+        total_non_cases = total_non_cases
+      )
+    )
+  }
+
+  # Continuous numeric exposure
+  tibble::tibble(
+    exposure_family = exposure_family,
+    exposure = exposure,
+    Category = "Continuous",
+    category_order = 1L,
+    model_type = "continuous",
+    reference_level = NA_character_,
+    comparison_level = NA_character_,
+    outcome_0 = total_non_cases,
+    outcome_1 = total_cases,
+    total_cases = total_cases,
+    total_non_cases = total_non_cases
+  )
+}
+
+
+cc_level_counts <- purrr::map2_dfr(
+  candidate_lookup$exposure,
+  candidate_lookup$exposure_family,
+
+  function(exposure_name, family_name) {
+    make_cc_level_counts(
+      data = analysis_cc,
+      exposure = exposure_name,
+      exposure_family = family_name,
+      outcome = "had_HSA"
+    )
+  }
+) %>%
+  dplyr::mutate(
+    `Cases (%)` = format_count_percent(
+      outcome_1,
+      total_cases
+    ),
+
+    `Non-cases (%)` = format_count_percent(
+      outcome_0,
+      total_non_cases
+    )
+  )
+
+
+cc_exposure_metadata <- cc_level_counts %>%
+  dplyr::distinct(
+    exposure_family,
+    exposure,
+    model_type,
+    reference_level,
+    comparison_level
+  )
+
+crude_cc_model_display <- crude_cc_results %>%
+  dplyr::left_join(
+    cc_exposure_metadata,
+    by = c(
+      "exposure_family",
+      "exposure"
+    )
+  ) %>%
+  dplyr::mutate(
+    Category = dplyr::case_when(
+      model_type == "continuous" ~
+        "Continuous",
+
+      model_type == "binary_numeric" ~
+        comparison_level,
+
+      model_type == "factor" &
+        !is.na(term) &
+        startsWith(term, exposure) ~
+        substring(
+          term,
+          nchar(exposure) + 1L
+        ),
+
+      TRUE ~ term
+    ),
+
+    `Crude OR (95% CI)` = dplyr::case_when(
+      is.na(OR) |
+        is.na(CI_lower) |
+        is.na(CI_upper) ~ "",
+
+      TRUE ~ sprintf(
+        "%.3f (%.3f–%.3f)",
+        OR,
+        CI_lower,
+        CI_upper
+      )
+    ),
+
+    `Wald p-value` = format_p(wald_p)
+  ) %>%
+  dplyr::select(
+    exposure_family,
+    exposure,
+    Category,
+    `Crude OR (95% CI)`,
+    `Wald p-value`
+  )
+
+crude_cc_overall_display <- crude_cc_results %>%
+  dplyr::group_by(
+    exposure_family,
+    exposure
+  ) %>%
+  dplyr::summarise(
+    `Model n` = first_non_missing(n),
+
+    `LRT p-value` = format_p(
+      first_non_missing(overall_LRT_p)
+    ),
+
+    `Family FDR p-value` = format_p(
+      first_non_missing(
+        LRT_p_FDR_within_family
+      )
+    ),
+
+    `Global FDR p-value` = format_p(
+      first_non_missing(
+        LRT_p_FDR_global
+      )
+    ),
+
+    .groups = "drop"
+  )
+```
+
+```{r}
+crude_cc_results_table <- cc_level_counts %>%
+  dplyr::left_join(
+    crude_cc_model_display,
+    by = c(
+      "exposure_family",
+      "exposure",
+      "Category"
+    )
+  ) %>%
+  dplyr::left_join(
+    crude_cc_overall_display,
+    by = c(
+      "exposure_family",
+      "exposure"
+    )
+  ) %>%
+  dplyr::mutate(
+    is_reference =
+      !is.na(reference_level) &
+      Category == reference_level,
+
+    `Crude OR (95% CI)` = dplyr::case_when(
+      is_reference ~ "1.000 (reference)",
+
+      TRUE ~ dplyr::coalesce(
+        `Crude OR (95% CI)`,
+        ""
+      )
+    ),
+
+    `Wald p-value` = dplyr::case_when(
+      is_reference ~ "",
+
+      TRUE ~ dplyr::coalesce(
+        `Wald p-value`,
+        ""
+      )
+    )
+  )
+
+
+family_order_lookup <- tibble::tibble(
+  exposure_family =
+    names(candidate_exposure_families),
+
+  family_order =
+    seq_along(candidate_exposure_families)
+)
+
+exposure_order_lookup <- purrr::imap_dfr(
+  candidate_exposure_families,
+
+  function(variables, family_name) {
+    tibble::tibble(
+      exposure_family = family_name,
+      exposure = variables,
+      exposure_order = seq_along(variables)
+    )
+  }
+)
+
+crude_cc_results_table <- crude_cc_results_table %>%
+  dplyr::left_join(
+    family_order_lookup,
+    by = "exposure_family"
+  ) %>%
+  dplyr::left_join(
+    exposure_order_lookup,
+    by = c(
+      "exposure_family",
+      "exposure"
+    )
+  ) %>%
+  dplyr::arrange(
+    family_order,
+    exposure_order,
+    category_order
+  )
+
+
+crude_cc_results_table <- crude_cc_results_table %>%
+  dplyr::group_by(
+    exposure_family,
+    exposure
+  ) %>%
+  dplyr::mutate(
+    `Model n` = dplyr::if_else(
+      dplyr::row_number() == 1L,
+      as.character(`Model n`),
+      ""
+    ),
+
+    `LRT p-value` = dplyr::if_else(
+      dplyr::row_number() == 1L,
+      `LRT p-value`,
+      ""
+    ),
+
+    `Family FDR p-value` = dplyr::if_else(
+      dplyr::row_number() == 1L,
+      `Family FDR p-value`,
+      ""
+    ),
+
+    `Global FDR p-value` = dplyr::if_else(
+      dplyr::row_number() == 1L,
+      `Global FDR p-value`,
+      ""
+    )
+  ) %>%
+  dplyr::ungroup()
+
+
+crude_cc_results_table <- crude_cc_results_table %>%
+  dplyr::transmute(
+    Group = exposure_family,
+    Variable = exposure,
+    Category,
+    `Model n`,
+    `Cases (%)`,
+    `Non-cases (%)`,
+    `Crude OR (95% CI)`,
+    `Wald p-value`,
+    `LRT p-value`,
+    `Family FDR p-value`,
+    `Global FDR p-value`
+  )
+
+
+crude_cc_results_table
+```
+
+Save output
+
+```{r}
+output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+
+readr::write_excel_csv(
+  crude_cc_results_table,
+  file.path(
+    output_folder,
+    "crude_complete_case_results_table.csv"
+  ),
+  na = ""
+)
+
+
+
+ft_cc <- flextable(
+  crude_cc_results_table
+) %>%
+  theme_booktabs() %>%
+  bold(part = "header") %>%
+  fontsize(size = 7, part = "all") %>%
+  valign(valign = "top", part = "all") %>%
+  align(
+    j = c("Group", "Variable", "Category"),
+    align = "left",
+    part = "all"
+  ) %>%
+  align(
+    j = c(
+      "Model n",
+      "Cases (%)",
+      "Non-cases (%)",
+      "Crude OR (95% CI)",
+      "Wald p-value",
+      "LRT p-value",
+      "Family FDR p-value",
+      "Global FDR p-value"
+    ),
+    align = "center",
+    part = "all"
+  ) %>%
+  autofit() %>%
+  set_table_properties(
+    layout = "autofit",
+    width = 1,
+    opts_word = list(
+      split = TRUE
+    )
+  )
+
+doc_cc <- read_docx() %>%
+  body_add_par(
+    "Complete-case crude logistic regression results",
+    style = "heading 1"
+  ) %>%
+  body_add_flextable(ft_cc) %>%
+  body_end_section_landscape()
+
+print(
+  doc_cc,
+  target = "crude_complete_case_results_table.docx"
+)
+
+print(
+  doc_cc,
+  target = file.path(
+    output_folder,
+    "crude_complete_case_results_table.docx"
+  )
+)
+```
+
+From this to take forward:
+
+-   heating fuel primary mode 5y prior
+
+-   aerosol, incense, smoke early life
+
+-   weeds and insects and fertiliser rest and whole life
+
+-   main lifestyle category mode
+
+-   outside YN early or whole
+
+-   mode activity level overview
+
+-   mode activity intensity 5y prior
+
+-   mode freq 5y prior
+
+-   whole activity mode
+
+-   antiparasites quartiles lifetime and 5y prior
+
+-   comorb chronic inflam all
+
+## Adjusted single exposure models
+
+Running models with forced covariates in for the following variables:
+
+```{r}
+adjusted_candidate_exposure_families <- list(
+
+  built_environment_socioeconomic = c(
+    "heating_fuel_primary_mode_5yrs_prior"
+  ),
+
+  household_chemical_exposure = c(
+    "use_aerosol_study_years_rest_of_life",
+    "use_hepa_filter_study_years_rest_of_life",
+    "use_incense_or_candles_study_years_rest_of_life",
+    "smoke_exposure_study_years_early_life",
+
+    "any_treated_weeds_study_years_rest_of_life",
+    "any_treated_weeds_study_years_whole_life",
+    "any_treated_weeds_exposed_5yrs_prior",
+
+    "any_treated_insects_study_years_rest_of_life",
+    "any_treated_insects_study_years_whole_life",
+    "any_treated_insects_exposed_5yrs_prior",
+
+    "any_treated_fertilizer_study_years_rest_of_life",
+    "any_treated_fertilizer_study_years_whole_life",
+    "any_treated_fertilizer_exposed_5yrs_prior"
+  ),
+
+  lifestyle_sleep_location = c(
+    "main_lifestyle_category",
+    "main_lifestyle_category_mode_5yrs_prior",
+    "outside_YN_study_years_early_life",
+    "outside_YN_study_years_whole_life"
+  ),
+
+  dog_activity = c(
+    "mode_activity_level_overview",
+    "mode_intensity_5y_prior_endpoint",
+    "mode_frequency_5y_prior_endpoint",
+    "whole_activity_mode",
+    "rest_activity_mode"
+  ),
+
+  NSAIDs_anti_inflammatories = c(
+    "NSAID_ever",
+    "NSAID_5y",
+    "NSAID_5y_quantiles",
+    "quartile_anti_inflam_lifetime"
+  ),
+
+  dietary_supplements = c(
+    "half_dietary_supplements_lifetime",
+    "half_dietary_supplements_5y_prior_endpoint"
+  ),
+
+  immunologicals = c(
+    "quartile_immunologicals_lifetime",
+    "quartile_immunologicals_5y_prior_endpoint"
+  ),
+
+  anti_parasites = c(
+    "half_anti_parasites_lifetime",
+    "quartile_anti_parasites_lifetime",
+    "half_anti_parasites_5y_prior_endpoint",
+    "quartile_anti_parasites_5y_prior_endpoint",
+    "ecto_5y_quantiles",
+    "endo_5y_quantiles",
+    "fenbendazole_ever",
+    "fenbendazole_5y"
+  ),
+
+  chronic_inflammatory_comorbidity = c(
+    "comorb_chronic_inflam_all"
+  )
+)
+```
+
+```{r}
+forced_covariates <- c(
+  "age_at_final_date_bio",
+  "sex",
+  "neuter"
+)
+
+adjusted_candidate_lookup <- purrr::imap_dfr(
+  adjusted_candidate_exposure_families,
+  function(variables, family_name) {
+    tibble::tibble(
+      exposure_family = family_name,
+      exposure = variables
+    )
+  }
+)
+
+required_names <- c(
+  "had_HSA",
+  forced_covariates,
+  adjusted_candidate_lookup$exposure
+)
+
+missing_names <- setdiff(
+  unique(required_names),
+  names(analysis_df)
+)
+
+missing_names
+```
+
+```{r}
+extract_vif_diagnostics <- function(model, exposure) {
+
+  if (!requireNamespace("car", quietly = TRUE)) {
+    return(
+      list(
+        exposure_GVIF = NA_real_,
+        exposure_GVIF_df = NA_real_,
+        exposure_GVIF_adjusted = NA_real_,
+        max_GVIF_adjusted = NA_real_
+      )
+    )
+  }
+
+  vif_object <- tryCatch(
+    car::vif(model),
+    error = function(e) NULL
+  )
+
+  if (is.null(vif_object)) {
+    return(
+      list(
+        exposure_GVIF = NA_real_,
+        exposure_GVIF_df = NA_real_,
+        exposure_GVIF_adjusted = NA_real_,
+        max_GVIF_adjusted = NA_real_
+      )
+    )
+  }
+
+  if (is.matrix(vif_object)) {
+
+    terms <- rownames(vif_object)
+    raw_gvif <- vif_object[, "GVIF"]
+    gvif_df <- vif_object[, "Df"]
+
+    adjusted_column <- grep(
+      "1/(2",
+      colnames(vif_object),
+      fixed = TRUE
+    )
+
+    if (length(adjusted_column) > 0) {
+      adjusted_gvif <- vif_object[, adjusted_column[[1]]]
+    } else {
+      adjusted_gvif <- raw_gvif^(1 / (2 * gvif_df))
+    }
+
+  } else {
+
+    terms <- names(vif_object)
+    raw_gvif <- as.numeric(vif_object)
+    gvif_df <- rep(1, length(raw_gvif))
+
+    # Comparable scale to GVIF^(1/(2*df))
+    adjusted_gvif <- sqrt(raw_gvif)
+  }
+
+  exposure_position <- match(
+    exposure,
+    terms
+  )
+
+  maximum_adjusted <- if (
+    length(adjusted_gvif) == 0 ||
+      all(is.na(adjusted_gvif))
+  ) {
+    NA_real_
+  } else {
+    max(adjusted_gvif, na.rm = TRUE)
+  }
+
+  list(
+    exposure_GVIF = if (is.na(exposure_position)) {
+      NA_real_
+    } else {
+      unname(raw_gvif[exposure_position])
+    },
+
+    exposure_GVIF_df = if (is.na(exposure_position)) {
+      NA_real_
+    } else {
+      unname(gvif_df[exposure_position])
+    },
+
+    exposure_GVIF_adjusted = if (is.na(exposure_position)) {
+      NA_real_
+    } else {
+      unname(adjusted_gvif[exposure_position])
+    },
+
+    max_GVIF_adjusted = maximum_adjusted
+  )
+}
+
+empty_adjusted_result <- function(
+    exposure,
+    exposure_family,
+    n = 0L,
+    cases = 0L,
+    controls = 0L,
+    warning_message = NA_character_,
+    rank_deficient = NA
+) {
+
+  tibble::tibble(
+    exposure_family = exposure_family,
+    exposure = exposure,
+    term = NA_character_,
+    reference_level = NA_character_,
+
+    n = n,
+    cases = cases,
+    controls = controls,
+
+    adjusted_OR = NA_real_,
+    adjusted_CI_lower = NA_real_,
+    adjusted_CI_upper = NA_real_,
+    adjusted_wald_z = NA_real_,
+    adjusted_wald_p = NA_real_,
+
+    adjusted_LRT_chisq = NA_real_,
+    adjusted_LRT_df = NA_real_,
+    adjusted_LRT_p = NA_real_,
+
+    exposure_GVIF = NA_real_,
+    exposure_GVIF_df = NA_real_,
+    exposure_GVIF_adjusted = NA_real_,
+    max_GVIF_adjusted = NA_real_,
+    rank_deficient = rank_deficient,
+
+    AIC = NA_real_,
+    converged = FALSE,
+    warning = warning_message
+  )
+}
+```
+
+```{r}
+fit_adjusted_single_exposure <- function(
+    data,
+    exposure,
+    exposure_family,
+    outcome = "had_HSA",
+    forced_covariates
+) {
+
+  required_variables <- unique(
+    c(
+      outcome,
+      exposure,
+      forced_covariates
+    )
+  )
+
+  model_data <- data[
+    ,
+    required_variables,
+    drop = FALSE
+  ]
+
+  # Removes only genuine NA values.
+  # Character levels such as "not_recorded" are retained.
+  model_data <- model_data[
+    stats::complete.cases(model_data),
+    ,
+    drop = FALSE
+  ]
+
+  model_data <- droplevels(model_data)
+
+  # Ensure outcome is numeric 0/1
+  if (
+    is.character(model_data[[outcome]]) ||
+      is.factor(model_data[[outcome]])
+  ) {
+
+    model_data[[outcome]] <- suppressWarnings(
+      as.integer(
+        as.character(model_data[[outcome]])
+      )
+    )
+  }
+
+  if (is.logical(model_data[[outcome]])) {
+    model_data[[outcome]] <- as.integer(
+      model_data[[outcome]]
+    )
+  }
+
+  if (
+    any(
+      !model_data[[outcome]] %in% c(0, 1),
+      na.rm = TRUE
+    )
+  ) {
+
+    return(
+      empty_adjusted_result(
+        exposure = exposure,
+        exposure_family = exposure_family,
+        n = nrow(model_data),
+        warning_message =
+          "Outcome is not coded solely as 0 and 1"
+      )
+    )
+  }
+
+  predictor_variables <- c(
+    forced_covariates,
+    exposure
+  )
+
+  # Convert categorical predictors to ordinary unordered factors
+  for (variable in predictor_variables) {
+
+    if (is.ordered(model_data[[variable]])) {
+
+      old_levels <- levels(
+        model_data[[variable]]
+      )
+
+      model_data[[variable]] <- factor(
+        as.character(model_data[[variable]]),
+        levels = old_levels,
+        ordered = FALSE
+      )
+
+    } else if (
+      is.character(model_data[[variable]]) ||
+        is.logical(model_data[[variable]])
+    ) {
+
+      model_data[[variable]] <- factor(
+        model_data[[variable]]
+      )
+    }
+  }
+
+  n_model <- nrow(model_data)
+
+  cases <- sum(
+    model_data[[outcome]] == 1,
+    na.rm = TRUE
+  )
+
+  controls <- sum(
+    model_data[[outcome]] == 0,
+    na.rm = TRUE
+  )
+
+  if (
+    n_model == 0 ||
+      dplyr::n_distinct(model_data[[outcome]]) < 2
+  ) {
+
+    return(
+      empty_adjusted_result(
+        exposure = exposure,
+        exposure_family = exposure_family,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        warning_message =
+          "Insufficient outcome variation"
+      )
+    )
+  }
+
+  invariant_predictors <- predictor_variables[
+    vapply(
+      predictor_variables,
+      function(variable) {
+        dplyr::n_distinct(
+          model_data[[variable]]
+        ) < 2
+      },
+      logical(1)
+    )
+  ]
+
+  if (length(invariant_predictors) > 0) {
+
+    return(
+      empty_adjusted_result(
+        exposure = exposure,
+        exposure_family = exposure_family,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        warning_message = paste(
+          "No variation in:",
+          paste(
+            invariant_predictors,
+            collapse = ", "
+          )
+        )
+      )
+    )
+  }
+
+  reduced_formula <- reformulate(
+    termlabels = forced_covariates,
+    response = outcome
+  )
+
+  full_formula <- reformulate(
+    termlabels = c(
+      forced_covariates,
+      exposure
+    ),
+    response = outcome
+  )
+
+  # Check exact redundancy before fitting
+  design_matrix <- tryCatch(
+    model.matrix(
+      full_formula,
+      data = model_data
+    ),
+    error = function(e) e
+  )
+
+  if (inherits(design_matrix, "error")) {
+
+    return(
+      empty_adjusted_result(
+        exposure = exposure,
+        exposure_family = exposure_family,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        warning_message =
+          conditionMessage(design_matrix)
+      )
+    )
+  }
+
+  rank_deficient <- (
+    qr(design_matrix)$rank <
+      ncol(design_matrix)
+  )
+
+  if (rank_deficient) {
+
+    return(
+      empty_adjusted_result(
+        exposure = exposure,
+        exposure_family = exposure_family,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        warning_message =
+          "Rank-deficient design matrix: exact predictor redundancy",
+        rank_deficient = TRUE
+      )
+    )
+  }
+
+  captured_warnings <- character()
+
+  fit_model <- function(formula) {
+
+    tryCatch(
+      withCallingHandlers(
+        glm(
+          formula,
+          data = model_data,
+          family = binomial()
+        ),
+        warning = function(w) {
+
+          captured_warnings <<- c(
+            captured_warnings,
+            conditionMessage(w)
+          )
+
+          invokeRestart("muffleWarning")
+        }
+      ),
+      error = function(e) e
+    )
+  }
+
+  reduced_model <- fit_model(
+    reduced_formula
+  )
+
+  full_model <- fit_model(
+    full_formula
+  )
+
+  if (
+    inherits(reduced_model, "error") ||
+      inherits(full_model, "error")
+  ) {
+
+    error_messages <- c(
+      if (inherits(reduced_model, "error")) {
+        conditionMessage(reduced_model)
+      },
+
+      if (inherits(full_model, "error")) {
+        conditionMessage(full_model)
+      }
+    )
+
+    return(
+      empty_adjusted_result(
+        exposure = exposure,
+        exposure_family = exposure_family,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        warning_message = paste(
+          unique(error_messages),
+          collapse = "; "
+        ),
+        rank_deficient = FALSE
+      )
+    )
+  }
+
+  # Overall exposure test after adjustment
+  lrt <- anova(
+    reduced_model,
+    full_model,
+    test = "LRT"
+  )
+
+  coefficient_table <- summary(
+    full_model
+  )$coefficients
+
+  coefficient_names <- rownames(
+    coefficient_table
+  )
+
+  exposure_rows <- (
+    coefficient_names == exposure |
+      startsWith(
+        coefficient_names,
+        exposure
+      )
+  )
+
+  coefficient_table <- coefficient_table[
+    exposure_rows,
+    ,
+    drop = FALSE
+  ]
+
+  if (nrow(coefficient_table) == 0) {
+
+    return(
+      empty_adjusted_result(
+        exposure = exposure,
+        exposure_family = exposure_family,
+        n = n_model,
+        cases = cases,
+        controls = controls,
+        warning_message =
+          "Could not identify exposure coefficient rows",
+        rank_deficient = FALSE
+      )
+    )
+  }
+
+  estimates <- coefficient_table[
+    ,
+    "Estimate"
+  ]
+
+  standard_errors <- coefficient_table[
+    ,
+    "Std. Error"
+  ]
+
+  reference_level <- if (
+    is.factor(model_data[[exposure]])
+  ) {
+    levels(model_data[[exposure]])[[1]]
+  } else {
+    NA_character_
+  }
+
+  vif_diagnostics <- extract_vif_diagnostics(
+    full_model,
+    exposure
+  )
+
+  warning_text <- paste(
+    unique(captured_warnings),
+    collapse = "; "
+  )
+
+  if (warning_text == "") {
+    warning_text <- NA_character_
+  }
+
+  if (!full_model$converged) {
+
+    warning_text <- paste(
+      na.omit(
+        c(
+          warning_text,
+          "Full model did not converge"
+        )
+      ),
+      collapse = "; "
+    )
+  }
+
+  tibble::tibble(
+    exposure_family = exposure_family,
+    exposure = exposure,
+    term = rownames(coefficient_table),
+    reference_level = reference_level,
+
+    n = n_model,
+    cases = cases,
+    controls = controls,
+
+    adjusted_OR = exp(estimates),
+
+    adjusted_CI_lower = exp(
+      estimates - 1.96 * standard_errors
+    ),
+
+    adjusted_CI_upper = exp(
+      estimates + 1.96 * standard_errors
+    ),
+
+    adjusted_wald_z =
+      coefficient_table[, "z value"],
+
+    adjusted_wald_p =
+      coefficient_table[, "Pr(>|z|)"],
+
+    adjusted_LRT_chisq =
+      lrt$Deviance[2],
+
+    adjusted_LRT_df =
+      lrt$Df[2],
+
+    adjusted_LRT_p =
+      lrt$`Pr(>Chi)`[2],
+
+    exposure_GVIF =
+      vif_diagnostics$exposure_GVIF,
+
+    exposure_GVIF_df =
+      vif_diagnostics$exposure_GVIF_df,
+
+    exposure_GVIF_adjusted =
+      vif_diagnostics$exposure_GVIF_adjusted,
+
+    max_GVIF_adjusted =
+      vif_diagnostics$max_GVIF_adjusted,
+
+    rank_deficient = FALSE,
+
+    AIC = stats::AIC(
+      full_model
+    ),
+
+    converged =
+      full_model$converged,
+
+    warning = warning_text
+  )
+}
+```
+
+Run model build functions
+
+```{r}
+adjusted_single_results <- purrr::map2_dfr(
+  adjusted_candidate_lookup$exposure,
+  adjusted_candidate_lookup$exposure_family,
+
+  function(exposure_name, family_name) {
+
+    fit_adjusted_single_exposure(
+      data = analysis_df,
+      exposure = exposure_name,
+      exposure_family = family_name,
+      outcome = "had_HSA",
+      forced_covariates = forced_covariates
+    )
+  }
+)
+```
+
+```{r}
+adjusted_overall_p <- adjusted_single_results %>%
+  dplyr::distinct(
+    exposure_family,
+    exposure,
+    adjusted_LRT_p
+  ) %>%
+  dplyr::group_by(
+    exposure_family
+  ) %>%
+  dplyr::mutate(
+    adjusted_LRT_FDR_within_family =
+      p.adjust(
+        adjusted_LRT_p,
+        method = "BH"
+      )
+  ) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(
+    adjusted_LRT_FDR_global =
+      p.adjust(
+        adjusted_LRT_p,
+        method = "BH"
+      )
+  )
+
+adjusted_single_results <- adjusted_single_results %>%
+  dplyr::left_join(
+    adjusted_overall_p,
+    by = c(
+      "exposure_family",
+      "exposure",
+      "adjusted_LRT_p"
+    )
+  )
+```
+
+```{r}
+format_p <- function(x, digits = 3) {
+  dplyr::case_when(
+    is.na(x) ~ "",
+    x < 0.001 ~ "<0.001",
+    TRUE ~ formatC(
+      x,
+      format = "f",
+      digits = digits
+    )
+  )
+}
+
+adjusted_exposure_summary <- adjusted_single_results %>%
+  dplyr::distinct(
+    exposure_family,
+    exposure,
+    n,
+    cases,
+    controls,
+    adjusted_LRT_chisq,
+    adjusted_LRT_df,
+    adjusted_LRT_p,
+    adjusted_LRT_FDR_within_family,
+    adjusted_LRT_FDR_global,
+    exposure_GVIF_adjusted,
+    max_GVIF_adjusted,
+    rank_deficient,
+    AIC,
+    converged,
+    warning
+  ) %>%
+  dplyr::mutate(
+    `Adjusted LRT p` =
+      format_p(adjusted_LRT_p),
+
+    `Family FDR p` =
+      format_p(
+        adjusted_LRT_FDR_within_family
+      ),
+
+    `Global FDR p` =
+      format_p(
+        adjusted_LRT_FDR_global
+      )
+  ) %>%
+  dplyr::arrange(
+    adjusted_LRT_p
+  )
+
+View(adjusted_exposure_summary)
+```
+
+```{r}
+adjusted_exposure_summary %>%
+  dplyr::filter(
+    rank_deficient |
+      !converged |
+      !is.na(warning)
+  )
+```
+
+```{r}
+adjusted_exposure_summary %>%
+  dplyr::filter(
+    !is.na(exposure_GVIF_adjusted),
+    exposure_GVIF_adjusted > sqrt(5)
+  ) %>%
+  dplyr::arrange(
+    dplyr::desc(
+      exposure_GVIF_adjusted
+    )
+  )
+```
+
+```{r}
+format_p <- function(x, digits = 3) {
+  dplyr::case_when(
+    is.na(x) ~ "",
+    x < 0.001 ~ "<0.001",
+    TRUE ~ formatC(
+      x,
+      format = "f",
+      digits = digits
+    )
+  )
+}
+
+format_count_percent <- function(count, denominator) {
+  dplyr::case_when(
+    is.na(count) |
+      is.na(denominator) |
+      denominator == 0 ~ "",
+
+    TRUE ~ sprintf(
+      "%d (%.1f%%)",
+      as.integer(count),
+      100 * count / denominator
+    )
+  )
+}
+
+first_non_missing <- function(x) {
+  x <- x[!is.na(x)]
+
+  if (length(x) == 0) {
+    NA
+  } else {
+    x[[1]]
+  }
+}
+
+make_adjusted_level_counts <- function(
+    data,
+    exposure,
+    exposure_family,
+    outcome = "had_HSA",
+    forced_covariates
+) {
+
+  required_variables <- unique(
+    c(
+      outcome,
+      exposure,
+      forced_covariates
+    )
+  )
+
+  model_data <- data[
+    ,
+    required_variables,
+    drop = FALSE
+  ]
+
+  # Same complete-case population as the adjusted model
+  model_data <- model_data[
+    complete.cases(model_data),
+    ,
+    drop = FALSE
+  ]
+
+  model_data <- droplevels(model_data)
+
+  # Outcome as 0/1
+  if (
+    is.factor(model_data[[outcome]]) ||
+      is.character(model_data[[outcome]])
+  ) {
+    model_data[[outcome]] <- suppressWarnings(
+      as.integer(
+        as.character(model_data[[outcome]])
+      )
+    )
+  }
+
+  if (is.logical(model_data[[outcome]])) {
+    model_data[[outcome]] <-
+      as.integer(model_data[[outcome]])
+  }
+
+  x <- model_data[[exposure]]
+  y <- model_data[[outcome]]
+
+  # Match transformations in the modelling function
+  if (is.ordered(x)) {
+    x <- factor(
+      as.character(x),
+      levels = levels(x),
+      ordered = FALSE
+    )
+  } else if (
+    is.character(x) ||
+      is.logical(x)
+  ) {
+    x <- factor(x)
+  }
+
+  total_cases <- sum(
+    y == 1,
+    na.rm = TRUE
+  )
+
+  total_non_cases <- sum(
+    y == 0,
+    na.rm = TRUE
+  )
+
+  # Factor exposure
+  if (is.factor(x)) {
+
+    exposure_levels <- levels(x)
+
+    tab <- table(
+      factor(
+        x,
+        levels = exposure_levels
+      ),
+      factor(
+        y,
+        levels = c(0, 1)
+      )
+    )
+
+    return(
+      tibble::tibble(
+        exposure_family = exposure_family,
+        exposure = exposure,
+        Category = exposure_levels,
+        category_order = seq_along(exposure_levels),
+        model_type = "factor",
+        reference_level = exposure_levels[[1]],
+        comparison_level = NA_character_,
+
+        outcome_0 = as.integer(
+          tab[, "0"]
+        ),
+
+        outcome_1 = as.integer(
+          tab[, "1"]
+        ),
+
+        total_cases = total_cases,
+        total_non_cases = total_non_cases,
+        model_n = nrow(model_data)
+      )
+    )
+  }
+
+  distinct_values <- sort(
+    unique(x)
+  )
+
+  # Numeric binary exposure
+  if (
+    is.numeric(x) &&
+      length(distinct_values) == 2
+  ) {
+
+    x_factor <- factor(
+      x,
+      levels = distinct_values
+    )
+
+    tab <- table(
+      x_factor,
+      factor(
+        y,
+        levels = c(0, 1)
+      )
+    )
+
+    return(
+      tibble::tibble(
+        exposure_family = exposure_family,
+        exposure = exposure,
+        Category = as.character(
+          distinct_values
+        ),
+        category_order =
+          seq_along(distinct_values),
+        model_type = "binary_numeric",
+
+        reference_level =
+          as.character(distinct_values[[1]]),
+
+        comparison_level =
+          as.character(distinct_values[[2]]),
+
+        outcome_0 = as.integer(
+          tab[, "0"]
+        ),
+
+        outcome_1 = as.integer(
+          tab[, "1"]
+        ),
+
+        total_cases = total_cases,
+        total_non_cases = total_non_cases,
+        model_n = nrow(model_data)
+      )
+    )
+  }
+
+  # Continuous exposure
+  tibble::tibble(
+    exposure_family = exposure_family,
+    exposure = exposure,
+    Category = "Continuous",
+    category_order = 1L,
+    model_type = "continuous",
+    reference_level = NA_character_,
+    comparison_level = NA_character_,
+    outcome_0 = total_non_cases,
+    outcome_1 = total_cases,
+    total_cases = total_cases,
+    total_non_cases = total_non_cases,
+    model_n = nrow(model_data)
+  )
+}
+
+adjusted_level_counts <- purrr::map2_dfr(
+  adjusted_candidate_lookup$exposure,
+  adjusted_candidate_lookup$exposure_family,
+
+  function(exposure_name, family_name) {
+
+    make_adjusted_level_counts(
+      data = analysis_df,
+      exposure = exposure_name,
+      exposure_family = family_name,
+      outcome = "had_HSA",
+      forced_covariates = forced_covariates
+    )
+  }
+) %>%
+  mutate(
+    `Cases (%)` = format_count_percent(
+      outcome_1,
+      total_cases
+    ),
+
+    `Non-cases (%)` =
+      format_count_percent(
+        outcome_0,
+        total_non_cases
+      )
+  )
+
+adjusted_exposure_metadata <-
+  adjusted_level_counts %>%
+  distinct(
+    exposure_family,
+    exposure,
+    model_type,
+    reference_level,
+    comparison_level
+  )
+
+adjusted_model_display <-
+  adjusted_single_results %>%
+
+  left_join(
+    adjusted_exposure_metadata,
+    by = c(
+      "exposure_family",
+      "exposure"
+    ),
+    suffix = c("", "_counts")
+  ) %>%
+
+  mutate(
+    Category = case_when(
+
+      model_type == "continuous" ~
+        "Continuous",
+
+      model_type == "binary_numeric" ~
+        comparison_level,
+
+      model_type == "factor" &
+        !is.na(term) &
+        startsWith(term, exposure) ~
+        substring(
+          term,
+          nchar(exposure) + 1L
+        ),
+
+      TRUE ~ term
+    ),
+
+    `Adjusted OR (95% CI)` =
+      case_when(
+        is.na(adjusted_OR) |
+          is.na(adjusted_CI_lower) |
+          is.na(adjusted_CI_upper) ~ "",
+
+        TRUE ~ sprintf(
+          "%.3f (%.3f–%.3f)",
+          adjusted_OR,
+          adjusted_CI_lower,
+          adjusted_CI_upper
+        )
+      ),
+
+    `Adjusted Wald p-value` =
+      format_p(
+        adjusted_wald_p
+      )
+  ) %>%
+
+  select(
+    exposure_family,
+    exposure,
+    Category,
+    `Adjusted OR (95% CI)`,
+    `Adjusted Wald p-value`
+  )
+
+adjusted_overall_display <-
+  adjusted_single_results %>%
+
+  group_by(
+    exposure_family,
+    exposure
+  ) %>%
+
+  summarise(
+    `Adjusted LRT p-value` =
+      format_p(
+        first_non_missing(
+          adjusted_LRT_p
+        )
+      ),
+
+    `Family FDR p-value` =
+      format_p(
+        first_non_missing(
+          adjusted_LRT_FDR_within_family
+        )
+      ),
+
+    `Global FDR p-value` =
+      format_p(
+        first_non_missing(
+          adjusted_LRT_FDR_global
+        )
+      ),
+
+    `Exposure adjusted GVIF` =
+      round(
+        first_non_missing(
+          exposure_GVIF_adjusted
+        ),
+        3
+      ),
+
+    `Maximum adjusted GVIF` =
+      round(
+        first_non_missing(
+          max_GVIF_adjusted
+        ),
+        3
+      ),
+
+    converged = all(
+      converged,
+      na.rm = TRUE
+    ),
+
+    warning = paste(
+      unique(
+        warning[
+          !is.na(warning) &
+            warning != ""
+        ]
+      ),
+      collapse = "; "
+    ),
+
+    .groups = "drop"
+  )
+```
+
+```{r}
+adjusted_results_table <-
+  adjusted_level_counts %>%
+
+  left_join(
+    adjusted_model_display,
+    by = c(
+      "exposure_family",
+      "exposure",
+      "Category"
+    )
+  ) %>%
+
+  left_join(
+    adjusted_overall_display,
+    by = c(
+      "exposure_family",
+      "exposure"
+    )
+  ) %>%
+
+  mutate(
+    is_reference =
+      !is.na(reference_level) &
+      Category == reference_level,
+
+    `Adjusted OR (95% CI)` =
+      case_when(
+        is_reference ~
+          "1.000 (reference)",
+
+        TRUE ~ coalesce(
+          `Adjusted OR (95% CI)`,
+          ""
+        )
+      ),
+
+    `Adjusted Wald p-value` =
+      case_when(
+        is_reference ~ "",
+
+        TRUE ~ coalesce(
+          `Adjusted Wald p-value`,
+          ""
+        )
+      )
+  )
+family_order_lookup <- tibble::tibble(
+  exposure_family =
+    names(
+      adjusted_candidate_exposure_families
+    ),
+
+  family_order =
+    seq_along(
+      adjusted_candidate_exposure_families
+    )
+)
+
+exposure_order_lookup <- purrr::imap_dfr(
+  adjusted_candidate_exposure_families,
+
+  function(variables, family_name) {
+    tibble::tibble(
+      exposure_family = family_name,
+      exposure = variables,
+      exposure_order =
+        seq_along(variables)
+    )
+  }
+)
+adjusted_results_table <-
+  adjusted_results_table %>%
+
+  left_join(
+    family_order_lookup,
+    by = "exposure_family"
+  ) %>%
+
+  left_join(
+    exposure_order_lookup,
+    by = c(
+      "exposure_family",
+      "exposure"
+    )
+  ) %>%
+
+  arrange(
+    family_order,
+    exposure_order,
+    category_order
+  )
+
+```
+
+```{r}
+adjusted_results_table <-
+  adjusted_results_table %>%
+
+  group_by(
+    exposure_family,
+    exposure
+  ) %>%
+
+  mutate(
+    `Model n` = if_else(
+      row_number() == 1L,
+      as.character(model_n),
+      ""
+    ),
+
+    `Adjusted LRT p-value` =
+      if_else(
+        row_number() == 1L,
+        `Adjusted LRT p-value`,
+        ""
+      ),
+
+    `Family FDR p-value` =
+      if_else(
+        row_number() == 1L,
+        `Family FDR p-value`,
+        ""
+      ),
+
+    `Global FDR p-value` =
+      if_else(
+        row_number() == 1L,
+        `Global FDR p-value`,
+        ""
+      ),
+
+    `Exposure adjusted GVIF` =
+      if_else(
+        row_number() == 1L,
+        as.character(
+          `Exposure adjusted GVIF`
+        ),
+        ""
+      ),
+
+    `Maximum adjusted GVIF` =
+      if_else(
+        row_number() == 1L,
+        as.character(
+          `Maximum adjusted GVIF`
+        ),
+        ""
+      ),
+
+    Converged = if_else(
+      row_number() == 1L,
+      as.character(converged),
+      ""
+    ),
+
+    Warning = if_else(
+      row_number() == 1L,
+      coalesce(warning, ""),
+      ""
+    )
+  ) %>%
+
+  ungroup()
+adjusted_results_table <-
+  adjusted_results_table %>%
+
+  transmute(
+    Group = exposure_family,
+    Variable = exposure,
+    Category,
+    `Model n`,
+    `Cases (%)`,
+    `Non-cases (%)`,
+    `Adjusted OR (95% CI)`,
+    `Adjusted Wald p-value`,
+    `Adjusted LRT p-value`,
+    `Family FDR p-value`,
+    `Global FDR p-value`,
+    `Exposure adjusted GVIF`,
+    `Maximum adjusted GVIF`,
+    Converged,
+    Warning
+  )
+adjusted_results_table <-
+  adjusted_results_table %>%
+
+  mutate(
+    Group_original = Group,
+    Variable_original = Variable
+  ) %>%
+
+  group_by(
+    Group_original,
+    Variable_original
+  ) %>%
+
+  mutate(
+    Variable = if_else(
+      row_number() == 1L,
+      Variable,
+      ""
+    )
+  ) %>%
+
+  ungroup() %>%
+
+  group_by(Group_original) %>%
+
+  mutate(
+    Group = if_else(
+      row_number() == 1L,
+      Group,
+      ""
+    )
+  ) %>%
+
+  ungroup() %>%
+
+  select(
+    -Group_original,
+    -Variable_original
+  )
+```
+
+Save output
+
+```{r}
+output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+
+
+dir.create(
+  output_folder,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+readr::write_excel_csv(
+  adjusted_results_table,
+  file.path(
+    output_folder,
+    "adjusted_single_exposure_detailed_results.csv"
+  ),
+  na = ""
+)
+#need to format differently shorter col names etc for word
+
+adjusted_results_word <- adjusted_results_table %>%
+  dplyr::select(
+    Group,
+    Variable,
+    Category,
+    `Model n`,
+    `Cases (%)`,
+    `Non-cases (%)`,
+    `Adjusted OR (95% CI)`,
+    `Adjusted Wald p-value`,
+    `Adjusted LRT p-value`,
+    `Family FDR p-value`,
+    `Global FDR p-value`
+  )
+
+ft_adj <- flextable::flextable(
+  adjusted_results_word
+) %>%
+
+  flextable::set_header_labels(
+    Group = "Group",
+    Variable = "Variable",
+    Category = "Category",
+    `Model n` = "n",
+    `Cases (%)` = "Cases (%)",
+    `Non-cases (%)` = "Non-cases (%)",
+    `Adjusted OR (95% CI)` = "aOR (95% CI)",
+    `Adjusted Wald p-value` = "Wald p",
+    `Adjusted LRT p-value` = "LRT p",
+    `Family FDR p-value` = "Family FDR",
+    `Global FDR p-value` = "Global FDR"
+  ) %>%
+
+  flextable::theme_booktabs() %>%
+
+  flextable::bold(
+    part = "header"
+  ) %>%
+
+  flextable::fontsize(
+    size = 7.5,
+    part = "all"
+  ) %>%
+
+  flextable::font(
+    fontname = "Arial",
+    part = "all"
+  ) %>%
+
+  flextable::valign(
+    valign = "top",
+    part = "all"
+  ) %>%
+
+  flextable::align(
+    j = c(
+      "Group",
+      "Variable",
+      "Category"
+    ),
+    align = "left",
+    part = "all"
+  ) %>%
+
+  flextable::align(
+    j = c(
+      "Model n",
+      "Cases (%)",
+      "Non-cases (%)",
+      "Adjusted OR (95% CI)",
+      "Adjusted Wald p-value",
+      "Adjusted LRT p-value",
+      "Family FDR p-value",
+      "Global FDR p-value"
+    ),
+    align = "center",
+    part = "all"
+  ) %>%
+
+  # Reduce wasted space inside cells
+  flextable::padding(
+    padding.top = 1,
+    padding.bottom = 1,
+    padding.left = 2,
+    padding.right = 2,
+    part = "all"
+  ) %>%
+
+  # Fixed widths in inches
+  flextable::width(
+    j = "Group",
+    width = 1.10
+  ) %>%
+
+  flextable::width(
+    j = "Variable",
+    width = 1.70
+  ) %>%
+
+  flextable::width(
+    j = "Category",
+    width = 1.35
+  ) %>%
+
+  flextable::width(
+    j = "Model n",
+    width = 0.45
+  ) %>%
+
+  flextable::width(
+    j = "Cases (%)",
+    width = 0.75
+  ) %>%
+
+  flextable::width(
+    j = "Non-cases (%)",
+    width = 0.85
+  ) %>%
+
+  flextable::width(
+    j = "Adjusted OR (95% CI)",
+    width = 1.30
+  ) %>%
+
+  flextable::width(
+    j = c(
+      "Adjusted Wald p-value",
+      "Adjusted LRT p-value",
+      "Family FDR p-value",
+      "Global FDR p-value"
+    ),
+    width = 0.65
+  ) %>%
+
+  flextable::set_table_properties(
+    layout = "fixed",
+    width = 1,
+    opts_word = list(
+      split = TRUE
+    )
+  )
+
+doc_adj <- officer::read_docx() %>%
+
+  officer::body_add_par(
+    "Core-adjusted single-exposure logistic regression results",
+    style = "heading 1"
+  ) %>%
+
+  flextable::body_add_flextable(
+    ft_adj
+  ) %>%
+
+  officer::body_end_section_landscape()
+
+print(
+  doc_adj,
+  target = file.path(
+    output_folder,
+    "adjusted_single_exposure_detailed_results.docx"
+  )
+)
+```
+
+From these adjusted models retain for multivariable:
+
+-   primary heating fuel
+
+-   weed treatment rest or whole life (exact same case control counts)
+
+-   fertiliser rest of life or whole life (exact same cxase control counts)
+
+-   main lifestyle category mode 5y prior
+
+-   mode activity intensity for 5y prior
+
+-   mode activity frequency 5y prior
+
+-   NSAID ever Y N and NSAID 5y prior YN
+
+-   NSAID quantiles
+
+-   quartile parasite lifetime and 5y prior endpoint
+
+-   ecto 5y prior endo 5y prior
+
+-   fenbendazole ever
+
+Assess between dog activity variables for inclusion:
+
+```{r}
+activity_compare_data <- analysis_df %>%
+  dplyr::select(
+    had_HSA,
+    age_at_final_date_bio,
+    sex,
+    neuter,
+    mode_intensity_5y_prior_endpoint,
+    mode_frequency_5y_prior_endpoint,
+    rest_activity_mode
+  ) %>%
+  dplyr::filter(
+    complete.cases(.)
+  ) %>%
+  droplevels()
+
+#intensity
+mode_intensity_5y_prior_endpoint <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    mode_intensity_5y_prior_endpoint,
+  data = activity_compare_data,
+  family = binomial()
+)
+#frequency
+mode_frequency_5y_prior_endpoint <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    mode_intensity_5y_prior_endpoint,
+  data = activity_compare_data,
+  family = binomial()
+)
+#rest of life activity
+rest_activity_mode <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    rest_activity_mode,
+  data = activity_compare_data,
+  family = binomial()
+)
+
+#compare
+AIC(
+  mode_intensity_5y_prior_endpoint,
+  mode_frequency_5y_prior_endpoint,
+  rest_activity_mode
+)
+
+BIC(
+   mode_intensity_5y_prior_endpoint,
+  mode_frequency_5y_prior_endpoint,
+  rest_activity_mode
+)
+```
+
+Not much difference exc intensity and freq 5y prior sl lower AIC - frequency is more interpret-able so take forward
+
+Assess between NSAID variables for inclusion:
+
+```{r}
+nsaid_compare_data <- analysis_df %>%
+  dplyr::select(
+    had_HSA,
+    age_at_final_date_bio,
+    sex,
+    neuter,
+    NSAID_5y,
+    NSAID_5y_quantiles,
+    NSAID_ever
+  ) %>%
+  dplyr::filter(
+    complete.cases(.)
+  ) %>%
+  droplevels()
+
+#5y YN
+nsaid_binary_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    NSAID_5y,
+  data = nsaid_compare_data,
+  family = binomial()
+)
+#ever YN
+nsaid_binary_model_ever <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    NSAID_ever,
+  data = nsaid_compare_data,
+  family = binomial()
+)
+#5y categorical 
+nsaid_category_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    NSAID_5y_quantiles,
+  data = nsaid_compare_data,
+  family = binomial()
+)
+
+#compare
+AIC(
+  nsaid_binary_model,
+  nsaid_binary_model_ever,
+  nsaid_category_model
+)
+
+BIC(
+  nsaid_binary_model,
+  nsaid_binary_model_ever,
+  nsaid_category_model
+)
+```
+
+Both binaries are equivocal and categorical worse from a BIC perspective = use a binary
+
+Assess between parasite tx for inclusion:
+
+```{r}
+parasite_compare_data <- analysis_df %>%
+  dplyr::select(
+    had_HSA,
+    age_at_final_date_bio,
+    sex,
+    neuter,
+    quartile_anti_parasites_lifetime,
+    half_anti_parasites_lifetime,
+    quartile_anti_parasites_5y_prior_endpoint,
+    ecto_5y_quantiles,
+    endo_5y_quantiles,
+    fenbendazole_ever
+  ) %>%
+  dplyr::filter(
+    complete.cases(.)
+  ) %>%
+  droplevels()
+# Lifetime anti-parasite use: halves
+half_anti_parasites_lifetime_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    half_anti_parasites_lifetime,
+  data = parasite_compare_data,
+  family = binomial()
+)
+
+# Lifetime anti-parasite use: quartiles
+quartile_anti_parasites_lifetime_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    quartile_anti_parasites_lifetime,
+  data = parasite_compare_data,
+  family = binomial()
+)
+
+
+# Five-year anti-parasite use: quartiles
+quartile_anti_parasites_5y_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    quartile_anti_parasites_5y_prior_endpoint,
+  data = parasite_compare_data,
+  family = binomial()
+)
+
+# Five-year ectoparasiticide use
+ecto_5y_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    ecto_5y_quantiles,
+  data = parasite_compare_data,
+  family = binomial()
+)
+
+# Five-year endoparasiticide use
+endo_5y_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    endo_5y_quantiles,
+  data = parasite_compare_data,
+  family = binomial()
+)
+
+# Fenbendazole ever
+fenbendazole_ever_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    fenbendazole_ever,
+  data = parasite_compare_data,
+  family = binomial()
+)
+
+
+
+AIC(
+  half_anti_parasites_lifetime_model,
+  quartile_anti_parasites_lifetime_model,
+  quartile_anti_parasites_5y_model,
+  ecto_5y_model,
+  endo_5y_model,
+  fenbendazole_ever_model
+)
+
+BIC(
+  half_anti_parasites_lifetime_model,
+  quartile_anti_parasites_lifetime_model,
+  quartile_anti_parasites_5y_model,
+  ecto_5y_model,
+  endo_5y_model,
+  fenbendazole_ever_model
+)
+```
+
+Multivariable model:
+
+-   primary heating fuel
+
+-   weed treatment whole life
+
+-   fertiliser whole life
+
+-   main lifestyle category mode 5y prior
+
+-   mode activity frequency 5y prior
+
+-   NSAID ever Y N
+
+-   half anti parasites lifetime
+
+```{r}
+candidate_exposures <- c(
+  "heating_fuel_primary_mode_5yrs_prior",
+  "any_treated_weeds_study_years_whole_life",
+  "any_treated_fertilizer_study_years_whole_life",
+  "main_lifestyle_category_mode_5yrs_prior",
+  "mode_frequency_5y_prior_endpoint",
+  "NSAID_ever",
+  "half_anti_parasites_lifetime"
+)
+```
+
+```{r}
+forced_covariates <- c(
+  "age_at_final_date_bio",
+  "sex",
+  "neuter"
+)
+
+multivar_variables <- c(
+  forced_covariates,
+  candidate_exposures
+)
+
+multivar_data <- analysis_df %>%
+  dplyr::select(
+    had_HSA,
+    dplyr::all_of(multivar_variables)
+  ) %>%
+  dplyr::filter(
+    complete.cases(.)
+  ) %>%
+  droplevels()
+```
