@@ -335,6 +335,16 @@ cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
   )
 
 
+#change no_int_recorded to not_recorded
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
+  dplyr::mutate(
+    mode_intensity_5y_prior_endpoint =
+      forcats::fct_recode(
+        mode_intensity_5y_prior_endpoint,
+        not_recorded = "no_int_recorded"
+      )
+  )
+
 #------------------------------------------------------------
 # CONVERT CHARACTER VARIABLES TO FACTORS
 #------------------------------------------------------------
@@ -1023,6 +1033,51 @@ colnames_df <- tibble(
 
 colnames_df <- colnames(cohort_no_not_rec)
 write.csv(colnames_df,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_col_names.csv")
+```
+
+Harmonise the missing data recording name
+
+```{r}
+medication_missing_labels <- c(
+  "no_med_use_recorded",
+  "drug_not_administered"
+)
+
+new_medication_missing_label <-
+  "No medication records for this time period"
+
+cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
+  dplyr::mutate(
+    dplyr::across(
+      where(~ is.character(.x) || is.factor(.x)),
+      ~ {
+        was_factor <- is.factor(.x)
+        was_ordered <- is.ordered(.x)
+
+        x_character <- as.character(.x)
+
+        x_character[
+          x_character %in% medication_missing_labels
+        ] <- new_medication_missing_label
+
+        if (was_factor) {
+          updated_levels <- levels(.x)
+
+          updated_levels[
+            updated_levels %in% medication_missing_labels
+          ] <- new_medication_missing_label
+
+          factor(
+            x_character,
+            levels = unique(updated_levels),
+            ordered = was_ordered
+          )
+        } else {
+          x_character
+        }
+      }
+    )
+  )
 ```
 
 ## Regression analyses
@@ -2927,6 +2982,8 @@ crude_results_table3 <- crude_results_table2 %>%
 Need to ensure correct reference level (need to refactorise at start before this analysis)
 
 ```{r}
+output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+
 ft <- flextable(crude_results_table3) %>%
   theme_booktabs() %>%
   bold(part = "header") %>%
@@ -2947,12 +3004,7 @@ doc <- read_docx() %>%
   body_add_flextable(ft) %>%
   body_end_section_landscape()
 
-print(
-  doc,
-  target = "crude_results_table.docx"
-)
 
-output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
 
 writexl::write_xlsx(
   list("Crude results" = crude_results_table3),
@@ -4027,10 +4079,6 @@ doc_cc <- read_docx() %>%
   body_add_flextable(ft_cc) %>%
   body_end_section_landscape()
 
-print(
-  doc_cc,
-  target = "crude_complete_case_results_table.docx"
-)
 
 print(
   doc_cc,
@@ -5942,7 +5990,9 @@ BIC(
 )
 ```
 
-Multivariable model:
+## Multivariable modelling
+
+Variables to consider:
 
 -   primary heating fuel
 
@@ -5991,4 +6041,1269 @@ multivar_data <- analysis_df %>%
     complete.cases(.)
   ) %>%
   droplevels()
+
+
+for (variable in multivar_variables) {
+
+  if (is.ordered(multivar_data[[variable]])) {
+
+    original_levels <- levels(
+      multivar_data[[variable]]
+    )
+
+    multivar_data[[variable]] <- factor(
+      as.character(multivar_data[[variable]]),
+      levels = original_levels,
+      ordered = FALSE
+    )
+
+  } else if (
+    is.character(multivar_data[[variable]]) ||
+      is.logical(multivar_data[[variable]])
+  ) {
+
+    multivar_data[[variable]] <- factor(
+      multivar_data[[variable]]
+    )
+  }
+}
+```
+
+```{r}
+full_trial_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    heating_fuel_primary_mode_5yrs_prior +
+    any_treated_weeds_study_years_whole_life +
+    any_treated_fertilizer_study_years_whole_life +
+    main_lifestyle_category_mode_5yrs_prior +
+    mode_frequency_5y_prior_endpoint +
+    NSAID_ever +
+    half_anti_parasites_lifetime,
+  data = multivar_data,
+  family = binomial()
+)
+
+summary(full_trial_model)
+logistic.display(full_trial_model)
+```
+
+```{r}
+drop1(
+  full_trial_model,
+  test = "LRT"
+)
+```
+
+```{r}
+car::vif(
+  full_trial_model
+)
+```
+
+From this output:
+
+-   no VIF issue but several variables become NS
+
+-   retain: fixed covariates of age, sex, neuter and frequencey of exercise and assess how it performs vs fuller model
+
+```{r}
+reduced_trial_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    mode_frequency_5y_prior_endpoint ,
+  data = multivar_data,
+  family = binomial()
+)
+
+summary(reduced_trial_model)
+logistic.display(reduced_trial_model)
+```
+
+```{r}
+anova(
+  reduced_trial_model,
+  full_trial_model,
+  test = "LRT"
+)
+AIC(
+  reduced_trial_model,
+  full_trial_model
+)
+
+BIC(
+  reduced_trial_model,
+  full_trial_model
+)
+```
+
+```{r}
+AIC(
+  reduced_trial_model,
+  full_trial_model
+)
+
+BIC(
+  reduced_trial_model,
+  full_trial_model
+)
+```
+
+According to LRT - full model significantly better and likewise for AIC although BIC reduced model performs better
+
+Issue with variable seperation as not recorded and never each have 0 cases or non cases respectively
+
+trial on complete cases df
+
+```{r}
+analysis_df <- analysis_df %>%
+  dplyr::mutate(
+    mode_frequency_5y_clean = dplyr::na_if(
+      as.character(mode_frequency_5y_prior_endpoint),
+      "not_recorded"
+    ),
+
+    mode_frequency_5y_clean = factor(
+      mode_frequency_5y_clean,
+      levels = c(
+        "daily",
+        "multi_daily",
+        "min_weekly",
+        "less_than_weekly",
+        "never"
+      )
+    )
+  )
+
+
+candidate_exposures <- c(
+  "heating_fuel_primary_mode_5yrs_prior",
+  "any_treated_weeds_study_years_whole_life",
+  "any_treated_fertilizer_study_years_whole_life",
+  "main_lifestyle_category_mode_5yrs_prior",
+  "mode_frequency_5y_clean",
+  "NSAID_ever",
+  "half_anti_parasites_lifetime"
+)
+
+model_building_data <- analysis_df %>%
+  dplyr::select(
+    had_HSA,
+    age_at_final_date_bio,
+    sex,
+    neuter,
+    dplyr::all_of(candidate_exposures)
+  ) %>%
+  dplyr::filter(
+    complete.cases(.)
+  ) %>%
+  droplevels()
+
+
+core_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter,
+  data = model_building_data,
+  family = binomial()
+)
+
+
+```
+
+```{r}
+core_activity_model <- update(
+  core_model,
+  . ~ . + mode_frequency_5y_clean
+)
+
+anova(
+  core_model,
+  core_activity_model,
+  test = "LRT"
+)
+
+AIC(
+  core_model,
+  core_activity_model
+)
+
+BIC(
+  core_model,
+  core_activity_model
+)
+```
+
+Do forced covar model vs full and then all variables these stepwise ones
+
+```{r}
+core_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter,
+  data = model_building_data,
+  family = binomial()
+)
+```
+
+```{r}
+core_heating_model <- update(
+  core_model,
+  . ~ . + heating_fuel_primary_mode_5yrs_prior
+)
+
+core_weeds_model <- update(
+  core_model,
+  . ~ . + any_treated_weeds_study_years_whole_life
+)
+
+core_fertiliser_model <- update(
+  core_model,
+  . ~ . + any_treated_fertilizer_study_years_whole_life
+)
+
+core_lifestyle_model <- update(
+  core_model,
+  . ~ . + main_lifestyle_category_mode_5yrs_prior
+)
+
+core_activity_model <- update(
+  core_model,
+  . ~ . + mode_frequency_5y_clean
+)
+
+core_NSAID_model <- update(
+  core_model,
+  . ~ . + NSAID_ever
+)
+
+core_parasite_model <- update(
+  core_model,
+  . ~ . + half_anti_parasites_lifetime
+)
+```
+
+```{r}
+anova(core_model, core_heating_model, test = "LRT")
+anova(core_model, core_weeds_model, test = "LRT")
+anova(core_model, core_fertiliser_model, test = "LRT")
+anova(core_model, core_lifestyle_model, test = "LRT")
+anova(core_model, core_activity_model, test = "LRT")
+anova(core_model, core_NSAID_model, test = "LRT")
+anova(core_model, core_parasite_model, test = "LRT")
+```
+
+```{r}
+AIC(
+  core_model,
+  core_heating_model,
+  core_weeds_model,
+  core_fertiliser_model,
+  core_lifestyle_model,
+  core_activity_model,
+  core_NSAID_model,
+  core_parasite_model
+)
+
+BIC(
+  core_model,
+  core_heating_model,
+  core_weeds_model,
+  core_fertiliser_model,
+  core_lifestyle_model,
+  core_activity_model,
+  core_NSAID_model,
+  core_parasite_model
+)
+```
+
+From LRT:
+
+Adding in parasite, nsaid, weed, heating fuel and lifestyle each improve vs core model
+
+From AIC:
+
+All better than just core
+
+From BIC:
+
+only fertiliser better
+
+Build onwards from fertiliser
+
+```{r}
+fertiliser_model<- glm(
+had_HSA ~ age_at_final_date_bio +
+  sex +
+  neuter +
+  any_treated_fertilizer_study_years_whole_life, data=model_building_data,family=binomial())
+
+logistic.display(fertiliser_model)
+```
+
+Trial other variables alongside fertiliser
+
+```{r}
+fertiliser_parasite_model <- update(
+  fertiliser_model,
+  . ~ . + half_anti_parasites_lifetime
+)
+
+fertiliser_NSAID_model <- update(
+  fertiliser_model,
+  . ~ . + NSAID_ever
+)
+
+fertiliser_weeds_model <- update(
+  fertiliser_model,
+  . ~ . + any_treated_weeds_study_years_whole_life
+)
+
+fertiliser_heating_model <- update(
+  fertiliser_model,
+  . ~ . + heating_fuel_primary_mode_5yrs_prior
+)
+
+fertiliser_lifestyle_model <- update(
+  fertiliser_model,
+  . ~ . + main_lifestyle_category_mode_5yrs_prior
+)
+```
+
+```{r}
+anova(
+  fertiliser_model,
+  fertiliser_parasite_model,
+  test = "LRT"
+)
+
+anova(
+  fertiliser_model,
+  fertiliser_NSAID_model,
+  test = "LRT"
+)
+
+anova(
+  fertiliser_model,
+  fertiliser_weeds_model,
+  test = "LRT"
+)
+
+anova(
+  fertiliser_model,
+  fertiliser_heating_model,
+  test = "LRT"
+)
+
+anova(
+  fertiliser_model,
+  fertiliser_lifestyle_model,
+  test = "LRT"
+)
+```
+
+```{r}
+AIC(
+  fertiliser_model,
+  fertiliser_parasite_model,
+  fertiliser_NSAID_model,
+  fertiliser_weeds_model,
+  fertiliser_heating_model,
+  fertiliser_lifestyle_model
+)
+
+BIC(
+  fertiliser_model,
+  fertiliser_parasite_model,
+  fertiliser_NSAID_model,
+  fertiliser_weeds_model,
+  fertiliser_heating_model,
+  fertiliser_lifestyle_model
+)
+```
+
+From this:
+
+-   remove weeds and assess the other variables in again stepwise (using lowest AIC of heating value then others in)
+
+```{r}
+model_stage_2 <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    heating_fuel_primary_mode_5yrs_prior,
+  data = model_building_data,
+  family = binomial()
+)
+```
+
+```{r}
+anova(
+  fertiliser_model,
+  model_stage_2,
+  test = "LRT"
+)
+
+AIC(
+  fertiliser_model,
+  model_stage_2
+)
+
+BIC(
+  fertiliser_model,
+  model_stage_2
+)
+```
+
+```{r}
+#remaining variables trial in
+stage2_parasite_model <- update(
+  model_stage_2,
+  . ~ . + half_anti_parasites_lifetime
+)
+
+stage2_NSAID_model <- update(
+  model_stage_2,
+  . ~ . + NSAID_ever
+)
+
+stage2_lifestyle_model <- update(
+  model_stage_2,
+  . ~ . + main_lifestyle_category_mode_5yrs_prior
+)
+```
+
+```{r}
+anova(
+  model_stage_2,
+  stage2_parasite_model,
+  test = "LRT"
+)
+
+anova(
+  model_stage_2,
+  stage2_NSAID_model,
+  test = "LRT"
+)
+
+anova(
+  model_stage_2,
+  stage2_lifestyle_model,
+  test = "LRT"
+)
+AIC(
+  model_stage_2,
+  stage2_parasite_model,
+  stage2_NSAID_model,
+  stage2_lifestyle_model
+)
+
+BIC(
+  model_stage_2,
+  stage2_parasite_model,
+  stage2_NSAID_model,
+  stage2_lifestyle_model
+)
+```
+
+All variables: worse on BIC, same AIC values, NSAID sig on LRT
+
+```{r}
+drop1(
+  model_stage_2,
+  test = "LRT"
+)
+
+logistic.display(
+  model_stage_2
+)
+
+table(
+  model_building_data$heating_fuel_primary_mode_5yrs_prior,
+  model_building_data$had_HSA
+)
+```
+
+Confirm if it's just the missing data driving fuel inclusion by removing "not_recorded" and assessing performance without it:
+
+```{r}
+heating_recorded_data <- model_building_data %>%
+  dplyr::filter(
+    heating_fuel_primary_mode_5yrs_prior != "not_recorded"
+  ) %>%
+  droplevels()
+
+
+fertiliser_model_heating_cc <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life,
+  data = heating_recorded_data,
+  family = binomial()
+)
+
+fertiliser_heating_model_cc <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    heating_fuel_primary_mode_5yrs_prior,
+  data = heating_recorded_data,
+  family = binomial()
+)
+```
+
+```{r}
+anova(
+  fertiliser_model_heating_cc,
+  fertiliser_heating_model_cc,
+  test = "LRT"
+)
+
+AIC(
+  fertiliser_model_heating_cc,
+  fertiliser_heating_model_cc
+)
+
+BIC(
+  fertiliser_model_heating_cc,
+  fertiliser_heating_model_cc
+)
+
+drop1(
+  fertiliser_heating_model_cc,
+  test = "LRT"
+)
+```
+
+:
+
+```{r}
+fertiliser_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life,
+  data = model_building_data,
+  family = binomial()
+)
+
+fertiliser_NSAID_model <- update(
+  fertiliser_model,
+  . ~ . + NSAID_ever
+)
+
+fertiliser_parasite_model <- update(
+  fertiliser_model,
+  . ~ . + half_anti_parasites_lifetime
+)
+
+fertiliser_lifestyle_model <- update(
+  fertiliser_model,
+  . ~ . + main_lifestyle_category_mode_5yrs_prior
+)
+```
+
+```{r}
+anova(
+  fertiliser_model,
+  fertiliser_NSAID_model,
+  test = "LRT"
+)
+
+anova(
+  fertiliser_model,
+  fertiliser_parasite_model,
+  test = "LRT"
+)
+
+anova(
+  fertiliser_model,
+  fertiliser_lifestyle_model,
+  test = "LRT"
+)
+```
+
+```{r}
+AIC(
+  fertiliser_model,
+  fertiliser_NSAID_model,
+  fertiliser_parasite_model,
+  fertiliser_lifestyle_model
+)
+
+BIC(
+  fertiliser_model,
+  fertiliser_NSAID_model,
+  fertiliser_parasite_model,
+  fertiliser_lifestyle_model
+)
+```
+
+All improve on LRT and AIC but not BIC
+
+```{r}
+expanded_candidate_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    NSAID_ever +
+    half_anti_parasites_lifetime +
+    main_lifestyle_category_mode_5yrs_prior,
+  data = model_building_data,
+  family = binomial()
+)
+
+drop1(
+  expanded_candidate_model,
+  test = "LRT"
+)
+```
+
+```{r}
+anova(
+  fertiliser_model,
+  expanded_candidate_model,
+  test = "LRT"
+)
+
+AIC(
+  fertiliser_model,
+  expanded_candidate_model
+)
+
+BIC(
+  fertiliser_model,
+  expanded_candidate_model
+)
+```
+
+Only lifestyle sig in this final model of lifestyle, NSAID, parasite, fertiliser
+
+Although lifestyle is only sig due to not recorded category = ignore
+
+Asssess these alongside lifestyle
+
+```{r}
+lifestyle_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    main_lifestyle_category_mode_5yrs_prior,
+  data = model_building_data,
+  family = binomial()
+)
+
+anova(
+  lifestyle_model,
+  expanded_candidate_model,
+  test = "LRT"
+)
+
+AIC(
+  lifestyle_model,
+  expanded_candidate_model
+)
+
+BIC(
+  lifestyle_model,
+  expanded_candidate_model
+)
+```
+
+```{r}
+logistic.display(lifestyle_model)
+```
+
+Once the missing category is removed heating is NS, so continue building without
+
+```{r}
+#with not recorded removed 
+analysis_df <- analysis_df %>%
+  dplyr::mutate(
+    lifestyle_5y_clean = dplyr::na_if(
+      as.character(main_lifestyle_category_mode_5yrs_prior),
+      "not_recorded"
+    ),
+
+    lifestyle_5y_clean = factor(
+      lifestyle_5y_clean
+    ),
+
+    NSAID_ever_clean = dplyr::na_if(
+      as.character(NSAID_ever),
+      "No medication records for this time period"
+    ),
+
+    NSAID_ever_clean = factor(
+      NSAID_ever_clean,
+      levels = c("0", "1")
+    ),
+
+    anti_parasites_lifetime_clean = dplyr::na_if(
+      as.character(half_anti_parasites_lifetime),
+      "No medication records for this time period"
+    ),
+
+    anti_parasites_lifetime_clean = factor(
+      anti_parasites_lifetime_clean,
+      levels = c(
+        "lower_half",
+        "upper_half"
+      )
+    )
+  )
+
+model_building_data_clean <- analysis_df %>%
+  dplyr::select(
+    had_HSA,
+    age_at_final_date_bio,
+    sex,
+    neuter,
+    any_treated_fertilizer_study_years_whole_life,
+    lifestyle_5y_clean,
+    NSAID_ever_clean,
+    anti_parasites_lifetime_clean
+  ) %>%
+  dplyr::filter(
+    complete.cases(.)
+  ) %>%
+  droplevels()
+
+core_model_clean <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter,
+  data = model_building_data_clean,
+  family = binomial()
+)
+
+fertiliser_model_clean <- update(
+  core_model_clean,
+  . ~ . +
+    any_treated_fertilizer_study_years_whole_life
+)
+
+lifestyle_model_clean <- update(
+  core_model_clean,
+  . ~ . + lifestyle_5y_clean
+)
+
+NSAID_model_clean <- update(
+  core_model_clean,
+  . ~ . + NSAID_ever_clean
+)
+
+parasite_model_clean <- update(
+  core_model_clean,
+  . ~ . + anti_parasites_lifetime_clean
+)
+```
+
+```{r}
+anova(
+  core_model_clean,
+  lifestyle_model_clean,
+  test = "LRT"
+)
+
+AIC(
+  core_model_clean,
+  fertiliser_model_clean,
+  lifestyle_model_clean,
+  NSAID_model_clean,
+  parasite_model_clean
+)
+
+BIC(
+  core_model_clean,
+  fertiliser_model_clean,
+  lifestyle_model_clean,
+  NSAID_model_clean,
+  parasite_model_clean
+)
+```
+
+Next final steps to explore NSIAD and parasite
+
+```{r}
+model_no_lifestyle<- glm(had_HSA ~
+  age_at_final_date_bio +
+  sex +
+  neuter +
+  any_treated_fertilizer_study_years_whole_life +
+  NSAID_ever_clean +
+  anti_parasites_lifetime_clean, data=analysis_df, family = binomial()
+)
+
+drop1(
+  model_no_lifestyle,
+  test = "LRT"
+)
+
+# Exact observations used in the larger model
+comparison_data <- model.frame(
+  model_no_lifestyle
+)
+
+nrow(comparison_data)
+nobs(model_no_lifestyle)
+
+fertiliser_model_same_data <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life,
+  data = comparison_data,
+  family = binomial()
+)
+```
+
+```{r}
+anova(
+  fertiliser_model_same_data,
+  model_no_lifestyle,
+  test = "LRT"
+)
+
+AIC(
+  fertiliser_model_same_data,
+  model_no_lifestyle
+)
+
+BIC(
+  fertiliser_model_same_data,
+  model_no_lifestyle
+)
+```
+
+```{r}
+fertiliser_NSAID_same_data <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    NSAID_ever_clean,
+  data = comparison_data,
+  family = binomial()
+)
+
+fertiliser_parasite_same_data <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    anti_parasites_lifetime_clean,
+  data = comparison_data,
+  family = binomial()
+)
+```
+
+```{r}
+anova(
+  fertiliser_model_same_data,
+  fertiliser_NSAID_same_data,
+  test = "LRT"
+)
+
+anova(
+  fertiliser_model_same_data,
+  fertiliser_parasite_same_data,
+  test = "LRT"
+)
+
+AIC(
+  fertiliser_model_same_data,
+  fertiliser_NSAID_same_data,
+  fertiliser_parasite_same_data,
+  model_no_lifestyle
+)
+
+BIC(
+  fertiliser_model_same_data,
+  fertiliser_NSAID_same_data,
+  fertiliser_parasite_same_data,
+  model_no_lifestyle
+)
+```
+
+```{r}
+#Final model from these
+fertiliser_NSAID_same_data <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    NSAID_ever_clean,
+  data = comparison_data,
+  family = binomial()
+)
+logistic.display(fertiliser_NSAID_same_data)
+```
+
+Building the final model wtih missing data included
+
+```{r}
+final_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    NSAID_ever,
+  data = cohort_abr_updated_weight2,
+  family = binomial()
+)
+logistic.display(final_model)
+```
+
+```{r}
+
+library(dplyr)
+library(forcats)
+library(finalfit)
+
+finalfit_data <- cohort_abr_updated_weight2 %>%
+  mutate(
+    # Outcome: second level is the event modelled
+    had_HSA = factor(
+      as.character(had_HSA),
+      levels = c("0", "1"),
+      labels = c("No HSA", "HSA")
+    ),
+
+    # Set intended reference levels
+    age_at_final_date_bio = forcats::fct_relevel(
+      factor(age_at_final_date_bio),
+      ">5-<8y"
+    ),
+
+    sex = forcats::fct_relevel(
+      factor(sex),
+      "F"
+    ),
+
+    neuter = forcats::fct_relevel(
+      factor(neuter),
+      "Entire"
+    ),
+
+    any_treated_fertilizer_study_years_whole_life =
+      forcats::fct_relevel(
+        factor(
+          any_treated_fertilizer_study_years_whole_life
+        ),
+        "Not within whole life"
+      ),
+
+    # Clean and label NSAID categories
+    NSAID_ever = case_when(
+      as.character(NSAID_ever) == "0" ~
+        "No",
+
+      as.character(NSAID_ever) == "1" ~
+        "Yes",
+
+      as.character(NSAID_ever) %in% c(
+        "drug_not_administered",
+        "no_med_use_recorded",
+        "No medication records for this time period"
+      ) ~
+        "No medication records for this time period",
+
+      TRUE ~ as.character(NSAID_ever)
+    ),
+
+    NSAID_ever = factor(
+      NSAID_ever,
+      levels = c(
+        "No",
+        "Yes",
+        "No medication records for this time period"
+      )
+    )
+  )
+
+```
+
+```{r}
+final_variables <- c(
+  "had_HSA",
+  "age_at_final_date_bio",
+  "sex",
+  "neuter",
+  "any_treated_fertilizer_study_years_whole_life",
+  "NSAID_ever"
+)
+
+finalfit_data <- finalfit_data %>%
+  select(
+    all_of(final_variables)
+  ) %>%
+  filter(
+    complete.cases(.)
+  ) %>%
+  droplevels()
+```
+
+```{r}
+
+```
+
+```{r}
+dependent <- "had_HSA"
+
+explanatory <- c(
+  "age_at_final_date_bio",
+  "sex",
+  "neuter",
+  "any_treated_fertilizer_study_years_whole_life",
+  "NSAID_ever"
+)
+
+
+
+final_model_table <-finalfit_data %>% 
+  finalfit(dependent, explanatory, metrics = TRUE,column=TRUE) %>%
+  kable(format = "html", digits = 2, escape = FALSE) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+
+final_model_table
+```
+
+```{r}
+final_model <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    NSAID_ever,
+  data = cohort_abr_updated_weight2,
+  family = binomial()
+)
+
+final_model_data <- model.frame(
+  final_model
+)
+
+final_model_without_NSAID <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex +
+    neuter +
+    any_treated_fertilizer_study_years_whole_life,
+  data = final_model_data,
+  family = binomial()
+)
+
+
+anova(
+  final_model_without_NSAID,
+  final_model,
+  test = "LRT"
+)
+
+drop1(
+  final_model,
+  test = "LRT"
+)
+
+AIC(
+  final_model_without_NSAID,
+  final_model
+)
+
+BIC(
+  final_model_without_NSAID,
+  final_model
+)
+
+data.frame(
+  criterion = c("AIC", "BIC"),
+
+  without_NSAID = c(
+    AIC(final_model_without_NSAID),
+    BIC(final_model_without_NSAID)
+  ),
+
+  with_NSAID = c(
+    AIC(final_model),
+    BIC(final_model)
+  )
+) %>%
+  dplyr::mutate(
+    difference_with_minus_without =
+      with_NSAID - without_NSAID
+  )
+```
+
+VChecking if sex-neuter worth putting in instead of seperate sex and neuter
+
+```{r}
+with(
+  model.frame(final_model),
+  table(
+    sex,
+    neuter,
+    had_HSA,
+    useNA = "ifany"
+  )
+)
+```
+
+```{r}
+final_model_sex_neuter_interaction <- update(
+  final_model,
+  . ~ . + sex:neuter
+)
+
+
+anova(
+  final_model,
+  final_model_sex_neuter_interaction,
+  test = "LRT"
+)
+
+AIC(
+  final_model,
+  final_model_sex_neuter_interaction
+)
+
+BIC(
+  final_model,
+  final_model_sex_neuter_interaction
+)
+
+drop1(
+  final_model_sex_neuter_interaction,
+  test = "LRT"
+)
+```
+
+```{r}
+final_model_data <- model.frame(final_model) %>%
+  dplyr::mutate(
+    sex_neuter = interaction(
+      sex,
+      neuter,
+      sep = "_",
+      drop = TRUE
+    )
+  )
+
+table(
+  final_model_data$sex_neuter,
+  final_model_data$had_HSA
+)
+
+
+final_model_data <- final_model_data %>%
+  dplyr::mutate(
+    sex_neuter = forcats::fct_relevel(
+      sex_neuter,
+      "F_Entire"
+    )
+  )
+
+
+final_model_sex_neuter_combined <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex_neuter +
+    any_treated_fertilizer_study_years_whole_life +
+    NSAID_ever,
+  data = final_model_data,
+  family = binomial()
+)
+
+logistic.display(final_model_sex_neuter_combined)
+AIC(
+  final_model_sex_neuter_interaction,
+  final_model_sex_neuter_combined
+)
+
+logLik(final_model_sex_neuter_interaction)
+logLik(final_model_sex_neuter_combined)
+
+
+
+#trial without NSAID
+final_model_sex_neuter_combined_noNSAID <- glm(
+  had_HSA ~
+    age_at_final_date_bio +
+    sex_neuter +
+    any_treated_fertilizer_study_years_whole_life, 
+  data = final_model_data,
+  family = binomial()
+)
+
+AIC(final_model_sex_neuter_combined_noNSAID,final_model_sex_neuter_combined)
+BIC(final_model_sex_neuter_combined_noNSAID,final_model_sex_neuter_combined)
+
+anova(
+  final_model_sex_neuter_combined_noNSAID,
+  final_model_sex_neuter_combined,
+  test = "LRT"
+)
+
+```
+
+```{r}
+final_model_data <- final_model_data %>%
+  mutate(
+    had_HSA = factor(
+      had_HSA,
+      levels = c(0, 1),
+      labels = c("No HSA", "HSA")
+    )
+  )
+
+dependent <- "had_HSA"
+
+explanatory <- c(
+  "age_at_final_date_bio",
+  "sex_neuter",
+  "any_treated_fertilizer_study_years_whole_life",
+  "NSAID_ever"
+)
+
+final_model_table2 <- final_model_data %>%
+  finalfit::finalfit(
+    dependent = dependent,
+    explanatory = explanatory,
+    metrics = TRUE,
+    column = TRUE
+  ) %>%
+  knitr::kable(
+    format = "html",
+    digits = 2,
+    escape = FALSE
+  ) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover")
+  )
+
+final_model_table2
 ```
