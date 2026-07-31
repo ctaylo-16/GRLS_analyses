@@ -1,0 +1,73 @@
+---
+title: "GRLS HSA updated analysis confirmed cases"
+format: html
+editor: visual
+---
+
+# Variables associated with HSA in GRLS cohort - confirmed cases only
+
+```{r}
+library(tidyverse)
+library(tidyverse)
+library(dplyr)
+library(survival)
+library(ggplot2)
+library(tibble)
+library(kableExtra)
+library(epiDisplay)
+library(lme4)
+#devtools::install_github("zabore/ezfun")
+ezfun::set_ccf_palette("contrast")
+library(lubridate)
+library(ggsurvfit)
+library(gtsummary)
+library(tidycmprsk)
+library(gtable)
+#devtools::install_github("zabore/condsurv")
+library(condsurv)
+library(survminer)
+library(cardx)
+library(finalfit)
+library(crosstable)
+library(kableExtra)
+library(officer)
+library(flextable)
+library(writexl)
+library(readr)
+#updated df from midway through the updated log reg of cohort so now should only need to remove the tier 2 and 3 dogs prior to rerun
+cohort_df <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_updated_analysis_df.csv")
+#classification of dogs into tiers
+cohort_info_for_tiers <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+
+cohort_info_for_tiers1<- cohort_info_for_tiers %>%
+  mutate(across(where(is.character), str_to_lower))%>%
+  select(subject_id, tracked_condition,tier_of_confidence)%>%
+   dplyr::filter(tier_of_confidence==1)%>%
+  dplyr::filter(str_detect(tracked_condition, "hemangios"))
+
+
+
+```
+
+```{r}
+#now remove any of the cohort had HSA = 1 where they are not in the tier_of_confidence==1 list
+cohort_df_tier_1_cases <-cohort_df %>%
+  filter(
+    had_HSA == 0 |
+      subject_id %in% cohort_info_for_tiers1$subject_id
+  )
+
+
+#check all removed are correctly removed
+removed_cases <- cohort_df %>%
+  filter(
+    had_HSA == 1,
+    !subject_id %in% cohort_info_for_tiers1$subject_id
+  )
+```
+
+Running univariable models with cases only:
+
+```{r}
+#exposome families
+```

@@ -1359,7 +1359,7 @@ ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no
 
 Use profile dataset to calculate time between enrolled date and death_date OR 31st Dec 2024 if not dead yet
 
-```{r} 
+```{r}
 source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
 
 #add death date 31/12/24 for all dogs with no death date recorded into death_date_2
@@ -1422,5 +1422,402 @@ upper_rate <- (upper_limit / total_dog_years) * 100
 # Print results
 cat("Incidence rate of haemangiosarcoma (definitive) per 100 dog-years:", round(incidence_rate, 3), "\n")
 cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
+
+```
+
+### KM Survival curves of demographics 
+
+```{r}
+#get df ready for KMs
+cohort_df <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_updated_analysis_df.csv")
+#keep the age, sex, neut of only cases
+cohort_df_cases <- cohort_df %>%
+  dplyr::filter(had_HSA==1) %>%
+  dplyr::select(c(subject_id,age_at_final_date,age_at_final_date_bio,sex,neuter,had_HSA))
+#combine these cases to the HSA dogs 
+cohort_df_cases_survival_times <- cohort_df_cases%>%
+  left_join(HSA_dogs4,by="subject_id")
+
+#confirmed cases only
+cohort_df_cases_survival_times_confirmed <- cohort_df_cases_survival_times %>%
+  dplyr::filter(tier_of_confidence==1)
+```
+
+#### Age
+
+All cases:
+
+```{r}
+cohort_df_cases_survival_times <- cohort_df_cases_survival_times%>%
+  mutate(age_at_final_date_bio = factor(age_at_final_date_bio, levels = c("<5y",">5-<8y",">8-<11y", ">11-<13y",">13y")))
+
+# Fit the survival model
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ age_at_final_date_bio, data = cohort_df_cases_survival_times)
+
+# Plot the Kaplan-Meier curves
+ggsurvplot(fit, data = cohort_df_cases_survival_times, palette = "Dark2", risk.table = TRUE)
+
+
+
+library(RColorBrewer)
+
+KM_plot_age <- ggsurvplot(
+  fit, 
+  data = cohort_df_cases_survival_times,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Age at diagnosis groups",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_age
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis.svg", plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis.pdf", plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis.tif", plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
+
+```
+
+Tidier chatgpt sugestions
+
+```{r}
+library(dplyr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(grid)
+
+survival_age_data <- cohort_df_cases_survival_times %>%
+  mutate(
+    age_at_final_date_bio = factor(
+      age_at_final_date_bio,
+      levels = c(
+        "<5y",
+        ">5-<8y",
+        ">8-<11y",
+        ">11-<13y",
+        ">13y"
+      ),
+      labels = c(
+        "<5 years",
+        "5–<8 years",
+        "8–<11 years",
+        "11–<13 years",
+        "≥13 years"
+      )
+    )
+  ) %>%
+  filter(
+    !is.na(age_at_final_date_bio),
+    !is.na(time_between_diagnosis_date_death_date_days),
+    !is.na(status)
+  ) %>%
+  droplevels()
+
+fit_age <- survfit(
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_at_final_date_bio,
+  data = survival_age_data
+)
+
+age_n <- table(
+  survival_age_data$age_at_final_date_bio
+)
+
+age_legend_labels <- paste0(
+  names(age_n),
+  " (n=",
+  as.integer(age_n),
+  ")"
+)
+KM_plot_age <- ggsurvplot(
+  fit_age,
+  data = survival_age_data,
+
+  conf.int = FALSE,
+
+  # Censor marks
+  censor = TRUE,
+  censor.shape = 124,
+  censor.size = 3,
+
+  # Main manuscript time window
+  xlim = c(0, 365),
+  break.time.by = 90,
+
+  # Risk table
+  risk.table = TRUE,
+  risk.table.height = 0.25,
+  risk.table.title = "Number at risk",
+  risk.table.y.text = TRUE,
+  risk.table.y.text.col = FALSE,
+  risk.table.col = "black",
+
+  # Curves remain distinguishable in greyscale
+  linetype = "strata",
+  size = 0.9,
+
+  palette = c(
+    "#0072B2",
+    "#E69F00",
+    "#009E73",
+    "#CC79A7",
+    "#000000"
+  ),
+
+  xlab = "Days since HSA diagnosis",
+  ylab = "Survival probability",
+
+  legend.title = "Age at diagnosis",
+  legend.labs = age_legend_labels,
+
+  ggtheme = theme_classic(base_size = 12),
+  tables.theme = theme_cleantable(base_size = 10)
+)
+
+KM_plot_age$plot <- KM_plot_age$plot +
+  scale_y_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = 0.2),
+    labels = scales::label_percent(accuracy = 1)
+  ) +
+  theme(
+    legend.position = "top",
+    legend.justification = "left",
+    legend.key.width = unit(1.5, "cm"),
+    legend.text = element_text(size = 9),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )
+
+KM_plot_age$table <- KM_plot_age$table +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text = element_text(size = 9)
+  )
+
+KM_plot_age
+```
+
+Confirmed cases only:
+
+```{r}
+cohort_df_cases_survival_times_confirmed <- cohort_df_cases_survival_times_confirmed%>%
+  mutate(age_at_final_date_bio = factor(age_at_final_date_bio, levels = c("<5y",">5-<8y",">8-<11y", ">11-<13y",">13y")))
+# Fit the survival model
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ age_at_final_date_bio, data = cohort_df_cases_survival_times_confirmed)
+
+# Plot the Kaplan-Meier curves
+ggsurvplot(fit, data = cohort_df_cases_survival_times_confirmed, palette = "Dark2", risk.table = TRUE)
+
+
+
+library(RColorBrewer)
+
+KM_plot_age2 <- ggsurvplot(
+  fit, 
+  data = cohort_df_cases_survival_times_confirmed,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Age at diagnosis groups (confirmed cases)",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_age2
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis_conf_cases.svg", plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis_conf_cases.pdf", plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis_conf_cases.tif", plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
+
+
+```
+
+Sex
+
+All cases:
+
+```{r}
+
+# Fit the survival model
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ sex, data = cohort_df_cases_survival_times)
+
+# Plot the Kaplan-Meier curves
+ggsurvplot(fit, data = cohort_df_cases_survival_times, palette = "Dark2", risk.table = TRUE)
+
+
+
+library(RColorBrewer)
+
+KM_plot_sex <- ggsurvplot(
+  fit, 
+  data = cohort_df_cases_survival_times,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Sex groups",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_sex
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis.svg", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis.pdf", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis.tif", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+
+```
+
+Confirmed cases:
+
+```{r}
+
+# Fit the survival model
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ sex, data = cohort_df_cases_survival_times_confirmed)
+
+# Plot the Kaplan-Meier curves
+ggsurvplot(fit, data = cohort_df_cases_survival_times_confirmed, palette = "Dark2", risk.table = TRUE)
+
+
+
+library(RColorBrewer)
+
+KM_plot_sex2<- ggsurvplot(
+  fit, 
+  data = cohort_df_cases_survival_times_confirmed,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Sex in confirmed cases",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_sex2
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.svg", plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.pdf", plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.tif", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+
+```
+
+#### Neuter status
+
+All cases:
+
+```{r}
+
+# Fit the survival model
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ neuter, data = cohort_df_cases_survival_times)
+
+# Plot the Kaplan-Meier curves
+ggsurvplot(fit, data = cohort_df_cases_survival_times, palette = "Dark2", risk.table = TRUE)
+
+
+
+library(RColorBrewer)
+
+KM_plot_neut<- ggsurvplot(
+  fit, 
+  data = cohort_df_cases_survival_times,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Neutering status groups",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_neut
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis.svg", plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis.pdf", plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis.tif", plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
+
+```
+
+Confirmed cases:
+
+```{r}
+
+# Fit the survival model
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ neuter, data = cohort_df_cases_survival_times)
+
+# Plot the Kaplan-Meier curves
+ggsurvplot(fit, data = cohort_df_cases_survival_times, palette = "Dark2", risk.table = TRUE)
+
+
+
+library(RColorBrewer)
+
+KM_plot_neut2<- ggsurvplot(
+  fit, 
+  data = cohort_df_cases_survival_times,
+  palette = brewer.pal(n = 5, name = "Set1"),  # Use a scientific palette
+  conf.int = TRUE,  # Add confidence intervals
+  conf.int.alpha = 0.1,  # Adjust transparency (0 = fully transparent, 1 = fully opaque)
+  risk.table = FALSE,  # Dont show risk table
+  ggtheme = theme_minimal(),  # Use a clean theme for manuscripts
+  legend.title = "Age at diagnosis groups",
+  xlab = "Time (Days)",
+  ylab = "Survival Probability"
+)
+
+KM_plot_neut2
+
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis_conf_cases.svg", plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis_conf_cases.pdf", plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
+
+
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis_conf_cases.tif", plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
+
+```
+
+Create an image of the 3 demographics in a row with second col of confirmed
+
+```{r}
 
 ```
