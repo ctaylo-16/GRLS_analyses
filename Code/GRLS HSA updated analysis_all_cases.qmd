@@ -1160,6 +1160,7 @@ forced_covariates <- c(
 ##### Parasitism
 
 ```{r}
+#exposome families
 exposure_families <- list(
 
   #------------------------------------------------------------
@@ -1257,11 +1258,11 @@ exposure_families <- list(
 
     "outside_YN_study_years_early_life",
     "outside_YN_study_years_rest_of_life",
-    "outside_YN_study_years_whole_life",
+    "outside_YN_study_years_whole_life"
 
-    "in.the.house_YN_sum_early_life_quartile",
-    "in.the.house_YN_sum_rest_of_life_quartile",
-    "in.the.house_YN_sum_whole_life_quartile"
+   # "in.the.house_YN_sum_early_life_quartile",
+    #"in.the.house_YN_sum_rest_of_life_quartile",
+    #"in.the.house_YN_sum_whole_life_quartile"
   ),
 
   #------------------------------------------------------------
@@ -1269,62 +1270,62 @@ exposure_families <- list(
   #------------------------------------------------------------
 
   dog_activity = c(
-
+### removing all these avg,mean,median,min and max for intensity and frequency as they were a weird attempt to make an ordinal score for activity data up to 100 but do not make sense to interpret. keeping mode across these as allows to capture the free text of owner survey
   # Overall activity
-  "mean_activity_level_overview",
+ # "mean_activity_level_overview",
   "mode_activity_level_overview",
 
   # Time spent exercising
   "USDA_30min",
   "activity_1h_min",
   "activity_KC_2h_min",
-  "avg_activity_duration_sy1_2",
-  "avg_activity_duration_sy1_2_quartile",
+#  "avg_activity_duration_sy1_2",
+ # "avg_activity_duration_sy1_2_quartile",
 
   # Intensity
-  "avg_activity_intensity_sy1_2",
-  "avg_activity_intensity_sy3",
-  "avg_intensity_5y_prior_endpoint",
-  "avg_activity_intensity_sy3_quartile",
-  "avg_intensity_5y_prior_endpoint_quartile",
+  #"avg_activity_intensity_sy1_2",
+  #"avg_activity_intensity_sy3",
+  #"avg_intensity_5y_prior_endpoint",
+  #"avg_activity_intensity_sy3_quartile",
+  #"avg_intensity_5y_prior_endpoint_quartile",
   "mode_intensity_5y_prior_endpoint",
 
   # Frequency
-  "avg_activity_freq_sy1_2",
-  "avg_activity_freq_sy3",
-  "avg_frequency_5y_prior_endpoint",
-  "avg_activity_freq_sy1_2_quartile",
-  "avg_activity_freq_sy3_quartile",
-  "avg_frequency_5y_prior_endpoint_quartile",
+  #"avg_activity_freq_sy1_2",
+  #"avg_activity_freq_sy3",
+  #"avg_frequency_5y_prior_endpoint",
+  #"avg_activity_freq_sy1_2_quartile",
+  #"avg_activity_freq_sy3_quartile",
+  #"avg_frequency_5y_prior_endpoint_quartile",
   "mode_frequency_5y_prior_endpoint",
 
   # Whole-life summaries
   "whole_activity_mode",
-  "whole_activity_mean",
-  "whole_activity_median",
-  "whole_activity_min",
-  "whole_activity_max",
+  #"whole_activity_mean",
+  #"whole_activity_median",
+  #"whole_activity_min",
+  #"whole_activity_max",
 
   # Early-life summaries
   "early_activity_mode",
-  "early_activity_mean",
-  "early_activity_median",
-  "early_activity_min",
-  "early_activity_max",
+  #"early_activity_mean",
+  #"early_activity_median",
+  #"early_activity_min",
+  #"early_activity_max",
 
   # Rest-of-life summaries
   "rest_activity_mode",
-  "rest_activity_mean",
-  "rest_activity_median",
-  "rest_activity_min",
-  "rest_activity_max",
+  #"rest_activity_mean",
+  #"rest_activity_median",
+  #"rest_activity_min",
+  #"rest_activity_max",
 
   # Five-year-prior summaries
-  "prior5y_activity_mode",
-  "prior5y_activity_mean",
-  "prior5y_activity_median",
-  "prior5y_activity_min",
-  "prior5y_activity_max"
+  "prior5y_activity_mode"
+ # "prior5y_activity_mean",
+  #"prior5y_activity_median",
+  #"prior5y_activity_min",
+  #"prior5y_activity_max"
 
   ),
 

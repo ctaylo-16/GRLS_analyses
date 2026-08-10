@@ -435,9 +435,9 @@ HSA_dogs4 <- HSA_dogs3 %>%
 ```{r}
 splenic<- HSA_dogs4 %>%
   filter(grepl("splen",tracked_condition))
-cardiac <- HSA_dogs4 %>%
+cardiac <- HSA_dogs4%>%
   filter(grepl("card",tracked_condition))
-visceral<- HSA_dogs4 %>%
+visceral<-HSA_dogs4%>%
   filter(grepl("visc",tracked_condition))
 cutaneous<- HSA_dogs4 %>%
   filter(grepl("cut",tracked_condition))
@@ -1425,7 +1425,7 @@ cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
 
 ```
 
-### KM Survival curves of demographics 
+### KM Survival curves of demographics
 
 ```{r}
 #get df ready for KMs
@@ -1820,4 +1820,996 @@ Create an image of the 3 demographics in a row with second col of confirmed
 
 ```{r}
 
+```
+
+### Plot of combined all cases and histo case locations of tumours reported
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+
+# Combine all-case and histopath-confirmed location data
+location_comparison_df <- bind_rows(
+  location_df %>%
+    transmute(
+      location = as.character(location),
+      count = as.integer(count),
+      case_definition = "All HSA cases"
+    ),
+
+  location_df2 %>%
+    transmute(
+      location = as.character(location),
+      count = as.integer(count),
+      case_definition = "Histopathologically confirmed HSA"
+    )
+) %>%
+  group_by(case_definition) %>%
+  mutate(
+    # Percentage of all recorded locations within each case definition
+    percent = 100 * count / sum(count)
+  ) %>%
+  ungroup()
+
+
+# Order locations according to frequency in the all-case analysis
+location_order <- location_comparison_df %>%
+  filter(case_definition == "All HSA cases") %>%
+  arrange(percent) %>%
+  pull(location)
+
+
+# Add zero rows where a location is absent from one case definition
+location_comparison_df <- location_comparison_df %>%
+  complete(
+    location,
+    case_definition,
+    fill = list(
+      count = 0L,
+      percent = 0
+    )
+  ) %>%
+  mutate(
+    case_definition = factor(
+      case_definition,
+      levels = c(
+        "All HSA cases",
+        "Histopathologically confirmed HSA"
+      )
+    ),
+
+    location_label = str_to_sentence(location),
+
+    location_label = factor(
+      location_label,
+      levels = str_to_sentence(location_order)
+    ),
+
+    # Labels displayed as count (percentage)
+    bar_label = if_else(
+      count == 0,
+      "",
+      sprintf("%d (%.1f%%)", count, percent)
+    )
+  )
+```
+
+```{r}
+bar_dodge <- position_dodge(width = 0.78)
+
+location_comparison_plot <- ggplot(
+  location_comparison_df,
+  aes(
+    x = location_label,
+    y = percent,
+    fill = case_definition
+  )
+) +
+  geom_col(
+    position = bar_dodge,
+    width = 0.70,
+    colour = "black",
+    linewidth = 0.25
+  ) +
+  geom_text(
+    aes(label = bar_label),
+    position = bar_dodge,
+    hjust = -0.08,
+    size = 3.0
+  ) +
+  coord_flip(clip = "off") +
+  scale_fill_manual(
+    values = c(
+      "All HSA cases" = "#1b9e77",
+      "Histopathologically confirmed HSA" = "#d95f02"
+    ),
+    name = NULL
+  ) +
+  scale_y_continuous(
+    labels = function(x) paste0(x, "%"),
+    expand = expansion(mult = c(0, 0.30))
+  ) +
+  labs(
+    x = NULL,
+    y = "Percentage of recorded tumour locations",
+    caption = paste(
+      "Dogs could contribute more than one tumour location.",
+      "Labels show the number and percentage of recorded locations."
+    )
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position = "top",
+    legend.justification = "left",
+    legend.text = element_text(size = 11),
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    axis.title.x = element_text(size = 12),
+    axis.line = element_line(colour = "black"),
+    axis.ticks = element_line(colour = "black"),
+    plot.caption = element_text(
+      hjust = 0,
+      size = 9,
+      margin = margin(t = 8)
+    ),
+    plot.margin = margin(
+      t = 5.5,
+      r = 65,
+      b = 5.5,
+      l = 5.5
+    )
+  )
+
+location_comparison_plot
+```
+
+```{r}
+ggsave(
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_combined.tiff",
+  plot = location_comparison_plot,
+  width = 8.5,
+  height = 10,
+  units = "in",
+  dpi = 600,
+  compression = "lzw"
+)
+
+ggsave(
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_combined.pdf",
+  plot = location_comparison_plot,
+  width = 8.5,
+  height = 10,
+  units = "in"
+)
+```
+
+Compare for main 4 locations whether sig difference in number of histo confirmed
+
+```{r}
+# ================================================================
+# Compare the four main HSA locations between:
+#   1. Histopathologically confirmed HSA cases
+#   2. Non-histopathologically confirmed HSA cases
+#
+# Main locations:
+#   spleen, heart, lung and liver
+#
+# Each dog contributes a maximum of once to each location.
+#
+# Pearson's chi-squared tests are used for each comparison.
+# Odds ratios and Wald 95% confidence intervals are calculated
+# from the corresponding 2 x 2 contingency tables.
+#
+# P-values are unadjusted as these are prespecified,
+# exploratory/descriptive comparisons.
+# ================================================================
+
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(purrr)
+library(tibble)
+
+
+# ------------------------------------------------
+# 1. Check required variables are present
+# ------------------------------------------------
+
+stopifnot(
+  all(c("subject_id", "location") %in% names(HSA_dogs2)),
+  "subject_id" %in% names(HSA_dogs_confirmed)
+)
+
+
+# ------------------------------------------------
+# 2. Identify histopathologically confirmed dogs
+# ------------------------------------------------
+
+confirmed_ids <- HSA_dogs_confirmed %>%
+  distinct(subject_id) %>%
+  pull(subject_id)
+
+
+# ------------------------------------------------
+# 3. Create one row per HSA dog
+#
+# If a dog occurs more than once in HSA_dogs2, combine its
+# location strings before splitting individual locations.
+# ------------------------------------------------
+
+hsa_case_status <- HSA_dogs2 %>%
+  select(subject_id, location) %>%
+  group_by(subject_id) %>%
+  summarise(
+    location_raw = paste(
+      unique(location[!is.na(location) & location != ""]),
+      collapse = ", "
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    histopath_confirmed = subject_id %in% confirmed_ids,
+
+    confirmation_group = factor(
+      if_else(
+        histopath_confirmed,
+        "Histopathologically confirmed",
+        "Not histopathologically confirmed"
+      ),
+      levels = c(
+        "Not histopathologically confirmed",
+        "Histopathologically confirmed"
+      )
+    )
+  )
+
+
+# Check numbers in each confirmation group
+hsa_case_status %>%
+  count(confirmation_group)
+
+
+# ------------------------------------------------
+# 4. Clean and split location field
+# ------------------------------------------------
+
+location_segments <- hsa_case_status %>%
+  select(subject_id, location_raw) %>%
+  mutate(
+
+    location_clean = str_to_lower(location_raw),
+
+    # Standardise delimiters
+    location_clean = str_replace_all(
+      location_clean,
+      regex(" and ", ignore_case = TRUE),
+      ", "
+    ),
+
+    # Remove uncertain wording
+    location_clean = str_remove_all(
+      location_clean,
+      "suspect[^,]*"
+    ),
+
+    location_clean = str_remove_all(
+      location_clean,
+      "presum[^,]*"
+    ),
+
+    location_clean = str_remove_all(
+      location_clean,
+      "likel[^,]*"
+    ),
+
+    location_clean = str_remove_all(
+      location_clean,
+      "probable[^,]*"
+    ),
+
+    # Remove directional terms
+    location_clean = str_remove_all(
+      location_clean,
+      "\\bleft\\b|\\bright\\b"
+    ),
+
+    # Remove unnecessary wording
+    location_clean = str_replace_all(
+      location_clean,
+      fixed("mass on "),
+      ""
+    ),
+
+    location_clean = str_replace_all(
+      location_clean,
+      fixed("in the "),
+      ""
+    ),
+
+    location_clean = str_replace_all(
+      location_clean,
+      fixed("area of "),
+      ""
+    ),
+
+    location_clean = str_squish(location_clean)
+  ) %>%
+
+  # Split dogs with multiple recorded locations
+  separate_rows(
+    location_clean,
+    sep = ","
+  ) %>%
+
+  mutate(
+    location_clean = str_squish(location_clean),
+
+    # Do not classify explicitly ambiguous spleen/liver wording
+    location_clean = if_else(
+      str_detect(
+        location_clean,
+        "possibly spleen or liver|spleen or liver"
+      ),
+      NA_character_,
+      location_clean
+    )
+  ) %>%
+
+  filter(
+    !is.na(location_clean),
+    location_clean != ""
+  )
+
+
+# ------------------------------------------------
+# 5. Identify the four main tumour locations
+#
+# A dog may have more than one location.
+# Each dog contributes only once to each location.
+# ------------------------------------------------
+
+dog_location_long <- location_segments %>%
+  transmute(
+
+    subject_id,
+
+    spleen = str_detect(
+      location_clean,
+      "\\b(spleen|splenic)\\b"
+    ),
+
+    heart = str_detect(
+      location_clean,
+      paste0(
+        "\\b(",
+        "heart|cardiac|myocardium|myocardial|",
+        "atrium|atrial|auricle|",
+        "ventricle|ventricular|",
+        "atrioventricular",
+        ")\\b"
+      )
+    ),
+
+    lung = str_detect(
+      location_clean,
+      "\\b(lung|lungs|thorax|thoracic)\\b"
+    ),
+
+    liver = str_detect(
+      location_clean,
+      "\\b(liver|hepatic)\\b"
+    )
+  ) %>%
+
+  pivot_longer(
+    cols = c(
+      spleen,
+      heart,
+      lung,
+      liver
+    ),
+    names_to = "location",
+    values_to = "location_present"
+  ) %>%
+
+  filter(location_present) %>%
+
+  # Prevent duplicate contribution of the same dog
+  # to the same anatomical location
+  distinct(
+    subject_id,
+    location
+  )
+
+
+# Check dog-level numbers with each location
+dog_location_long %>%
+  count(
+    location,
+    sort = TRUE
+  )
+
+
+# ------------------------------------------------
+# 6. Define analysis population
+#
+# Restrict to dogs with some recorded tumour-location data.
+#
+# Dogs with a different recorded site (e.g. skin) remain in the
+# denominator and count as not having spleen/heart/lung/liver
+# involvement as appropriate.
+# ------------------------------------------------
+
+location_analysis_dogs <- hsa_case_status %>%
+  filter(
+    !is.na(location_raw),
+    str_squish(location_raw) != ""
+  )
+
+
+# Check denominators
+location_analysis_dogs %>%
+  count(confirmation_group)
+
+
+# ------------------------------------------------
+# 7. Run Pearson chi-squared test for each of
+#    the four major tumour locations
+# ------------------------------------------------
+
+main_locations <- c(
+  "spleen",
+  "heart",
+  "lung",
+  "liver"
+)
+
+
+main_location_tests <- map_dfr(
+  main_locations,
+  function(site) {
+
+    # Dogs with this location
+    dogs_with_site <- dog_location_long %>%
+      filter(location == site) %>%
+      distinct(subject_id) %>%
+      pull(subject_id)
+
+
+    # Add location present/absent to the whole analysis cohort
+    site_data <- location_analysis_dogs %>%
+      mutate(
+        location_present =
+          subject_id %in% dogs_with_site
+      )
+
+
+    # ------------------------------------------------
+    # Construct 2 x 2 table
+    #
+    #                        Confirmed    Not confirmed
+    #
+    # Location present          a              b
+    #
+    # Location absent           c              d
+    #
+    # ------------------------------------------------
+
+    a <- sum(
+      site_data$histopath_confirmed &
+        site_data$location_present
+    )
+
+    b <- sum(
+      !site_data$histopath_confirmed &
+        site_data$location_present
+    )
+
+    c <- sum(
+      site_data$histopath_confirmed &
+        !site_data$location_present
+    )
+
+    d <- sum(
+      !site_data$histopath_confirmed &
+        !site_data$location_present
+    )
+
+
+    location_table <- matrix(
+      c(
+        a, b,
+        c, d
+      ),
+      nrow = 2,
+      byrow = TRUE,
+      dimnames = list(
+        location_status = c(
+          "Location present",
+          "Location absent"
+        ),
+        confirmation_status = c(
+          "Histopathologically confirmed",
+          "Not histopathologically confirmed"
+        )
+      )
+    )
+
+
+    # ------------------------------------------------
+    # Pearson chi-squared test
+    #
+    # correct = FALSE turns off Yates continuity correction
+    # ------------------------------------------------
+
+    chi_result <- chisq.test(
+      location_table,
+      correct = FALSE
+    )
+
+
+    # Store expected counts so we can check that
+    # chi-squared assumptions are satisfied
+    expected_counts <- chi_result$expected
+
+    minimum_expected_count <- min(expected_counts)
+
+
+    # ------------------------------------------------
+    # Calculate ordinary 2 x 2 odds ratio
+    #
+    # OR = (a/b) / (c/d)
+    #    = (a*d) / (b*c)
+    #
+    # OR > 1:
+    # location proportion higher among confirmed cases
+    #
+    # OR < 1:
+    # location proportion lower among confirmed cases
+    # ------------------------------------------------
+
+    OR <- (a * d) / (b * c)
+
+
+    # ------------------------------------------------
+    # Wald 95% CI for the odds ratio
+    #
+    # SE(log OR) =
+    # sqrt(1/a + 1/b + 1/c + 1/d)
+    # ------------------------------------------------
+
+    SE_log_OR <- sqrt(
+      (1 / a) +
+      (1 / b) +
+      (1 / c) +
+      (1 / d)
+    )
+
+
+    CI_lower <- exp(
+      log(OR) -
+        1.96 * SE_log_OR
+    )
+
+
+    CI_upper <- exp(
+      log(OR) +
+        1.96 * SE_log_OR
+    )
+
+
+    # ------------------------------------------------
+    # Store results
+    # ------------------------------------------------
+
+    tibble(
+
+      location = site,
+
+      confirmed_with_location = a,
+      confirmed_without_location = c,
+      confirmed_total = a + c,
+
+      confirmed_percent =
+        100 * a / (a + c),
+
+      not_confirmed_with_location = b,
+      not_confirmed_without_location = d,
+      not_confirmed_total = b + d,
+
+      not_confirmed_percent =
+        100 * b / (b + d),
+
+      # Confirmed minus non-confirmed percentage
+      percentage_point_difference =
+        confirmed_percent -
+        not_confirmed_percent,
+
+      OR_for_histopath_confirmation = OR,
+
+      CI_lower = CI_lower,
+
+      CI_upper = CI_upper,
+
+      chi_square = unname(
+        chi_result$statistic
+      ),
+
+      degrees_freedom = unname(
+        chi_result$parameter
+      ),
+
+      chi_square_p_value =
+        chi_result$p.value,
+
+      # Useful check for chi-squared assumptions
+      minimum_expected_count =
+        minimum_expected_count
+    )
+  }
+) %>%
+
+  mutate(
+
+    interpretation = case_when(
+
+      chi_square_p_value < 0.05 &
+        OR_for_histopath_confirmation > 1 ~
+        "More frequently recorded among histopathologically confirmed cases",
+
+      chi_square_p_value < 0.05 &
+        OR_for_histopath_confirmation < 1 ~
+        "Less frequently recorded among histopathologically confirmed cases",
+
+      TRUE ~
+        "No evidence of a difference"
+    ),
+
+    # Preserve preferred location order
+    location = factor(
+      location,
+      levels = main_locations
+    )
+  ) %>%
+
+  arrange(location)
+
+
+# ------------------------------------------------
+# 8. View complete numerical results
+# ------------------------------------------------
+
+main_location_tests
+
+
+# ------------------------------------------------
+# 9. Check chi-squared expected cell counts
+#
+# Ideally all should be >= 5
+# ------------------------------------------------
+
+main_location_tests %>%
+  select(
+    location,
+    minimum_expected_count
+  )
+
+
+# Optional warning if any expected cell count is <5
+if (
+  any(
+    main_location_tests$minimum_expected_count < 5
+  )
+) {
+
+  warning(
+    "At least one location has an expected cell count <5; consider Fisher's exact test for that comparison."
+  )
+
+}
+
+
+# ------------------------------------------------
+# 10. Function to format p-values
+# ------------------------------------------------
+
+format_p_value <- function(p) {
+
+  case_when(
+
+    is.na(p) ~
+      NA_character_,
+
+    p < 0.001 ~
+      "<0.001",
+
+    TRUE ~
+      sprintf("%.3f", p)
+  )
+}
+
+
+# ------------------------------------------------
+# 11. Create manuscript-ready results table
+# ------------------------------------------------
+
+main_location_results_table <-
+  main_location_tests %>%
+
+  transmute(
+
+    Location =
+      str_to_sentence(
+        as.character(location)
+      ),
+
+    `Histopathologically confirmed, n/N (%)` =
+      sprintf(
+        "%d/%d (%.1f%%)",
+        confirmed_with_location,
+        confirmed_total,
+        confirmed_percent
+      ),
+
+    `Not histopathologically confirmed, n/N (%)` =
+      sprintf(
+        "%d/%d (%.1f%%)",
+        not_confirmed_with_location,
+        not_confirmed_total,
+        not_confirmed_percent
+      ),
+
+    `Difference in percentage points` =
+      sprintf(
+        "%+.1f",
+        percentage_point_difference
+      ),
+
+    `OR (95% CI)` =
+      sprintf(
+        "%.2f (%.2f–%.2f)",
+        OR_for_histopath_confirmation,
+        CI_lower,
+        CI_upper
+      ),
+
+    `Chi-squared statistic` =
+      sprintf(
+        "%.2f",
+        chi_square
+      ),
+
+    `Chi-squared p-value` =
+      format_p_value(
+        chi_square_p_value
+      ),
+
+    Interpretation =
+      interpretation
+  )
+
+
+# View manuscript-ready table
+main_location_results_table
+
+
+# ------------------------------------------------
+# 12. Save full numerical results
+# ------------------------------------------------
+
+write.csv(
+  main_location_tests,
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_main_location_histopath_tests_chisq.csv",
+  row.names = FALSE
+)
+
+
+# ------------------------------------------------
+# 13. Save manuscript-ready formatted table
+# ------------------------------------------------
+
+write.csv(
+  main_location_results_table,
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_main_location_histopath_results_table_chisq.csv",
+  row.names = FALSE
+)
+```
+
+## Survival time calculations for dogs with \>= 1 day of survival time ie. intention to treat proxy
+
+```{r}
+survival_time_1 <- HSA_dogs4 %>%
+  dplyr::filter(time_between_diagnosis_date_death_date_days > 0)
+
+
+survfit(Surv(survival_time_1$time_between_diagnosis_date_death_date_days, survival_time_1$status) ~ 1, data = survival_time_1) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(survival_time_1$time_between_diagnosis_date_death_date_days)
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = survival_time_1)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = survival_time_1), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = survival_time_1) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(survival_time_1$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+```
+
+By locations:
+
+```{r}
+splenic<- survival_time_1 %>%
+  filter(grepl("splen",tracked_condition))
+cardiac <- survival_time_1 %>%
+  filter(grepl("card",tracked_condition))
+visceral<- survival_time_1 %>%
+  filter(grepl("visc",tracked_condition))
+cutaneous<- survival_time_1 %>%
+  filter(grepl("cut",tracked_condition))
+other<- survival_time_1 %>%
+  filter(grepl("other",tracked_condition))
+
+```
+
+
+### Splenic
+
+```{r}
+survfit(Surv(splenic$time_between_diagnosis_date_death_date_days, splenic$status) ~ 1, data = splenic) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(splenic$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(splenic$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(splenic$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Cardiac
+
+```{r}
+survfit(Surv(cardiac$time_between_diagnosis_date_death_date_days, cardiac$status) ~ 1, data = cardiac) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(cardiac$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(cardiac$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(cardiac$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Visceral
+
+```{r}
+survfit(Surv(visceral$time_between_diagnosis_date_death_date_days, visceral$status) ~ 1, data = visceral) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(visceral$time_between_diagnosis_date_death_date_days)
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral)
+#probability of surviving to one year
+#NB needs to be set at 364 here as the single 365d case makes this not work as everyone has had the case by the 365d point
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral), times = 365.25)
+ 
+#1 year survival rate - doesnt work as all cases dead by 1y
+#survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral) %>% 
+ # tbl_survfit(
+  #  times = 365.25,
+  #  label_header = "**1-year survival (95% CI)**"
+ # )
+
+
+nrow(visceral)
+
+summary(visceral$time_between_diagnosis_date_death_date_days)
+
+table(visceral$status, useNA = "ifany")
+
+#errors with above attempts to problem solve - not working
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral)
+
+# Extract components
+fit_df <- data.frame(
+  time = fit$time,
+  surv = fit$surv,
+  lower = fit$lower,
+  upper = fit$upper
+)
+
+# Check the structure of the new data frame
+str(fit)
+
+report_time <- max(fit_df$time[fit_df$surv > 0])
+
+tbl_survfit(
+  fit,
+  times = report_time,
+  label_header = paste0("**Survival at ", report_time, " days (95% CI)**")
+)
+
+
+
+
+quantile(visceral$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(visceral$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Cutaneous
+
+```{r}
+survfit(Surv(cutaneous$time_between_diagnosis_date_death_date_days, cutaneous$status) ~ 1, data = cutaneous) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(cutaneous$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(cutaneous$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(cutaneous$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
 ```
