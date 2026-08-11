@@ -1438,6 +1438,9 @@ cohort_df_cases <- cohort_df %>%
 cohort_df_cases_survival_times <- cohort_df_cases%>%
   left_join(HSA_dogs4,by="subject_id")
 
+
+
+
 #confirmed cases only
 cohort_df_cases_survival_times_confirmed <- cohort_df_cases_survival_times %>%
   dplyr::filter(tier_of_confidence==1)
@@ -2618,14 +2621,15 @@ write.csv(
 )
 ```
 
-## Survival time calculations for dogs with \>= 1 day of survival time ie. intention to treat proxy
+## Survival time calculations for dogs with \>= 1 day of survival time ie. intention to treat proxy for any cases
 
 ```{r}
 survival_time_1 <- HSA_dogs4 %>%
   dplyr::filter(time_between_diagnosis_date_death_date_days > 0)
 
 
-survfit(Surv(survival_time_1$time_between_diagnosis_date_death_date_days, survival_time_1$status) ~ 1, data = survival_time_1) %>% 
+
+survfit(Surv(survival_time_1$time_between_diagnosis_date_death_date_days, survival_time_1$status) ~ 1, data = HSA_dogs_confirmed _survival_time_1) %>% 
   ggsurvfit() +
   labs(
     x = "Days",
@@ -2664,7 +2668,6 @@ other<- survival_time_1 %>%
   filter(grepl("other",tracked_condition))
 
 ```
-
 
 ### Splenic
 
@@ -2812,4 +2815,1924 @@ survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cu
 
 quantile(cutaneous$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
 range(cutaneous$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### For confirmed histopath day \>1 cases
+
+```{r}
+#create confirmed HSA cohort with day 1 survival and then run analysis as above for that
+
+HSA_dogs_confirmed_survival_time_1 <- survival_time_1 %>%
+  semi_join(
+    cohort_info_for_tiers %>%
+      distinct(subject_id),
+    by = "subject_id"
+  )
+```
+
+```{r}
+survfit(Surv(HSA_dogs_confirmed_survival_time_1$time_between_diagnosis_date_death_date_days, HSA_dogs_confirmed_survival_time_1$status) ~ 1, data = HSA_dogs_confirmed_survival_time_1) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(HSA_dogs_confirmed_survival_time_1$time_between_diagnosis_date_death_date_days)
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = HSA_dogs_confirmed_survival_time_1)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = HSA_dogs_confirmed_survival_time_1), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = HSA_dogs_confirmed_survival_time_1) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(HSA_dogs_confirmed_survival_time_1$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+```
+
+By locations:
+
+```{r}
+splenic<- HSA_dogs_confirmed_survival_time_1 %>%
+  filter(grepl("splen",tracked_condition))
+cardiac <- HSA_dogs_confirmed_survival_time_1 %>%
+  filter(grepl("card",tracked_condition))
+visceral<- HSA_dogs_confirmed_survival_time_1 %>%
+  filter(grepl("visc",tracked_condition))
+cutaneous<- HSA_dogs_confirmed_survival_time_1 %>%
+  filter(grepl("cut",tracked_condition))
+other<- HSA_dogs_confirmed_survival_time_1 %>%
+  filter(grepl("other",tracked_condition))
+
+```
+
+### Splenic
+
+```{r}
+survfit(Surv(splenic$time_between_diagnosis_date_death_date_days, splenic$status) ~ 1, data = splenic) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(splenic$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = splenic) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(splenic$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(splenic$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Cardiac
+
+```{r}
+survfit(Surv(cardiac$time_between_diagnosis_date_death_date_days, cardiac$status) ~ 1, data = cardiac) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(cardiac$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cardiac) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(cardiac$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(cardiac$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Visceral
+
+```{r}
+survfit(Surv(visceral$time_between_diagnosis_date_death_date_days, visceral$status) ~ 1, data = visceral) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(visceral$time_between_diagnosis_date_death_date_days)
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral)
+#probability of surviving to one year
+#NB needs to be set at 364 here as the single 365d case makes this not work as everyone has had the case by the 365d point
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral), times = 365.25)
+ 
+#1 year survival rate - doesnt work as all cases dead by 1y
+#survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral) %>% 
+ # tbl_survfit(
+  #  times = 365.25,
+  #  label_header = "**1-year survival (95% CI)**"
+ # )
+
+
+nrow(visceral)
+
+summary(visceral$time_between_diagnosis_date_death_date_days)
+
+table(visceral$status, useNA = "ifany")
+
+#errors with above attempts to problem solve - not working
+fit <- survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = visceral)
+
+# Extract components
+fit_df <- data.frame(
+  time = fit$time,
+  surv = fit$surv,
+  lower = fit$lower,
+  upper = fit$upper
+)
+
+# Check the structure of the new data frame
+str(fit)
+
+report_time <- max(fit_df$time[fit_df$surv > 0])
+
+tbl_survfit(
+  fit,
+  times = report_time,
+  label_header = paste0("**Survival at ", report_time, " days (95% CI)**")
+)
+
+
+
+
+quantile(visceral$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(visceral$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+### Cutaneous
+
+```{r}
+survfit(Surv(cutaneous$time_between_diagnosis_date_death_date_days, cutaneous$status) ~ 1, data = cutaneous) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall survival probability"
+  ) +  add_confidence_interval() +
+  add_risktable()
+
+summary(cutaneous$time_between_diagnosis_date_death_date_days)
+#median survival time is 5 days 
+
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous)
+#probability of surviving to one year
+summary(survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous), times = 365.25)
+
+#1 year survival rate
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = cutaneous) %>% 
+  tbl_survfit(
+    times = 365.25,
+    label_header = "**1-year survival (95% CI)**"
+  )
+
+quantile(cutaneous$time_between_diagnosis_date_death_date_days, probs = c(0.25, 0.75), na.rm = TRUE)
+range(cutaneous$time_between_diagnosis_date_death_date_days,na.rm = TRUE)
+```
+
+#### Combined demographic KMS for the manuscript
+
+```{r}
+# ================================================================
+# DEMOGRAPHIC KAPLAN-MEIER FIGURE
+#
+# 2 rows x 3 columns:
+#
+#                     All cases      Histopath confirmed      Day-1 survivors
+# Age                     KM                 KM                    KM
+# Sex/neuter              KM                 KM                    KM
+#
+# Cohort titles are shown ONLY on the top row.
+# No confidence ribbons or risk tables are shown to keep the
+# six-panel figure clean and manuscript-friendly.
+# ================================================================
+
+
+library(dplyr)
+library(stringr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(patchwork)
+
+# If patchwork has not previously been installed, run once:
+# install.packages("patchwork")
+
+
+# ------------------------------------------------
+# 1. Prepare one dog-level demographic survival dataset
+# ------------------------------------------------
+
+km_demographic_base <- cohort_df_cases_survival_times %>%
+
+  # Ensure one row per dog
+  distinct(subject_id, .keep_all = TRUE) %>%
+
+  # Retain dogs with usable survival information
+  filter(
+    !is.na(time_between_diagnosis_date_death_date_days),
+    !is.na(status)
+  ) %>%
+
+  mutate(
+
+    # --------------------------------------------
+    # Age groups
+    # --------------------------------------------
+
+    age_group = factor(
+      age_at_final_date_bio,
+      levels = c(
+        "<5y",
+        ">5-<8y",
+        ">8-<11y",
+        ">11-<13y",
+        ">13y"
+      ),
+      labels = c(
+        "<5 years",
+        "5–<8 years",
+        "8–<11 years",
+        "11–<13 years",
+        ">13 years"
+      )
+    ),
+
+
+    # --------------------------------------------
+    # Combined sex/neuter variable
+    # --------------------------------------------
+
+    sex_label = str_to_sentence(
+      as.character(sex)
+    ),
+
+    neuter_label = str_to_sentence(
+      as.character(neuter)
+    ),
+
+    sex_neuter = if_else(
+      !is.na(sex) & !is.na(neuter),
+
+      paste0(
+        sex_label,
+        ", ",
+        neuter_label
+      ),
+
+      NA_character_
+    )
+  )
+
+
+# ------------------------------------------------
+# 2. Fix sex/neuter factor levels
+#
+# This helps keep colours consistent between
+# all three cohort panels.
+# ------------------------------------------------
+
+sex_neuter_levels <- km_demographic_base %>%
+  filter(!is.na(sex_neuter)) %>%
+  distinct(sex_neuter) %>%
+  arrange(sex_neuter) %>%
+  pull(sex_neuter)
+
+
+km_demographic_base <- km_demographic_base %>%
+  mutate(
+    sex_neuter = factor(
+      sex_neuter,
+      levels = sex_neuter_levels
+    )
+  )
+
+
+# Check the resulting sex/neuter categories
+table(
+  km_demographic_base$sex_neuter,
+  useNA = "ifany"
+)
+
+
+# ------------------------------------------------
+# 3. Create the three analysis cohorts
+# ------------------------------------------------
+
+# All HSA cases
+km_all <- km_demographic_base
+
+
+# Histopathologically confirmed HSA cases
+km_histopath <- km_demographic_base %>%
+  filter(
+    tier_of_confidence == 1
+  )
+
+
+# Day-1 landmark cohort:
+# dogs surviving beyond the day of diagnosis
+km_day1 <- km_demographic_base %>%
+  filter(
+    time_between_diagnosis_date_death_date_days > 0
+  )
+
+
+# ------------------------------------------------
+# 4. Check numbers of dogs in each cohort
+# ------------------------------------------------
+
+cat(
+  "\nAll HSA cases: ",
+  n_distinct(km_all$subject_id),
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Histopathologically confirmed cases: ",
+  n_distinct(km_histopath$subject_id),
+  "\n",
+  sep = ""
+)
+
+cat(
+  "Day-1 landmark cohort: ",
+  n_distinct(km_day1$subject_id),
+  "\n",
+  sep = ""
+)
+
+
+# ------------------------------------------------
+# 5. Colour palettes
+#
+# Same demographic category receives the same
+# colour in each of the three cohort panels.
+# ------------------------------------------------
+
+age_colours <- c(
+  "<5 years"   = "#0072B2",
+  "5–<8 years" = "#E69F00",
+  "8–<11 years" = "#009E73",
+  "11–<13 years" = "#CC79A7",
+  ">13 years" = "#000000"
+)
+
+
+# Assign colours to the sex/neuter categories
+# in the order in which they occur in the dataset
+
+available_sex_neuter_colours <- c(
+  "#0072B2",
+  "#E69F00",
+  "#009E73",
+  "#CC79A7",
+  "#000000"
+)
+
+sex_neuter_colours <- setNames(
+  available_sex_neuter_colours[
+    seq_along(sex_neuter_levels)
+  ],
+  sex_neuter_levels
+)
+
+
+# ------------------------------------------------
+# 6. Function to create AGE Kaplan-Meier plots
+# ------------------------------------------------
+
+make_age_km <- function(
+    data,
+    panel_title = NULL,
+    show_title = TRUE,
+    show_x_title = TRUE,
+    show_y_title = TRUE) {
+
+
+  plot_data <- data %>%
+    filter(
+      !is.na(age_group)
+    ) %>%
+    droplevels()
+
+
+  # Identify age groups actually present in this cohort
+  present_age_groups <- levels(
+    plot_data$age_group
+  )
+
+
+  fit <- survfit(
+    Surv(
+      time_between_diagnosis_date_death_date_days,
+      status
+    ) ~ age_group,
+    data = plot_data
+  )
+
+
+  p <- ggsurvplot(
+    fit,
+    data = plot_data,
+
+    # No confidence ribbons
+    conf.int = FALSE,
+
+    # Retain censor marks
+    censor = TRUE,
+    censor.shape = 124,
+    censor.size = 2,
+
+    # Focus figure on first year
+    xlim = c(0, 365),
+    break.time.by = 90,
+
+    # No risk tables in six-panel figure
+    risk.table = FALSE,
+
+    # Colour + line type makes curves easier
+    # to distinguish in greyscale
+    linetype = "strata",
+    size = 0.8,
+
+    palette = unname(
+      age_colours[
+        present_age_groups
+      ]
+    ),
+
+    xlab = if (show_x_title) {
+      "Days since HSA diagnosis"
+    } else {
+      ""
+    },
+
+    ylab = if (show_y_title) {
+      "Survival probability"
+    } else {
+      ""
+    },
+
+    legend.title = "Age at diagnosis",
+
+    title = if (show_title) {
+      panel_title
+    } else {
+      NULL
+    },
+
+    ggtheme = theme_classic(
+      base_size = 10
+    )
+  )
+
+
+  p$plot +
+
+    scale_y_continuous(
+      limits = c(0, 1),
+      breaks = seq(
+        0,
+        1,
+        by = 0.2
+      ),
+      labels = scales::label_percent(
+        accuracy = 1
+      )
+    ) +
+
+    theme(
+
+      # Smaller cohort title
+      plot.title = element_text(
+        hjust = 0.5,
+        face = "bold",
+        size = 9,
+        margin = margin(
+          b = 3
+        )
+      ),
+
+      legend.position = "bottom",
+
+      legend.title = element_text(
+        size = 8.5
+      ),
+
+      legend.text = element_text(
+        size = 7.5
+      ),
+
+      legend.key.width = unit(
+        1.1,
+        "cm"
+      ),
+
+      axis.title = element_text(
+        size = 9
+      ),
+
+      axis.text = element_text(
+        size = 8
+      ),
+
+      # Reduce unnecessary whitespace
+      plot.margin = margin(
+        t = 3,
+        r = 4,
+        b = 3,
+        l = 4
+      )
+    )
+}
+
+
+# ------------------------------------------------
+# 7. Function to create SEX/NEUTER Kaplan-Meier plots
+# ------------------------------------------------
+
+make_sex_neuter_km <- function(
+    data,
+    panel_title = NULL,
+    show_title = FALSE,
+    show_x_title = TRUE,
+    show_y_title = TRUE) {
+
+
+  plot_data <- data %>%
+    filter(
+      !is.na(sex_neuter)
+    ) %>%
+    droplevels()
+
+
+  # Identify categories actually present in this cohort
+  present_sex_neuter <- levels(
+    plot_data$sex_neuter
+  )
+
+
+  fit <- survfit(
+    Surv(
+      time_between_diagnosis_date_death_date_days,
+      status
+    ) ~ sex_neuter,
+    data = plot_data
+  )
+
+
+  p <- ggsurvplot(
+    fit,
+    data = plot_data,
+
+    conf.int = FALSE,
+
+    censor = TRUE,
+    censor.shape = 124,
+    censor.size = 2,
+
+    xlim = c(0, 365),
+    break.time.by = 90,
+
+    risk.table = FALSE,
+
+    linetype = "strata",
+    size = 0.8,
+
+    palette = unname(
+      sex_neuter_colours[
+        present_sex_neuter
+      ]
+    ),
+
+    xlab = if (show_x_title) {
+      "Days since HSA diagnosis"
+    } else {
+      ""
+    },
+
+    ylab = if (show_y_title) {
+      "Survival probability"
+    } else {
+      ""
+    },
+
+    legend.title = "Sex/neuter status",
+
+    title = if (show_title) {
+      panel_title
+    } else {
+      NULL
+    },
+
+    ggtheme = theme_classic(
+      base_size = 10
+    )
+  )
+
+
+  p$plot +
+
+    scale_y_continuous(
+      limits = c(0, 1),
+      breaks = seq(
+        0,
+        1,
+        by = 0.2
+      ),
+      labels = scales::label_percent(
+        accuracy = 1
+      )
+    ) +
+
+    theme(
+
+      plot.title = element_text(
+        hjust = 0.5,
+        face = "bold",
+        size = 9,
+        margin = margin(
+          b = 3
+        )
+      ),
+
+      legend.position = "bottom",
+
+      legend.title = element_text(
+        size = 8.5
+      ),
+
+      legend.text = element_text(
+        size = 7.5
+      ),
+
+      legend.key.width = unit(
+        1.1,
+        "cm"
+      ),
+
+      axis.title = element_text(
+        size = 9
+      ),
+
+      axis.text = element_text(
+        size = 8
+      ),
+
+      plot.margin = margin(
+        t = 3,
+        r = 4,
+        b = 3,
+        l = 4
+      )
+    )
+}
+
+
+# ------------------------------------------------
+# 8. Create TOP ROW: AGE
+#
+# These three plots carry the cohort headings.
+#
+# Only left-hand plot needs y-axis title.
+# X-axis title is omitted from top row because the
+# bottom row carries the same x-axis title.
+# ------------------------------------------------
+
+age_all_plot <- make_age_km(
+  km_all,
+  panel_title = "All cases",
+  show_title = TRUE,
+  show_x_title = FALSE,
+  show_y_title = TRUE
+)
+
+
+age_histopath_plot <- make_age_km(
+  km_histopath,
+  panel_title = "Histopath confirmed",
+  show_title = TRUE,
+  show_x_title = FALSE,
+  show_y_title = FALSE
+)
+
+
+age_day1_plot <- make_age_km(
+  km_day1,
+  panel_title = "Day-1 landmark cohort",
+  show_title = TRUE,
+  show_x_title = FALSE,
+  show_y_title = FALSE
+)
+
+
+# ------------------------------------------------
+# 9. Create BOTTOM ROW: SEX/NEUTER
+#
+# No cohort titles here because they are already
+# given immediately above in the age row.
+# ------------------------------------------------
+
+sex_neuter_all_plot <- make_sex_neuter_km(
+  km_all,
+  show_title = FALSE,
+  show_x_title = TRUE,
+  show_y_title = TRUE
+)
+
+
+sex_neuter_histopath_plot <- make_sex_neuter_km(
+  km_histopath,
+  show_title = FALSE,
+  show_x_title = TRUE,
+  show_y_title = FALSE
+)
+
+
+sex_neuter_day1_plot <- make_sex_neuter_km(
+  km_day1,
+  show_title = FALSE,
+  show_x_title = TRUE,
+  show_y_title = FALSE
+)
+
+
+# ------------------------------------------------
+# 10. Combine the AGE row
+#
+# Collect the three identical age legends into one.
+# ------------------------------------------------
+
+age_row <- (
+  age_all_plot |
+    age_histopath_plot |
+    age_day1_plot
+) +
+
+  plot_layout(
+    guides = "collect"
+  ) &
+
+  theme(
+    legend.position = "bottom"
+  )
+
+
+# ------------------------------------------------
+# 11. Combine the SEX/NEUTER row
+#
+# Collect the three identical sex/neuter legends
+# into one.
+# ------------------------------------------------
+
+sex_neuter_row <- (
+  sex_neuter_all_plot |
+    sex_neuter_histopath_plot |
+    sex_neuter_day1_plot
+) +
+
+  plot_layout(
+    guides = "collect"
+  ) &
+
+  theme(
+    legend.position = "bottom"
+  )
+
+
+# ------------------------------------------------
+# 12. Combine into final 2 x 3 figure
+#
+# No additional row titles are added, maximising
+# the available space for the six KM panels.
+# ------------------------------------------------
+
+demographic_KM_figure <- (
+  age_row /
+    sex_neuter_row
+) +
+
+  plot_layout(
+    heights = c(
+      1,
+      1
+    )
+  )
+
+
+# View combined figure
+demographic_KM_figure
+
+
+# ------------------------------------------------
+# 13. Save combined manuscript figure as TIFF
+# ------------------------------------------------
+
+ggsave(
+  filename =
+    "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_demographic_KM_combined.tiff",
+
+  plot =
+    demographic_KM_figure,
+
+  width = 13,
+  height = 8.5,
+  units = "in",
+  dpi = 600,
+  compression = "lzw"
+)
+
+
+# ------------------------------------------------
+# 14. Save combined manuscript figure as PDF
+# ------------------------------------------------
+
+ggsave(
+  filename =
+    "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_demographic_KM_combined.pdf",
+
+  plot =
+    demographic_KM_figure,
+
+  width = 13,
+  height = 8.5,
+  units = "in"
+)
+```
+
+Log rank testing for differences between groups
+
+```{r}
+# ================================================================
+# LOG-RANK TESTS FOR DEMOGRAPHIC KAPLAN-MEIER CURVES
+#
+# Global log-rank tests for:
+#
+#   Age:
+#     1. All HSA cases
+#     2. Histopathologically confirmed cases
+#     3. Day-1 survivor cohort
+#
+#   Sex/neuter:
+#     4. All HSA cases
+#     5. Histopathologically confirmed cases
+#     6. Day-1 survivor cohort
+#
+# Tests compare demographic groups WITHIN each cohort.
+# The three overlapping cohorts are NOT compared against one another.
+# ================================================================
+
+
+library(dplyr)
+library(survival)
+library(survminer)
+library(tibble)
+
+
+# ------------------------------------------------
+# 1. Function to run a global log-rank test
+# ------------------------------------------------
+
+run_logrank <- function(data, group_variable, cohort_name) {
+
+  # Remove missing group values
+  analysis_data <- data %>%
+    filter(
+      !is.na(.data[[group_variable]]),
+      !is.na(time_between_diagnosis_date_death_date_days),
+      !is.na(status)
+    ) %>%
+    droplevels()
+
+
+  # Construct survival formula
+  surv_formula <- as.formula(
+    paste0(
+      "Surv(time_between_diagnosis_date_death_date_days, status) ~ ",
+      group_variable
+    )
+  )
+
+
+  # Log-rank test
+  logrank_result <- survdiff(
+    surv_formula,
+    data = analysis_data,
+    rho = 0
+  )
+
+
+  # Degrees of freedom = number of groups - 1
+  df <- length(logrank_result$n) - 1
+
+
+  # Calculate p-value from chi-squared statistic
+  p_value <- pchisq(
+    logrank_result$chisq,
+    df = df,
+    lower.tail = FALSE
+  )
+
+
+  tibble(
+    cohort = cohort_name,
+    demographic_variable = group_variable,
+    n = sum(logrank_result$n),
+    number_of_groups = length(logrank_result$n),
+    chi_square = unname(logrank_result$chisq),
+    degrees_freedom = df,
+    p_value = p_value
+  )
+}
+
+
+# ------------------------------------------------
+# 2. AGE: global log-rank tests
+# ------------------------------------------------
+
+logrank_age_all <- run_logrank(
+  data = km_all,
+  group_variable = "age_group",
+  cohort_name = "All HSA cases"
+)
+
+
+logrank_age_histopath <- run_logrank(
+  data = km_histopath,
+  group_variable = "age_group",
+  cohort_name = "Histopathologically confirmed"
+)
+
+
+logrank_age_day1 <- run_logrank(
+  data = km_day1,
+  group_variable = "age_group",
+  cohort_name = "Day-1 survivor cohort"
+)
+
+
+# ------------------------------------------------
+# 3. SEX/NEUTER: global log-rank tests
+# ------------------------------------------------
+
+logrank_sex_neuter_all <- run_logrank(
+  data = km_all,
+  group_variable = "sex_neuter",
+  cohort_name = "All HSA cases"
+)
+
+
+logrank_sex_neuter_histopath <- run_logrank(
+  data = km_histopath,
+  group_variable = "sex_neuter",
+  cohort_name = "Histopathologically confirmed"
+)
+
+
+logrank_sex_neuter_day1 <- run_logrank(
+  data = km_day1,
+  group_variable = "sex_neuter",
+  cohort_name = "Day-1 survivor cohort"
+)
+
+
+# ------------------------------------------------
+# 4. Combine all six global tests
+# ------------------------------------------------
+
+demographic_logrank_results <- bind_rows(
+
+  logrank_age_all,
+  logrank_age_histopath,
+  logrank_age_day1,
+
+  logrank_sex_neuter_all,
+  logrank_sex_neuter_histopath,
+  logrank_sex_neuter_day1
+
+) %>%
+
+  mutate(
+
+    demographic_variable = recode(
+      demographic_variable,
+      age_group = "Age at diagnosis",
+      sex_neuter = "Sex/neuter status"
+    ),
+
+    p_formatted = case_when(
+      p_value < 0.001 ~ "<0.001",
+      TRUE ~ sprintf("%.3f", p_value)
+    )
+  )
+
+
+# View results
+demographic_logrank_results
+
+
+# ------------------------------------------------
+# 5. Simpler manuscript-ready output
+# ------------------------------------------------
+
+demographic_logrank_table <- demographic_logrank_results %>%
+  transmute(
+    Cohort = cohort,
+    Variable = demographic_variable,
+    N = n,
+    `Log-rank chi-squared` = round(
+      chi_square,
+      2
+    ),
+    df = degrees_freedom,
+    `p-value` = p_formatted
+  )
+
+
+demographic_logrank_table
+
+
+# ------------------------------------------------
+# 6. Save results
+# ------------------------------------------------
+
+write.csv(
+  demographic_logrank_results,
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_demographic_logrank_tests.csv",
+  row.names = FALSE
+)
+
+
+# ================================================================
+# OPTIONAL PAIRWISE LOG-RANK TESTS
+#
+# I would only interpret these where the corresponding
+# GLOBAL log-rank test suggests a difference.
+#
+# Holm adjustment is used within each set of pairwise comparisons.
+# ================================================================
+
+
+# ------------------------------------------------
+# AGE pairwise tests
+# ------------------------------------------------
+
+pairwise_age_all <- pairwise_survdiff(
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+  data = km_all %>%
+    filter(!is.na(age_group)),
+  p.adjust.method = "holm"
+)
+
+
+pairwise_age_histopath <- pairwise_survdiff(
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+  data = km_histopath %>%
+    filter(!is.na(age_group)),
+  p.adjust.method = "holm"
+)
+
+
+pairwise_age_day1 <- pairwise_survdiff(
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+  data = km_day1 %>%
+    filter(!is.na(age_group)),
+  p.adjust.method = "holm"
+)
+
+
+# View pairwise age p-values
+pairwise_age_all$p.value
+pairwise_age_histopath$p.value
+pairwise_age_day1$p.value
+
+
+# ------------------------------------------------
+# SEX/NEUTER pairwise tests
+# ------------------------------------------------
+
+pairwise_sex_neuter_all <- pairwise_survdiff(
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ sex_neuter,
+  data = km_all %>%
+    filter(!is.na(sex_neuter)),
+  p.adjust.method = "holm"
+)
+
+
+pairwise_sex_neuter_histopath <- pairwise_survdiff(
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ sex_neuter,
+  data = km_histopath %>%
+    filter(!is.na(sex_neuter)),
+  p.adjust.method = "holm"
+)
+
+
+pairwise_sex_neuter_day1 <- pairwise_survdiff(
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ sex_neuter,
+  data = km_day1 %>%
+    filter(!is.na(sex_neuter)),
+  p.adjust.method = "holm"
+)
+
+
+# View pairwise sex/neuter p-values
+pairwise_sex_neuter_all$p.value
+pairwise_sex_neuter_histopath$p.value
+pairwise_sex_neuter_day1$p.value
+```
+
+Explore age association as is sig
+
+```{r}
+# ================================================================
+# FURTHER EXPLORATION OF AGE AND HSA SURVIVAL
+#
+# 1. Numbers/events by age group
+# 2. Median survival by age group
+# 3. 1-year survival by age group
+# 4. Pairwise log-rank tests with Holm correction
+#
+# The all-HSA analysis should be regarded as the primary analysis;
+# histopath-confirmed and day-1 analyses are supportive/sensitivity
+# analyses because these cohorts overlap.
+# ================================================================
+
+
+library(dplyr)
+library(survival)
+library(survminer)
+library(tidyr)
+library(purrr)
+library(tibble)
+
+
+# ------------------------------------------------
+# 1. FUNCTION: numbers of dogs and deaths/events
+# ------------------------------------------------
+
+age_group_counts <- function(data, cohort_name) {
+
+  data %>%
+    filter(
+      !is.na(age_group),
+      !is.na(time_between_diagnosis_date_death_date_days),
+      !is.na(status)
+    ) %>%
+    group_by(age_group) %>%
+    summarise(
+      n = n(),
+      deaths = sum(status == 1, na.rm = TRUE),
+      censored = sum(status == 0, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      cohort = cohort_name,
+      .before = 1
+    )
+}
+
+
+age_counts <- bind_rows(
+
+  age_group_counts(
+    km_all,
+    "All HSA cases"
+  ),
+
+  age_group_counts(
+    km_histopath,
+    "Histopathologically confirmed"
+  ),
+
+  age_group_counts(
+    km_day1,
+    "Day-1 landmark cohort"
+  )
+)
+
+
+age_counts
+
+
+# Easier wide view
+age_counts %>%
+  select(
+    cohort,
+    age_group,
+    n,
+    deaths,
+    censored
+  ) %>%
+  arrange(
+    cohort,
+    age_group
+  )
+
+
+# ------------------------------------------------
+# 2. FUNCTION: median survival and 95% CI by age
+# ------------------------------------------------
+
+get_age_survival_summary <- function(data, cohort_name) {
+
+  analysis_data <- data %>%
+    filter(
+      !is.na(age_group),
+      !is.na(time_between_diagnosis_date_death_date_days),
+      !is.na(status)
+    ) %>%
+    droplevels()
+
+
+  fit <- survfit(
+    Surv(
+      time_between_diagnosis_date_death_date_days,
+      status
+    ) ~ age_group,
+    data = analysis_data
+  )
+
+
+  fit_table <- summary(fit)$table
+
+
+  # Convert survfit output to dataframe
+  fit_df <- as.data.frame(fit_table)
+
+  fit_df$age_group <- sub(
+    "^age_group=",
+    "",
+    rownames(fit_df)
+  )
+
+  rownames(fit_df) <- NULL
+
+
+  fit_df %>%
+    transmute(
+
+      cohort = cohort_name,
+
+      age_group = age_group,
+
+      n = records,
+
+      events = events,
+
+      median_survival_days = median,
+
+      median_CI_lower = `0.95LCL`,
+
+      median_CI_upper = `0.95UCL`
+    )
+}
+
+
+age_median_survival <- bind_rows(
+
+  get_age_survival_summary(
+    km_all,
+    "All HSA cases"
+  ),
+
+  get_age_survival_summary(
+    km_histopath,
+    "Histopathologically confirmed"
+  ),
+
+  get_age_survival_summary(
+    km_day1,
+    "Day-1 landmark cohort"
+  )
+)
+
+
+age_median_survival
+
+
+# ------------------------------------------------
+# 3. FUNCTION: survival probability at one year
+#
+# Uses 365 days.
+# If a group has insufficient follow-up to estimate survival
+# at this time, the value may be NA.
+# ------------------------------------------------
+
+get_age_one_year_survival <- function(data, cohort_name) {
+
+  analysis_data <- data %>%
+    filter(
+      !is.na(age_group),
+      !is.na(time_between_diagnosis_date_death_date_days),
+      !is.na(status)
+    ) %>%
+    droplevels()
+
+
+  fit <- survfit(
+    Surv(
+      time_between_diagnosis_date_death_date_days,
+      status
+    ) ~ age_group,
+    data = analysis_data
+  )
+
+
+  s <- summary(
+    fit,
+    times = 365,
+    extend = TRUE
+  )
+
+
+  tibble(
+    cohort = cohort_name,
+
+    age_group = sub(
+      "^age_group=",
+      "",
+      as.character(s$strata)
+    ),
+
+    survival_1y = s$surv,
+
+    survival_1y_lower = s$lower,
+
+    survival_1y_upper = s$upper
+  ) %>%
+
+    mutate(
+      survival_1y_percent =
+        100 * survival_1y,
+
+      survival_1y_lower_percent =
+        100 * survival_1y_lower,
+
+      survival_1y_upper_percent =
+        100 * survival_1y_upper
+    )
+}
+
+
+age_one_year_survival <- bind_rows(
+
+  get_age_one_year_survival(
+    km_all,
+    "All HSA cases"
+  ),
+
+  get_age_one_year_survival(
+    km_histopath,
+    "Histopathologically confirmed"
+  ),
+
+  get_age_one_year_survival(
+    km_day1,
+    "Day-1 landmark cohort"
+  )
+)
+
+
+age_one_year_survival
+
+
+# ------------------------------------------------
+# 4. Combine descriptive survival results
+# ------------------------------------------------
+
+age_survival_summary <- age_median_survival %>%
+
+  left_join(
+    age_one_year_survival,
+    by = c(
+      "cohort",
+      "age_group"
+    )
+  ) %>%
+
+  mutate(
+
+    median_survival_formatted = case_when(
+
+      is.na(median_survival_days) ~
+        "Not reached",
+
+      TRUE ~
+        sprintf(
+          "%.0f (%.0f–%.0f)",
+          median_survival_days,
+          median_CI_lower,
+          median_CI_upper
+        )
+    ),
+
+    one_year_survival_formatted = case_when(
+
+      is.na(survival_1y_percent) ~
+        "Not estimable",
+
+      TRUE ~
+        sprintf(
+          "%.1f%% (%.1f–%.1f%%)",
+          survival_1y_percent,
+          survival_1y_lower_percent,
+          survival_1y_upper_percent
+        )
+    )
+  )
+
+
+age_survival_summary
+
+
+# Manuscript-friendly version
+age_survival_table <- age_survival_summary %>%
+
+  select(
+    cohort,
+    age_group,
+    n,
+    `Median survival, days (95% CI)` =
+      median_survival_formatted,
+    `1-year survival (95% CI)` =
+      one_year_survival_formatted
+  )
+
+
+age_survival_table
+
+
+# ------------------------------------------------
+# 5. PAIRWISE LOG-RANK TESTS
+#
+# Holm adjustment is performed WITHIN each cohort.
+# ------------------------------------------------
+
+pairwise_age_all <- pairwise_survdiff(
+
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+
+  data = km_all %>%
+    filter(!is.na(age_group)) %>%
+    droplevels(),
+
+  p.adjust.method = "holm"
+)
+
+
+pairwise_age_histopath <- pairwise_survdiff(
+
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+
+  data = km_histopath %>%
+    filter(!is.na(age_group)) %>%
+    droplevels(),
+
+  p.adjust.method = "holm"
+)
+
+
+pairwise_age_day1 <- pairwise_survdiff(
+
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+
+  data = km_day1 %>%
+    filter(!is.na(age_group)) %>%
+    droplevels(),
+
+  p.adjust.method = "holm"
+)
+
+
+# View adjusted pairwise p-values
+pairwise_age_all$p.value
+
+pairwise_age_histopath$p.value
+
+pairwise_age_day1$p.value
+
+
+# ------------------------------------------------
+# 6. Convert pairwise matrices into tidy dataframes
+# ------------------------------------------------
+
+tidy_pairwise <- function(pairwise_object, cohort_name) {
+
+  as.data.frame(
+    as.table(
+      pairwise_object$p.value
+    )
+  ) %>%
+
+    rename(
+      group1 = Var1,
+      group2 = Var2,
+      adjusted_p_value = Freq
+    ) %>%
+
+    filter(
+      !is.na(adjusted_p_value)
+    ) %>%
+
+    mutate(
+      cohort = cohort_name,
+      .before = 1,
+
+      p_formatted = case_when(
+
+        adjusted_p_value < 0.001 ~
+          "<0.001",
+
+        TRUE ~
+          sprintf(
+            "%.3f",
+            adjusted_p_value
+          )
+      )
+    )
+}
+
+
+pairwise_age_results <- bind_rows(
+
+  tidy_pairwise(
+    pairwise_age_all,
+    "All HSA cases"
+  ),
+
+  tidy_pairwise(
+    pairwise_age_histopath,
+    "Histopathologically confirmed"
+  ),
+
+  tidy_pairwise(
+    pairwise_age_day1,
+    "Day-1 landmark cohort"
+  )
+)
+
+
+pairwise_age_results
+
+
+# Show only pairwise comparisons that remain significant
+# after Holm correction
+
+pairwise_age_results %>%
+  filter(
+    adjusted_p_value < 0.05
+  )
+
+
+# ------------------------------------------------
+# 7. Save outputs
+# ------------------------------------------------
+
+write.csv(
+  age_survival_summary,
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_age_survival_summary.csv",
+  row.names = FALSE
+)
+
+
+write.csv(
+  pairwise_age_results,
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_age_pairwise_logrank_tests.csv",
+  row.names = FALSE
+)
+```
+
+Small sample sizes of \<5y and \>\<13y groups so rerun age analysis without the extremes to see if still sig:
+
+```{r}
+# ================================================================
+# Sensitivity analysis:
+# restrict age comparison to the three adequately represented
+# age groups
+# ================================================================
+
+main_age_groups <- c(
+  "5–<8 years",
+  "8–<11 years",
+  "11–<13 years"
+)
+
+
+# Function for restricted global log-rank test
+run_restricted_age_logrank <- function(data, cohort_name) {
+
+  restricted_data <- data %>%
+    filter(
+      age_group %in% main_age_groups
+    ) %>%
+    droplevels()
+
+  test <- survdiff(
+    Surv(
+      time_between_diagnosis_date_death_date_days,
+      status
+    ) ~ age_group,
+    data = restricted_data
+  )
+
+  df <- length(test$n) - 1
+
+  p <- pchisq(
+    test$chisq,
+    df = df,
+    lower.tail = FALSE
+  )
+
+  tibble(
+    cohort = cohort_name,
+    n = nrow(restricted_data),
+    chi_square = unname(test$chisq),
+    df = df,
+    p_value = p
+  )
+}
+
+
+restricted_age_logrank_results <- bind_rows(
+
+  run_restricted_age_logrank(
+    km_all,
+    "All HSA cases"
+  ),
+
+  run_restricted_age_logrank(
+    km_histopath,
+    "Histopathologically confirmed"
+  ),
+
+  run_restricted_age_logrank(
+    km_day1,
+    "Day-1 landmark cohort"
+  )
+)
+
+restricted_age_logrank_results
+```
+
+```{r}
+# ================================================================
+# PAIRWISE LOG-RANK TESTS FOR THE THREE ADEQUATELY REPRESENTED
+# AGE GROUPS
+#
+# Groups:
+#   5–<8 years
+#   8–<11 years
+#   11–<13 years
+#
+# Analyses:
+#   1. All HSA cases
+#   2. Histopathologically confirmed HSA cases
+#
+# Holm adjustment is applied to the three pairwise comparisons
+# within each cohort.
+# ================================================================
+
+
+library(dplyr)
+library(survival)
+library(survminer)
+library(tibble)
+
+
+# ------------------------------------------------
+# 1. Define the three age groups to retain
+# ------------------------------------------------
+
+main_age_groups <- c(
+  "5–<8 years",
+  "8–<11 years",
+  "11–<13 years"
+)
+
+
+# ------------------------------------------------
+# 2. Restrict the datasets to these age groups
+# ------------------------------------------------
+
+km_all_restricted_age <- km_all %>%
+  filter(
+    age_group %in% main_age_groups
+  ) %>%
+  droplevels()
+
+
+km_histopath_restricted_age <- km_histopath %>%
+  filter(
+    age_group %in% main_age_groups
+  ) %>%
+  droplevels()
+
+
+# Check numbers in each age group
+km_all_restricted_age %>%
+  count(age_group)
+
+km_histopath_restricted_age %>%
+  count(age_group)
+
+
+# ------------------------------------------------
+# 3. Pairwise log-rank tests:
+#    ALL HSA CASES
+# ------------------------------------------------
+
+pairwise_age_all_restricted <- pairwise_survdiff(
+
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+
+  data = km_all_restricted_age,
+
+  p.adjust.method = "holm"
+)
+
+
+# View adjusted p-value matrix
+pairwise_age_all_restricted$p.value
+
+
+# ------------------------------------------------
+# 4. Pairwise log-rank tests:
+#    HISTOPATHOLOGICALLY CONFIRMED CASES
+# ------------------------------------------------
+
+pairwise_age_histopath_restricted <- pairwise_survdiff(
+
+  Surv(
+    time_between_diagnosis_date_death_date_days,
+    status
+  ) ~ age_group,
+
+  data = km_histopath_restricted_age,
+
+  p.adjust.method = "holm"
+)
+
+
+# View adjusted p-value matrix
+pairwise_age_histopath_restricted$p.value
+
+
+# ------------------------------------------------
+# 5. Function to convert pairwise matrix to a tidy table
+# ------------------------------------------------
+
+tidy_pairwise_logrank <- function(pairwise_object, cohort_name) {
+
+  as.data.frame(
+    as.table(
+      pairwise_object$p.value
+    )
+  ) %>%
+
+    rename(
+      age_group_1 = Var1,
+      age_group_2 = Var2,
+      adjusted_p_value = Freq
+    ) %>%
+
+    filter(
+      !is.na(adjusted_p_value)
+    ) %>%
+
+    mutate(
+      cohort = cohort_name,
+      .before = 1,
+
+      p_formatted = case_when(
+        adjusted_p_value < 0.001 ~ "<0.001",
+        TRUE ~ sprintf(
+          "%.3f",
+          adjusted_p_value
+        )
+      )
+    )
+}
+
+
+# ------------------------------------------------
+# 6. Combine all-case and histopath results
+# ------------------------------------------------
+
+restricted_pairwise_age_results <- bind_rows(
+
+  tidy_pairwise_logrank(
+    pairwise_age_all_restricted,
+    "All HSA cases"
+  ),
+
+  tidy_pairwise_logrank(
+    pairwise_age_histopath_restricted,
+    "Histopathologically confirmed"
+  )
+)
+
+
+# View full tidy results
+restricted_pairwise_age_results
+
+
+# ------------------------------------------------
+# 7. View only comparisons significant after
+#    Holm correction
+# ------------------------------------------------
+
+restricted_pairwise_age_results %>%
+  filter(
+    adjusted_p_value < 0.05
+  )
+
+
+# ------------------------------------------------
+# 8. Manuscript-friendly output
+# ------------------------------------------------
+
+restricted_pairwise_age_table <-
+  restricted_pairwise_age_results %>%
+
+  transmute(
+    Cohort = cohort,
+    `Age group 1` = age_group_1,
+    `Age group 2` = age_group_2,
+    `Holm-adjusted p-value` = p_formatted
+  )
+
+
+restricted_pairwise_age_table
+
+
+# ------------------------------------------------
+# 9. Save results
+# ------------------------------------------------
+
+write.csv(
+  restricted_pairwise_age_results,
+  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_restricted_age_pairwise_logrank_tests.csv",
+  row.names = FALSE
+)
 ```

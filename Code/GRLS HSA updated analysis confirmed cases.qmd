@@ -41,7 +41,7 @@ cohort_info_for_tiers <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/
 
 cohort_info_for_tiers1<- cohort_info_for_tiers %>%
   mutate(across(where(is.character), str_to_lower))%>%
-  select(subject_id, tracked_condition,tier_of_confidence)%>%
+  dplyr::select(subject_id, tracked_condition,tier_of_confidence)%>%
    dplyr::filter(tier_of_confidence==1)%>%
   dplyr::filter(str_detect(tracked_condition, "hemangios"))
 
@@ -771,6 +771,31 @@ is.numeric(
 is.factor(
   analysis_df$avg_activity_freq_sy3
 )
+
+analysis_df <- analysis_df %>%
+  mutate(
+    age_at_final_date_bio = factor(
+      age_at_final_date_bio,
+      levels = c(
+        ">5-<8y",
+        "<5y",
+        ">8-<11y",
+        ">11-<13y",
+        ">13y",
+        "not_recorded"
+      )
+    )
+  )
+#
+
+
+
+
+#
+
+
+
+#
 ```
 
 ```{r}
@@ -4584,8 +4609,8 @@ forest_comparison <- forest_comparison %>%
         match(
           as.character(category),
           c(
-            "<5y",
             ">5-<8y",
+            "<5y",
             ">8-<11y",
             ">11-<13y",
             ">13y"
