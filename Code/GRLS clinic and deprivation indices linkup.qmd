@@ -6,6 +6,12 @@ editor: visual
 
 ## GRLS deprivation linkage
 
+Further information on MDI: <https://www.census.gov/topics/income-poverty/poverty/about/related-sites/rates.html>
+
+MDI is the US equivalent of the UK Index of Multiple Deprivation (IMD). This analysis uses the most recent values available at the time of the original work: county-level 2019 MDI.
+
+Veterinary-clinic and owner home ZIP codes are first linked to Federal Information Processing System (FIPS) county codes, then linked to county-level MDI. The ZIP-to-FIPS data come from <https://simplemaps.com/data/us-zips>.
+
 This workflow links both veterinary-clinic and owner home ZIP codes to county-level 2019 Multidimensional Deprivation Index (MDI) values.
 
 - Clinic ZIP is the first five digits of `vet_address.csv::postal_code`. This explicitly handles ZIP+4 values.
@@ -16,14 +22,23 @@ This workflow links both veterinary-clinic and owner home ZIP codes to county-le
 library(tidyverse)
 source(here::here("R", "deprivation.R"))
 
+# GRLS veterinary-clinic addresses
 clinics <- read.csv(here::here("Data", "vet_address.csv"))
+
+# Annual owner-reported home information, used to obtain the modal primary ZIP
 owner_addresses <- read.csv(here::here("Data", "house_details.csv"))
+
+# SimpleMaps ZIP-to-FIPS database
 zip_lookup <- read.csv(here::here("Data", "uszips.csv"))
+
+# County-level 2019 MDI data. The source CSV contains a UTF-8 byte-order mark.
 mdi <- read.csv(
   here::here("Data", "MDI_2019.csv"),
   fileEncoding = "UTF-8-BOM"
 )
 
+# Calculate MDI quintiles across all counties, link clinic ZIP to clinic MDI,
+# calculate the modal owner home ZIP, and link it to owner MDI.
 deprivation <- build_deprivation_dataset(
   clinics,
   owner_addresses,
@@ -31,6 +46,7 @@ deprivation <- build_deprivation_dataset(
   mdi
 )
 
+# One row per GRLS dog with both clinic and owner deprivation measures
 write.csv(
   deprivation,
   here::here("Output", "GRLS_dogs_MDI_2019.csv"),

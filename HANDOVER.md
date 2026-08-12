@@ -18,6 +18,8 @@ The refactored project should stop when an input, package, key, or expected colu
 
 Warnings that indicate data-definition changes should be resolved before outputs are accepted.
 
+Domain annotations, source notes, and comments explaining analytical rationale are part of the handover record. Preserve them when moving implementation into shared functions; update wording only when it is obsolete or misleading.
+
 ## Local data
 
 `Data/` and `Output/` are intentionally excluded from Git. A handover therefore requires the repository and the corresponding data snapshot. Record the date or release identifier of that snapshot when transferring it.
