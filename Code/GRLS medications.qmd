@@ -656,7 +656,7 @@ Ones that are worth tidying for calculations here:
 
 -   ml
 
--   specific parasiticide ones eg. 460Â mgÂ lufenuron,Â 23Â mgÂ milbemycinÂ oxime?
+-   specific parasiticide ones eg. 460 mg lufenuron, 23 mg milbemycin oxime?
 
 ```{r}
 dose <- medications_2 %>%
@@ -1556,7 +1556,7 @@ Non use vs intermediate use vs long term use.
 
 There is a few papers defining this usage:
 
-"We classiï¬ed use as non-use (0â€“1 prescription), in- termediate use (2â€“7 prescriptions), and long-term use (â‰¥8 prescrip- tions). Eight prescriptions was chosen as a cut-off as drugs for chronic treatment are typically supplied for 3 months use for each dispensing in Denmark, whereby our deï¬nition oflong-termusewould correspond to two years' cumulative treatment." - Pottegard et al., 2016
+"We classiﬁed use as non-use (0–1 prescription), in- termediate use (2–7 prescriptions), and long-term use (≥8 prescrip- tions). Eight prescriptions was chosen as a cut-off as drugs for chronic treatment are typically supplied for 3 months use for each dispensing in Denmark, whereby our deﬁnition oflong-termusewould correspond to two years' cumulative treatment." - Pottegard et al., 2016
 
 -   exclude drug usage for the year prior to diagnosis (recognised that increased prescribing in year prior to diagnosis possibly due to cancer diagnosing issues PLUS likely wont be involved in cancer diagnosis
 
