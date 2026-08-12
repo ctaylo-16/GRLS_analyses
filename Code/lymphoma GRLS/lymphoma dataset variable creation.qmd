@@ -1548,7 +1548,7 @@ rows, preserving the established threshold; the `any_records` medians remain
 available when fewer records exist. Weight is converted from pounds to kg using
 0.453 and height from inches to cm using 2.54. Converted summaries are left
 missing for dogs younger than 18 months at the endpoint (six dogs in the legacy
-notes). BCS mode ties are recorded explicitly as `multiple`.
+notes). Where BCS values tie for the mode, the maximum tied value is used.
 
 ```{r}
 source(here::here("R", "weight.R"))

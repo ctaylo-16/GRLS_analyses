@@ -1,4 +1,4 @@
-.weight_mode_or_multiple <- function(value) {
+.weight_mode_max_tie <- function(value) {
   value <- value[!is.na(value)]
 
   if (length(value) == 0L) {
@@ -6,9 +6,9 @@
   }
 
   counts <- table(value)
-  modes <- names(counts)[counts == max(counts)]
+  modes <- as.numeric(names(counts)[counts == max(counts)])
 
-  if (length(modes) == 1L) modes[[1L]] else "multiple"
+  as.character(max(modes))
 }
 
 weight_feature_columns <- function() {
@@ -107,7 +107,7 @@ build_weight_features <- function(
       } else {
         NA_real_
       },
-      mode_purina_BCS_5y_prior_endpoint = .weight_mode_or_multiple(
+      mode_purina_BCS_5y_prior_endpoint = .weight_mode_max_tie(
         .data$purina_body_condition_score
       ),
       .groups = "drop"

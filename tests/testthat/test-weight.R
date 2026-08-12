@@ -43,7 +43,7 @@ test_that("weight features require five examination rows for primary summaries",
   expect_identical(result$median_weight_5y_prior_endpoint_any_records, 51)
 })
 
-test_that("tied BCS modes are explicit", {
+test_that("tied BCS modes use the maximum value", {
   cohort <- data.frame(
     subject_id = "A",
     year_in_study_diagnosis_or_final_record_year = 2,
@@ -59,7 +59,7 @@ test_that("tied BCS modes are explicit", {
 
   result <- build_weight_features(cohort, exams)
 
-  expect_identical(result$mode_purina_BCS_5y_prior_endpoint, "multiple")
+  expect_identical(result$mode_purina_BCS_5y_prior_endpoint, "5")
 })
 
 test_that("adult converted summaries exclude endpoints before 18 months", {

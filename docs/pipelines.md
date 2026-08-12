@@ -83,9 +83,11 @@ and the five preceding study years. Primary summaries retain the historical
 minimum of five examination rows, while the `any_records` medians do not apply
 that threshold. Adult conversions use 0.453 kg per pound and 2.54 cm per inch;
 converted summaries are missing for dogs younger than 18 months at the endpoint.
-Tied BCS modes are recorded as `multiple` (431 dogs in each current cohort
-snapshot). The endpoint upper bound is explicit even though the current snapshots
-contain no physical-examination rows after a dog's endpoint.
+Where BCS values tie for the mode, the maximum tied value is used (431 dogs in
+each current cohort snapshot). Nominal modes, such as household/location and
+lifestyle fields, continue to use `multiple` for ties because they have no
+meaningful maximum. The endpoint upper bound is explicit even though the current
+snapshots contain no physical-examination rows after a dog's endpoint.
 
 Important generated prerequisites include:
 
