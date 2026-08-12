@@ -25,7 +25,7 @@ scripts/    command-line project checks and execution entry points
 
 ## Reproducibility status
 
-The project is undergoing a handover refactor. Machine-specific paths have been removed and obvious cross-analysis output errors corrected. The next stages are to confirm the canonical notebooks, extract shared feature engineering into tested functions, and create a package lockfile and single execution entry point.
+The project is undergoing a handover refactor. Machine-specific paths have been removed, obvious cross-analysis output errors corrected, shared helpers made fail-fast, and the author's R 4.4.1 package environment recorded in `renv.lock`. The next stages are to confirm the canonical notebooks, extract the remaining shared feature engineering, and create a single execution entry point.
 
 Until those stages are complete, run notebooks only in the documented dependency order and do not assume similarly named dated or `updated` files are interchangeable.
 

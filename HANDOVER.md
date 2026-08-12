@@ -35,7 +35,7 @@ Do not rename columns or source files in `Data/` without updating the consuming 
 
 1. Install R, RStudio if desired, and Quarto.
 2. Open `GRLS_analyses.Rproj` so project-relative paths resolve consistently.
-3. Restore the project's package environment once `renv.lock` has been created from the author's working installation.
+3. Run `renv::restore()` to restore the package versions recorded from the author's R 4.4.1 environment.
 4. Place the agreed source-data snapshot in `Data/` and create `Output/`.
 5. Run `Rscript scripts/check_setup.R` from the project root.
 
@@ -54,5 +54,5 @@ The setup check deliberately fails on missing packages or directories.
 - Replace order-dependent `cbind()` operations with explicit keyed joins.
 - Replace positional column selection with named selections.
 - Parameterise duplicated all-case and confirmed-case HSA analyses.
-- Create `renv.lock` from the original author's known-working R environment.
+- Restore `renv.lock` on a clean machine and resolve any operating-system dependencies reported by R.
 - Add a single documented execution entry point after the canonical analysis list is confirmed.
