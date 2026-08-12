@@ -60,9 +60,9 @@ The denominator currently uses `Data/dog_profile_for_MCT.csv`, `Data/study_endpo
 
 Shared functions under `R/` now cover cancer-cohort preparation, deprivation,
 environmental exposure windows, smoke dosage, sleep location, comorbidities,
-lifestyle, household/location, and medication features for the lymphoma and MCT
-routes. The variable notebooks still contain duplicated derivations for
-reproduction, weight, and activity; these are the next candidates for extraction,
+lifestyle, household/location, medication, and reproduction features for the
+lymphoma and MCT routes. The variable notebooks still contain duplicated
+derivations for weight and activity; these are the next candidates for extraction,
 with cancer-specific cohort definitions and output names kept in the entry-point
 notebooks.
 
@@ -71,6 +71,13 @@ tied. The curated broad water-source grouping is used for all derived water
 features. Subject `094-000461` has no endpoint study year in either frozen cancer
 cohort; the household workflow deliberately stops rather than applying the
 historical substitution of study year 1.
+
+Reproduction uses annual `heat_last_year` responses rather than the more sparsely
+recorded heat-detail dates. Its count is explicitly the number of reporting years,
+not the number of heats. Pregnancy and mating mean ever recorded and are not
+restricted to neutered dogs. Reproduction date checks currently identify two
+neuter dates before birth (`094-000441`, `094-023124`) and ten neuter dates after
+the MCT cohort endpoint; these deliberately stop dataset creation until resolved.
 
 Important generated prerequisites include:
 

@@ -1728,266 +1728,48 @@ write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_
 
 ## Reproduction variables
 
-Load in repro datasets
+Reproductive features use the annual female and male reproductive-history
+tables plus neuter status and dates from `Data/dog_profile.csv`. The heat-detail
+table is not used here because `heat_date` has substantially less coverage than
+the annual `heat_last_year` indicator.
+
+The first-heat age is therefore the dog's age at the first questionnaire that
+reported a heat in the preceding year; it is an approximate reporting age, not
+an exact heat date. `heat_reporting_years` counts distinct study years with a
+positive `heat_last_year` response and must not be interpreted as the literal
+number of heats.
+
+Pregnancy and mating are defined as ever recorded, regardless of neuter status,
+because some dogs are never neutered. Pregnancy is not applicable to male dogs,
+and mating is not applicable to female dogs. Male mating uses either a positive
+annual intact-breeding response or the neutered-ever-bred response.
+
+Neuter age, time between neutering and the cohort endpoint, and age at endpoint
+are derived from recorded dates. The workflow stops rather than replacing
+negative intervals with zero. In the current data, dogs `094-000441` and
+`094-023124` have neuter dates before birth. Ten dogs have neuter dates after
+the MCT endpoint; four of these also affect lymphoma: `094-006352`,
+`094-000677`, `094-026390`, and `094-027529`. These source/cohort dates must
+be resolved before accepting new analysis datasets.
 
 ```{r}
-# female information
-repro_hx_female <- read.csv(here::here("Data/reproductive_history_female.csv"))
-# not using df as hasnt been updated in past year or so of GRLS datasets so dont think being maintained spay_details <- read.csv(here::here("Data/details_spay_before_heat.csv"))
-#join spay details to repro hx female sheet
+source(here::here("R", "reproduction.R"))
 
-repro_heats_female <- read.csv(here::here("Data/reproductive_history_heat.csv"))
-#male 
-repro_hx_male <- read.csv(here::here("Data/reproductive_history_male.csv"))
+repro_hx_female <- read.csv(
+  here::here("Data", "reproductive_history_female.csv")
+)
+repro_hx_male <- read.csv(
+  here::here("Data", "reproductive_history_male.csv")
+)
+profile <- read.csv(here::here("Data", "dog_profile.csv"))
 
-repro_hx_hormones <-read.csv(here::here("Data/reproductive_history_hormones.csv"))
-#all empty cells encoded as NA
-repro_hx_female <- repro_hx_female %>%
-  mutate_if(~any(. == ""), na_if, "")
-
-repro_hx_male <- repro_hx_male %>%
-  mutate_if(~any(. == ""), na_if, "")
-
-repro_heats_female <- repro_heats_female %>%
-  mutate_if(~any(. == ""), na_if, "")
-
-repro_hx_hormones <- repro_hx_hormones %>%
-  mutate_if(~any(. == ""), na_if, "")
-
-#what are the columns available in df
-colnames(repro_hx_female)
-colnames(repro_hx_male)
-colnames(repro_heats_female)
-colnames(repro_hx_hormones)
-
-#dog profile also contains neuter date and neuter status
-profile <- read.csv(here::here("Data/dog_profile.csv"))
-```
-
-First adding basic neuter info to the dataset = neuter status and age at neuter
-
-```{r}
-profile <- profile %>%
-  dplyr::select(c(subject_id,sex_status,spay_neuter_date,birth_date))
-
-
-profile <- profile %>% 
-  mutate(sex=recode(
-    sex_status,"Spayed Female"="F", "Intact Female" = "F", "Neutered Male" = "M",
-    "Intact Male" = "M")
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 <-
+  build_reproduction_features(
+    dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib,
+    profile,
+    repro_hx_female,
+    repro_hx_male
   )
-#neuter status
-profile <- profile%>%
-  mutate(neuter=recode(
-    sex_status, "Spayed Female"="Neutered", "Neutered Male"="Neutered","Intact Female"= "Entire", "Intact Male" = "Entire")
-  )
-#calculate age at neuter
-profile$birth_date2 <- as.Date(profile$birth_date)
-profile$spay_neuter_date2 <- as.Date(profile$spay_neuter_date)
-
-
-profile <- profile %>%
-mutate(
-    age_at_neuter_years = case_when(
-      is.na(spay_neuter_date2) ~ "not_neutered",
-      #age at neuter if negative value replace with age = 0
-
-      time_length(interval(birth_date2, spay_neuter_date2), "years") < 0 ~ "0",
-      TRUE ~ as.character(round(time_length(interval(birth_date2, spay_neuter_date2), "years"), 1))
-    )
-  )
-profile_abr <- profile %>%
-  dplyr::select(subject_id,neuter, sex, sex_status,birth_date2, age_at_neuter_years,spay_neuter_date2)
-
-
-
-## add back onto df
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib_neutering <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib %>% left_join(profile_abr, by="subject_id")
-```
-
-Info on number of seasons etc
-
-```{r}
-repro_status <-bind_rows(repro_hx_female,repro_hx_male)
-
-#add dog profile
-demog_neut <- repro_status %>%
-  left_join(profile_abr, by="subject_id")
-demog_neut <- demog_neut%>% 
-  group_by(subject_id)%>%
-  fill(c(spay_neuter_date2,neutered_reason),.direction="downup")
-
-
-demog_neut <- demog_neut %>% 
-  mutate_if(is.character, ~ ifelse(is.na(.), "not_recorded", .))
-
-demog_neut$record_date2 <- as.Date(demog_neut$record_date)
-#all dogs have neuter records
-unique_neut <- unique(demog_neut$subject_id)
-
-```
-
-### Age at first heat variable
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-neut_age_seasons2<- first_exposure_point(demog_neut,heat_last_year,record_date2)
-neut_age_seasons3  <- first_exposure_age2(neut_age_seasons2,"heat_last_year_first_exposure_date", "birth_date2")
-
-neut_age_seasons3 <- neut_age_seasons3 %>%
-  rename(age_first_heat_years=heat_last_year_first_exposure_date_age_years)
-  
-
-#recode so that if M in sex column recode the NAs for these as = "male_dog" in age_first_heat_years
-#recode so that remaining NAs = "not_recorded"
-
-neut_age_seasons3 <- neut_age_seasons3 %>%
-  mutate(
-    age_first_heat_years = case_when(
-      is.na(age_first_heat_years) & sex == "M" ~ "male_dog",
-      is.na(age_first_heat_years) ~ "not_recorded",
-      TRUE ~ as.character(age_first_heat_years)
-    ),
-    heat_last_year_first_exposure_date_age = case_when(
-      is.na(age_first_heat_years) & sex == "M" ~ "male_dog",
-      is.na(heat_last_year_first_exposure_date_age) ~ "not_recorded",
-      TRUE ~ as.character(heat_last_year_first_exposure_date_age)
-    )
-  )
-```
-
-### Num heats before neutering
-
-```{r}
-neut_age_seasons4 <- num_exposures(neut_age_seasons3,"heat_last_year","record_date2","spay_neuter_date2")
-
-#replace 0s coded in the "heat_last_year_num_exposures" with "male_dogs" and "not_recorded" dogs if dogs are M or have no heat records
-neut_age_seasons4 <- neut_age_seasons4 %>%
-  mutate(
-    heat_last_year_num_exposures = case_when(
-      heat_last_year_num_exposures == 0 & sex == "M" ~ "male_dog",
-      TRUE ~ as.character(heat_last_year_num_exposures)
-    )
-    )
-
-```
-
-### Ever pregnant variable
-
-```{r}
-#pregnancy before neuter Y N
-neut_age_seasons5<- neut_age_seasons4 %>%
-  group_by(subject_id) %>%
-  mutate(preg_pre_neuter=ifelse(any(!is.na(age_at_neuter_years) & no_pregnancy_last_year==1,na.rm=TRUE),1,0))    
-
-neut_age_seasons5 <- neut_age_seasons5 %>%
-  mutate(
-    no_pregnancy_last_year = case_when(
-      no_pregnancy_last_year == 0 & sex == "M" ~ "male_dog",
-      TRUE ~ as.character(no_pregnancy_last_year)
-    )
-    )
-```
-
-### Males ever bred from variable
-
-```{r}
-
-neut_age_M <- neut_age_seasons5 %>%
-  mutate(
-    mated_pre_neuter = if_else(sex == "M" & neuter == "Neutered" & 
-                                  any(!is.na(age_at_neuter_years) & intact_naturally_bred_last_year == 1),
-                                1,
-                                0)
-  )
-
-```
-
-### Tidying up of repro data so all values are valid for sex/neuter status e.g males dont have number of pregnancy 0 but just number of pregnancy - not applciable or similar
-
-```{r}
-neut_data_single_row <- neut_age_M %>%
-  distinct(subject_id,.keep_all = TRUE)
-
-
-#check male variables not include females - there are none of these
-
-#check neut variables not including entire dogs
-neut_data_single_row <- neut_data_single_row %>%
-  mutate(
-    preg_pre_neuter = case_when(
-      preg_pre_neuter == 0 & neuter == "Entire" ~ "Entire",
-      TRUE ~ as.character(preg_pre_neuter)
-    )
-    )
-
-neut_data_single_row <- neut_data_single_row %>%
-  mutate(
-    mated_pre_neuter = case_when(
-      mated_pre_neuter == 0 & neuter == "Entire" ~ "Entire",
-      TRUE ~ as.character(mated_pre_neuter)
-    )
-    )
-#keep relevant cols
-neut_data_single_row <- neut_data_single_row %>%
-  dplyr::select(1,37:42,47:50)
-
-
-```
-
-### Time between neuter date and cancer diagnosis/endpoint date variable
-
-perform this when only single row per dog rather than all the repro rows as in the prev dfs
-
-```{r}
-#add neut data to the main df then calculate 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib %>% left_join(neut_data_single_row,by="subject_id")
-#delete dupe columns
-#dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 %>%
-#  dplyr::select(-c(neuter.x,sex.x,birth_date2.x,age_at_neuter_years.x,spay_neuter_date2.x))
-#remove the .y suffix from the columns now
-#dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 <-
- # dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 %>%
- # rename(sex= sex.y,
-  #       neuter = neuter.y,
-   #      birth_date2 = birth_date2.y,
-     #    age_at_neuter_years = age_at_neuter_years.y,
-     #    spay_neuter_date2 = spay_neuter_date2.y)
-#calculate time between spay_neuter_date2 and end date
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib2 %>%
-mutate(
-    time_between_neuter_endpoint_diagnosis_years = case_when(
-      is.na(spay_neuter_date2) ~ "not_neutered",
-      #age at neuter if negative value replace with age = 0
-
-      time_length(interval(spay_neuter_date2,end_date), "years") < 0 ~ "0",
-      TRUE ~ as.character(round(time_length(interval(spay_neuter_date2, end_date), "years"), 1))
-    )
-  )
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 %>%
-mutate(
-    time_between_neuter_endpoint_diagnosis_months = case_when(
-      is.na(spay_neuter_date2) ~ "not_neutered",
-      #age at neuter if negative value replace with age = 0
-
-      time_length(interval(spay_neuter_date2,end_date), "months") < 0 ~ "0",
-      TRUE ~ as.character(round(time_length(interval(spay_neuter_date2, end_date), "months"), 1))
-    )
-  )
-```
-
-### Age at endpoint diagnosis
-
-```{r}
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 %>%
-  mutate(
-    birth_date2 = as.Date(birth_date2, format = "%Y-%m-%d"),
-    end_date2= as.Date(end_date, format = "%Y-%m-%d")
-  ) %>%
-  mutate(age_at_final_date = as.numeric(interval(birth_date2, end_date2) / years(1)))
-
-
 ```
 
 ## Weight and height data 5y prior to endpoint

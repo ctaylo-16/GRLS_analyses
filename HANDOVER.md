@@ -76,3 +76,10 @@ pipeline steps. In particular, subject `094-000461` has no endpoint study year
 in either frozen lymphoma or MCT cohort. Do not restore the historical default
 of study year 1; correct the cohort definition explicitly before accepting a
 new analysis dataset.
+
+The reproduction workflow also stops on biologically or temporally inconsistent
+dates rather than converting negative intervals to zero. The current snapshot has
+two neuter dates before birth (`094-000441`, `094-023124`) and ten neuter dates
+after the MCT endpoint. Four of the latter also affect lymphoma (`094-006352`,
+`094-000677`, `094-026390`, `094-027529`). Resolve these in the source/cohort
+definition before accepting regenerated outputs.
