@@ -60,11 +60,17 @@ The denominator currently uses `Data/dog_profile_for_MCT.csv`, `Data/study_endpo
 
 Shared functions under `R/` now cover cancer-cohort preparation, deprivation,
 environmental exposure windows, smoke dosage, sleep location, comorbidities,
-lifestyle, and medication features for the lymphoma and MCT routes. The variable
-notebooks still contain duplicated derivations for household exposures,
-reproduction, weight, and activity; these are the next candidates for
-extraction, with cancer-specific cohort definitions and output names kept in the
-entry-point notebooks.
+lifestyle, household/location, and medication features for the lymphoma and MCT
+routes. The variable notebooks still contain duplicated derivations for
+reproduction, weight, and activity; these are the next candidates for extraction,
+with cancer-specific cohort definitions and output names kept in the entry-point
+notebooks.
+
+Household and location histories use `multiple` when the most frequent value is
+tied. The curated broad water-source grouping is used for all derived water
+features. Subject `094-000461` has no endpoint study year in either frozen cancer
+cohort; the household workflow deliberately stops rather than applying the
+historical substitution of study year 1.
 
 Important generated prerequisites include:
 

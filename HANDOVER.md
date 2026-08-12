@@ -70,3 +70,9 @@ The current lymphoma workflow uses the frozen `Data/lymphoma_cohort_241201.csv` 
 - Parameterise duplicated all-case and confirmed-case HSA analyses.
 - Restore `renv.lock` on a clean machine and resolve any operating-system dependencies reported by R.
 - Add executable cancer-specific entry points for the documented routes.
+
+Known current data-definition blockers are documented beside the affected
+pipeline steps. In particular, subject `094-000461` has no endpoint study year
+in either frozen lymphoma or MCT cohort. Do not restore the historical default
+of study year 1; correct the cohort definition explicitly before accepting a
+new analysis dataset.

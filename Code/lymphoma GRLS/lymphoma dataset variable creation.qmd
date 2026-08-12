@@ -180,365 +180,55 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <-
 
 ## Household exposures
 
-House datasets
+Household features come from `Data/house_details.csv`; residential location
+features come from `Data/location_history.csv`. Text is normalized to lower case,
+and missing or blank source values are represented as `no_records_available`.
+
+Variables retained from this domain are:
+
+- primary and secondary heating and cooking fuel;
+- metal and plastic pipe indicators;
+- water source, house type, area type, and mean recorded house age; and
+- modal region, state, and owner ZIP.
+
+Free-text fuel descriptions are mapped to the established electric, natural gas,
+oil, propane, wood, and renewable groups. The curated spelling variants and
+mixed-source descriptions are retained in `R/household.R`.
+
+Pipe indicators combine the structured primary/secondary-house questions with
+the curated free-text descriptions. If either structured material question has
+no record, the derived material value remains `no_records_available`.
+
+For water, municipal supply means a public water system managed by a local
+authority or utility and treated to applicable US drinking-water standards. The
+approved broad groups are municipal, groundwater, spring/surface, bottled, and
+rainwater/cistern. These grouped values—not the original ungrouped answers—are
+used for every derived water-source feature.
+
+Early-life (study years 0–2), rest-of-life (3–10), and whole-life (0–10)
+features use the most frequent recorded value. Five-year features use the most
+frequent value in the five study years before the cohort endpoint. When values
+tie, the output is explicitly `multiple` rather than selecting whichever row
+appears first.
+
+Dog `094-000461` has no
+`year_in_study_diagnosis_or_final_record_year` in either frozen cancer cohort.
+The historical notebook replaced this missing value with 1. The shared workflow
+now stops so that the cohort endpoint definition must be corrected explicitly
+before an analysis dataset is accepted.
 
 ```{r}
+source(here::here("R", "household.R"))
 
-house <- read.csv(here::here("Data/house_details.csv"))
-house<- house %>%
-  mutate(across(where(is.character), tolower))
-location <- read.csv(here::here("Data/location_history.csv"))
-location <- location %>%
-  mutate(across(where(is.character), tolower))
+house <- read.csv(here::here("Data", "house_details.csv"))
+location <- read.csv(here::here("Data", "location_history.csv"))
 
-
-#recode NAs and blank cells in df as "no_records_available"
-house <- house %>%
-  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
-                ~ replace(., is.na(.) | . == "", "no_records_available")))
-
-location <- location %>%
-  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
-                ~ replace(., is.na(.) | . == "", "no_records_available")))
-```
-
-Variables to create:
-
--   fuel - heating and cooking and primary and secondary sources
-
--   pipe type
-
--   water source
-
--   house type
-
--   area type
-
-Some of the data is a bit untidy - heating, water etc. so need to tidy these up
-
-#### Tidying up heating type into groups
-
-```{r}
-#reclass heating into these
-#class all the others into the main categories
-electric <- c("electric", "geothermal electric", "electric but geothermal", "elec gerothermal", "Electric Heat Pump","electric fire place","electric/induction (magnetic)","induction cooktop","microwave","electric/microwave","microwave (electric)","george forman grill","microwave?","microwave and electric oven", "microwave oven")
-natural_gas <- c("natural gas boiler", "gas hydronic heat system", "gas forced air", "gas-heated hot water", "gas heated hot water","hot water heated by natural gas","in floor hot water heating from gas","in floor hot water heating with natural gas","	
-hot water heated floors  water heated by natural gas","infloor hot water heating  water heated w/gas","inflor heating with hot water heated by a gas furnace","infloor heating with natural gas no forced air furnace","	boiler system fueled by propane","hydronic heat fueled by propane h2o heaters","hydronic in floor heating fueled by propane", "radiant floor heat powered by propane boiler","in floor heating with natural gas","radiant water via natural gas","boiler system fueled by propane","natural gas fireplace little use","occassionally gas fireplace","propane until 1 year ago-switched to natural gas","natural gas for water heater, dryer and fireplace (turned off),; i often 'smell gas,' but gas co. has not found leaks","water/propane (boiler unit)","natural gas and electric","outdoor gas grill","natural gass grill")
-oil <- c("oil", "oil fired hot water","kerosene","kerosine","kerosens","kerosene for emergencies","small oil radiator","free satnding plug in oil heater","electric oil units","kerosene heaters/hardly ever used")
-propane <- c("propane", "hydronic heat fueled by propane", "radiant floor heat powered by propane boiler","outdoor grill propane")
-wood <- c("wood", "wood pellets","wood pellet", "wood pellet stove", "hot water from outside wood furnace", "outside wood furnace","pellets","hot water heated by outside wood furnace","outside wood stove","outside woodstove", "hot water from outside wood furnace", "pellet stove","occasional wood stove", "fireplace wood", "pellets and wood stoves","charcoal","grill(charcoal)","smoker","barbecue","charcoal / wood grill","smoker grill", "charcol","bbq - pellets","bbq - wood pellets","charcoal grill", "wood - outdoor grill", "charcoal barbecue", "charcoal and wood chips", "charcoal grill outside", "charcoal/wood","charcoal with propane starter", "wood pellt bbq", "charcoal grille", "bbq wood pellets","grilling,charcoal", "grilol charcol", "wood chips","w00d")
-renewables <- c("solar","passive solar", "geothermal","radiant/geo thermal","	geo-thermal","geo thermal","geothermal heat pumps","geo heat pump","gio thurmo","gio thurmal","gio thurmal","giothurmal","ground source heat pump","inground heat pump","inground heat pump source","in ground heat pump","geothermal/electric heat exchanger","geothermal heat exchange","geothermal heat pump", "geo thermal heat pump","heat exchanger with geothermal", "	gero thermal - electric","geo-thermal",
-                "geothermal heat pumps","sun", "geo heat pump","geothermal heating","gerothermal","solar hot water","geo thurmo","geo-thermal","giothurmal","gero thermal - electric","passive solar")
-no_records_available <- c("no_records_available")
-
-#primary heating  
-house <- house %>%
-  mutate(heating_fuel_primary = case_when(
-    heating_fuel_primary_other %in% electric ~ "electric",
-    heating_fuel_primary_other %in% natural_gas ~ "natural_gas",
-    heating_fuel_primary_other %in% oil ~ "oil",
-    heating_fuel_primary_other %in% propane ~ "propane",
-    heating_fuel_primary_other %in% wood ~ "wood",
-    heating_fuel_primary_other %in% renewables ~ "renewable",
-    TRUE ~ heating_fuel_primary
-  ))
-  
-#secondary heating
-house <- house %>%
-  mutate(heating_fuel_secondary = case_when(
-    heating_fuel_secondary_other %in% electric ~ "electric",
-    heating_fuel_secondary_other %in% natural_gas ~ "natural_gas",
-    heating_fuel_secondary_other %in% oil ~ "oil",
-    heating_fuel_secondary_other %in% propane ~ "propane",
-    heating_fuel_secondary_other %in% wood ~ "wood",
-    heating_fuel_secondary_other %in% renewables ~ "renewable",
-    TRUE ~ heating_fuel_secondary
-  ))
-#primary cooking
-
-house <- house %>%
-  mutate(cooking_fuel_primary = case_when(
-    cooking_fuel_primary_other %in% electric ~ "electric",
-    cooking_fuel_primary_other %in% natural_gas ~ "natural_gas",
-    cooking_fuel_primary_other %in% oil ~ "oil",
-    cooking_fuel_primary_other %in% propane ~ "propane",
-    cooking_fuel_primary_other %in% wood ~ "wood",
-    cooking_fuel_primary_other %in% renewables ~ "renewable",
-    TRUE ~ cooking_fuel_primary
-  ))
-  
-
-```
-
-#### Tidying up pipe types
-
-```{r}
-metal <-c("mix of copper and pvc","mixed copper and pvc","galvinazed iron","salvanized",
-          "some copper, some pvc","both copper & plastic","metal and pvc","iron","iron and copper","lead probably", "lead","galvanized steel","copper and plastic", "some copper/some pvc", "mixture of all above","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc", "galvanized","cast iron","copper/metal/pvc","cast","pex and copper","pex, cu",
-          "pex, with copper manifolds", "galvenized steel","galvinized", "copper and pvc","copper/metal and pvc/plastic", "both copper and pvc","maybe copper/metal also" , "some copper", "copper, cpvc","both metal and plastic","probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc", "galvenized" , "copper, pvc and metal","copper/pvc", "pvc & copper" , "copper and pvc" , "copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" , "copper & pvc", "steel"  )
-plastic <-c("mix of copper and pvc","mixed copper and pvc","pex","pec", "some copper, some pvc",
-            "both copper & plastic","metal and pvc", "copper and plastic", "some copper/some pvc", "mixture of all above", "k-peck","copper except under sinks which is pvc","combination of copper and pvc  pvc appears under sinks etc.  ","i think copper but pvc under sink and other areas where water enters the house", "metal/pvc","copper/metal/pvc","pex and copper", "pe","pex, cu","pex, with copper manifolds","pecs","poly", "copper and pvc", "pvc","cvc", "copper/metal and pvc/plastic", "both copper and pvc", "cpvc", "pvex", "pvc and copper", "copper, cpvc", "cpcv","both metal and plastic", "probably a mixture of copper/metal & pvc/plastic", "pvc/copper", "both metal & pvc","copper,metal, pvc","mix of copper metal and pvc" , "polybutylene", "copper, pvc and metal", "copper/pvc" , "pvc & copper", "copper and pvc" , "plex","pic system","pec system","plastic","copper plastic", "copper pvs stainles steel", "both pvc and copper", "main-copper inside-plasticc" ,"copper & pvc", "peg", "pec plastic", "pex tubing")
-
-house <- house %>%
-  mutate(pipes_metal_any = case_when(
-    pipes_other_specify %in% metal ~ 1,
-    sec_pipes_other_specify %in% metal ~1,
-    pipes_copper_metal == 1 ~ 1,
-    sec_pipes_copper_metal == 1 ~1,
-    TRUE ~ 0
-  ))
-
-house <- house %>%
-  mutate(pipes_metal_any = case_when(
-    pipes_other_specify %in% metal ~ "1",
-    sec_pipes_other_specify %in% metal ~ "1",
-    pipes_copper_metal == "1" ~ "1",
-    sec_pipes_copper_metal == "1" ~ "1",
-    pipes_other_specify == "no_records_available" |
-      sec_pipes_other_specify == "no_records_available" |
-      is.na(pipes_copper_metal) |
-      is.na(sec_pipes_copper_metal) ~ "no_records_available",
-    TRUE ~ "0"  # keep "0" as a character for consistency
-  ))
-
-house <- house %>%
-  mutate(pipes_metal_any = case_when(
-    #only keeping the no_records_available for these columns as the specify columns are super messy and missing loads 
-    pipes_copper_metal == "no_records_available" | 
-    sec_pipes_copper_metal == "no_records_available" ~ "no_records_available",
-    pipes_other_specify %in% metal ~ "1",
-    sec_pipes_other_specify %in% metal ~ "1",
-    pipes_copper_metal == "1" ~ "1",
-    sec_pipes_copper_metal == "1" ~ "1",
-    TRUE ~ "0"
-  ))
-
-
-
-house <- house %>%
-  mutate(pipes_plastic_any = case_when(
-        pipes_pvc_plastic == "no_records_available" | 
-    sec_pipes_pvc_plastic == "no_records_available" ~ "no_records_available",
-    pipes_other_specify %in% plastic ~ "1",
-    sec_pipes_other_specify %in% plastic ~"1",
-    pipes_pvc_plastic == "1" ~ "1",
-    sec_pipes_pvc_plastic == "1" ~ "1", 
-    TRUE ~ "0"
-  ))
-```
-
-#### Water source tidying/reclassifying
-
--   In the United States, "municipal water" refers to the public water supply system that provides drinking water to homes, businesses, and other facilities within a city or town. It is managed by local government or utility companies and is typically sourced from rivers, lakes, reservoirs, or groundwater. Municipal water is treated to meet safety standards set by the Environmental Protection Agency (EPA) to ensure it is safe for consumption and use. The term "municipal" indicates that the water is supplied and regulated by a local government authority rather than being privately sourced or managed.
-
--   Choose to group:
-
-    -   municipal, groundwater, spring and surface, bottled, rainwater and cistern
-
-```{r}
-
-municipal <-c("municipal","municipal at home, well at work with me daily","municipal well","filtered municipal","municipal from lake","municipal filtered via reverse osmosis","municiapl wells with home filtration system","municipal with town well water","highly filtered municipal","private through municipal","municipal and well","both municipal and well","municipal and private well","municipal filtered","municipal with a reverse osmosis filtration unit","municipal but reverse osmosis filtered","filtered muni water","municipal but reverse osmosis water system")
-groundwater <-c("well","ground","underground aquifers","underground aquifer","community owned wells","town well water","town well","community well w/chlorine","community well chlorine filter","subdivision well","community well for subdivision  has chloroine  we filter all chlorine out and have a filtration system","well water with chlorine filter","comunity well with a clorine station  we have a filter in our home to filter out the chlorine","well and municipal","both well and municipal","well 50%, municipal 50%", "fox river and well","1/2 well 1/2 municipal","reverse osmosis from well","aquifer","town wells"," community well, treated & filtered", "wel and municipal","well and spring","well water goes to municipal","community well water","well/bottle/city","aquafer")
-spring_surface <-c("berkeley springs spring water","spring","hicknley springs","spring water","lake water via city","neighborhood water tanks from lake tahoe water","lake tahoe","lake michigan","natural spring","spring on property", "lake filtered/treated","lake filtered system")
-bottled<-c("bottled","bottled spring water","bottled water","bottled water/municipal",".bottle","bottled spring","dogs drink bottled","bottled and municipal")
-rainwater_cistern<-c("cistern", "rain fed cistern","rain fed cistern filtered and uv sanitized","uv and filtered rain filled cistern","rain water","rain","rain water tanks","rainwater","rain water ")
-
-
-house <- house %>%
-  mutate(water_source_2 = case_when(
-    water_source_other %in% municipal ~ "municipal",
-    water_source_other %in% groundwater ~ "groundwater",
-    water_source_other %in% spring_surface ~ "spring_surface",
-    water_source_other %in% bottled ~ "bottled",
-    water_source_other %in% rainwater_cistern ~ "rainwater_cistern",
-    TRUE ~ water_source
-  ))
-
-
-
-```
-
-Mode exposure value calculations
-
--   rather than early, rest,whole, 5y prior as not that much variation across
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-#early life
-columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
-
-study_years <- c(0,1,2)
-
-year_column <-"year_in_study"
-house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
-
-
-#rest of life
-study_years <- c(3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
-
-#late life
-study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-house <- check_exposure_mode(house, columns_to_check, study_years,year_column)
-```
-
-Tidy names
-
-```{r}
-print(colnames(house))
-
-
-
-house_tidy <- house %>%
-    rename_with(
-      ~ gsub("_0_1_2$", "_early_life", .), 
-      ends_with("_0_1_2")
-    ) 
-
-house_tidy <- house_tidy%>%
-  rename_with(
-      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
-      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
-    ) 
-  
-house_tidy <- house_tidy %>%
-    rename_with(
-      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
-      ends_with("_3_4_5_6_7_8_9_10")
-    )
-#check renaming all OK
-print(colnames(house_tidy))
-```
-
-#### House mean age
-
-```{r}
-
-
-house_tidy <- house_tidy %>%
-  group_by(subject_id) %>%
-  mutate(
-    avg_house_age = mean(
-      # convert "no_records_available" to NA, others to numeric
-      as.numeric(ifelse(house_age == "no_records_available", NA, house_age)),
-      na.rm = TRUE
-    )
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location2 <-
+  build_household_features(
+    house,
+    location,
+    dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all
   )
-```
-
-#### Majority region/state/zip in study
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-#early life
-columns_to_check <- c("region_name","state","zip")
-
-study_years <- c(0,1,2)
-
-year_column <-"year_in_study"
-location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
-
-
-#rest of life
-study_years <- c(3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
-
-#late life
-study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-location <- check_exposure_mode(location, columns_to_check, study_years,year_column)
-```
-
-Tidy up names
-
-```{r}
-
-result_df3 <- location %>%
-    rename_with(
-      ~ gsub("_0_1_2$", "_early_life", .), 
-      ends_with("_0_1_2")
-    ) 
-
-result_df3 <- result_df3 %>%
-  rename_with(
-      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
-      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
-    ) 
-  
-result_df3 <- result_df3 %>%
-    rename_with(
-      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
-      ends_with("_3_4_5_6_7_8_9_10")
-    )
-#check renaming all OK
-print(colnames(result_df3))
-```
-
-Combine house data, location data and enviro/smoke/sleep/deprivation df
-
-```{r}
-#make distinct house and locaiton dfs with 1 row per dog
-location_distinct <- result_df3 %>%
-  distinct(subject_id,.keep_all = TRUE)
-house_tidy_distinct <- house_tidy %>%
-  distinct(subject_id,.keep_all = TRUE)
-#keep only relevant cols
-location_distinct_abr <- location_distinct %>%
-  dplyr::select(subject_id,13:25)
-house_tidy_distinct_abr <- house_tidy_distinct %>%
-  dplyr::select(c(subject_id,57:84))
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>% left_join(location_distinct_abr,by="subject_id")
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>% left_join(house_tidy_distinct_abr,by="subject_id")
-```
-
-Code for 5y prior to endpoint calculations
-
-Determining most common exposure (mode) in the 5y prior to endpoint (year_in_study_diagnosis_or_final_record_year):
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-#add to house tidy the final record year column
-cohort_dogs_final_date <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>%
-  dplyr::select(c(subject_id,year_in_study_diagnosis_or_final_record_year))
-#join to house tidy
-house_tidy <- house_tidy %>% left_join(cohort_dogs_final_date,by="subject_id")
-house_tidy$year_in_study_diagnosis_or_final_record_year <-as.numeric(house_tidy$year_in_study_diagnosis_or_final_record_year)
-house_tidy$year_in_study <-as.numeric(house_tidy$year_in_study)
-#1 dog has an NA value for final diagnosis year replace with a 1
-house_tidy <- house_tidy %>%
-  mutate(year_in_study_diagnosis_or_final_record_year = replace_na(year_in_study_diagnosis_or_final_record_year, 1))
-
-columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
-cohort_house <- check_exposure_mode_X_prev_years(
-  data = house_tidy,
-  columns_to_check = columns_to_check,
-  year_range = 5, # Number of years prior to consider
-  year_column = "year_in_study_diagnosis_or_final_record_year",
-  study_year_column = "year_in_study"
-)
-
-#now keeping 1 row per dog
-cohort_house_per_dog <- cohort_house %>%
-  distinct(subject_id,.keep_all = TRUE)
-```
-
-Add back onto main df
-
-```{r}
-#keep only rel columns
-cohort_house_per_dog_abr <- cohort_house_per_dog %>%
-  dplyr::select(c(subject_id,86:94))
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>% left_join(cohort_house_per_dog_abr,by="subject_id")
 ```
 
 ## Comorbidities
