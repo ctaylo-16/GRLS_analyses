@@ -1854,66 +1854,26 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 
 ## Tidying up columns for final df
 
--   need to ensure columns (where indicated) have the correct NA e.g dogs with no medical records have "no_medical_records_for_time_point" rather than NA/not_recorded etc
+Dates and endpoint fields retain genuine `NA` values (for example, a dog that
+was never withdrawn). Missing values in analysis feature columns are written as
+`records_not_available`. The feature selection is name-based so it cannot
+silently shift when an upstream column is added or removed.
+
+CSV row names are disabled; spreadsheet-style `X` index columns are not part of
+the analysis dataset.
 
 ```{r}
-colnames(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity)
+source(here::here("R", "final_dataset.R"))
 
-#remove unnecessary columns:
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity %>%
-  dplyr::select(-c(record_date.x,X))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied <-
+  finalise_cancer_dataset(
+    dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity,
+    case_column = "had_MCT"
+  )
 
-sum(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2))
-
-#check which columns have most NAs and decide how best to replace
-na_summary <- colSums(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2))
-
-na_summary_df <- data.frame(
-  column = names(na_summary),
-  na_count = na_summary
-) %>%
-  arrange(desc(na_count))
-
-na_summary_df
-#majority of NAs are fine e.g in date withdrawn column
-
-#ensure the rest are replaced by NAs, doing sequentially to ignore date columns which keep messing up the is.na conversion
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity2 %>%
-  mutate(across(2:21, ~ replace(., is.na(.), "records_not_available")))
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
-  mutate(across(36:260, ~ replace(., is.na(.), "records_not_available")))
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
-  mutate(across(273:304, ~ replace(., is.na(.), "records_not_available")))
-
-#check NAs now
-na_summary2 <- colSums(is.na(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3))
-
-na_summary_df2 <- data.frame(
-  column = names(na_summary2),
-  na_count = na_summary2
-) %>%
-  arrange(desc(na_count))
-
-na_summary_df2
-
-
-#manually fix avg_weight_5y_prior_endpoint and MDI_quintile
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 <- 
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
-  mutate(avg_weight_5y_prior_endpoint = replace(avg_weight_5y_prior_endpoint, 
-                                                 is.na(avg_weight_5y_prior_endpoint), 
-                                                 "records_not_available"))
-
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied <- 
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity3 %>%
-  mutate(MDI_quintile = replace(MDI_quintile, 
-                                                 is.na(MDI_quintile), 
-                                                 "records_not_available"))
-
-
-```
-
-```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied,here::here("Output/GRLS_MCT_variables_dataset.csv"))
+write.csv(
+  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied,
+  here::here("Output/GRLS_MCT_variables_dataset.csv"),
+  row.names = FALSE
+)
 ```

@@ -102,6 +102,12 @@ early/rest/whole ordinal overview distributions; the established MCT schema
 retains the shared mean and other activity features without adding those 15
 lymphoma-only columns.
 
+Final dataset cleanup is name-based. Structural dates and endpoint fields retain
+true missing values; missing analysis features use `records_not_available`.
+Final CSVs are written with `row.names = FALSE`, so generated `X` index columns
+are not part of the handoff schema. This replaces the former numeric column
+ranges, which became invalid when upstream feature layouts changed.
+
 Important generated prerequisites include:
 
 | Generated prerequisite | Producer or source |
