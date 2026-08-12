@@ -1756,61 +1756,25 @@ Using the df created in an earlier script of analyses which tidies up free text 
 
 ```{r}
 medications <- read.csv(here::here("Output/GRLS_medications_initial_tidy.csv"))
+source(here::here("R", "medications.R"))
 ```
 
 ### Lifetime medication calculations
 
 ```{r}
-# Step 1: Count occurrences per dog per active ingredient group
-meds_per_dog_lifetime <- medications %>%
-  group_by(subject_id, active_ingredient_groups) %>%
-  summarise(count = n(), .groups = "drop")
+medication_features_lifetime <- summarise_medication_quartiles(
+  medications,
+  suffix = "lifetime",
+  missing_value = "medication_not_prescribed"
+)
 
-# Step 2: Compute quartiles *within* each active ingredient group
-medication_summary_lifetime <- meds_per_dog_lifetime%>%
-  group_by(active_ingredient_groups) %>%
-  summarise(
-    min=min(count),
-    Q1 = quantile(count, 0.25, na.rm = TRUE),
-    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
-    Q3 = quantile(count, 0.75, na.rm = TRUE),
-    .groups = "drop",
-    max = max(count)
-  )
+meds_per_dog_lifetime <- medication_features_lifetime$counts
+medication_summary_lifetime <- medication_features_lifetime$summary
+meds_per_dog_quart_lifetime <- medication_features_lifetime$categorised
+meds_wide_quart_lifetime <- medication_features_lifetime$wide
 
 write.csv(medication_summary_lifetime,here::here("Output/MCT_study_medication_quartiles_summaries_lifetime.csv"))
-
-
-
-# Step 3: Join quartiles back to individual dog data and assign quartile categories
-meds_per_dog_quart_lifetime <- meds_per_dog_lifetime %>%
-  left_join(medication_summary_lifetime, by = "active_ingredient_groups") %>%
-  mutate(
-    quartile = case_when(
-      count <= Q1 ~ "Q1",
-      count > Q1 & count <= median_count_per_dog ~ "Q2",
-      count > median_count_per_dog & count <= Q3 ~ "Q3",
-      count > Q3 ~ "Q4"
-    ),
-    # Assign halves based on median
-    half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
-  ) %>%
-  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
-
-
-# Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
-meds_wide_quart_lifetime <- meds_per_dog_quart_lifetime %>%
-  pivot_wider(names_from = active_ingredient_groups, values_from = c(half,quartile))
-
-# View the final data
 meds_wide_quart_lifetime
-
-meds_wide_quart_lifetime <- meds_wide_quart_lifetime %>%
-  rename_with(~ paste0(.x, "_lifetime"), -1)
-
-#replace NAs with "medication_not_prescribed"
-meds_wide_quart_lifetime <- meds_wide_quart_lifetime %>% 
-  mutate_if(is.character, ~ ifelse(is.na(.), "medication_not_prescribed", .))
 ```
 
 ### 5y prior to endpoint medication calculations
@@ -1818,63 +1782,21 @@ meds_wide_quart_lifetime <- meds_wide_quart_lifetime %>%
 NB. there is 2889 dogs in this 5y - dogs with meds records in 5y prior to death, ensure when joining back into main 3044 dogs that these \~150 dogs have "no_records_available" coded on them
 
 ```{r}
-#keeping only the 5y prior rows
-medications_5y <- medications %>%
-  group_by(subject_id) %>%
-  filter(year_in_study %in% sort(unique(year_in_study), decreasing = TRUE)[1:5]) %>%
-  ungroup()
+medications_5y <- select_last_study_years(medications, 5)
 
+medication_features_5y <- summarise_medication_quartiles(
+  medications_5y,
+  suffix = "5y",
+  missing_value = "medication_not_used"
+)
 
-# Step 1: Count occurrences per dog per active ingredient group
-meds_per_dog_5y <- medications_5y %>%
-  group_by(subject_id, active_ingredient_groups) %>%
-  summarise(count = n(), .groups = "drop")
-
-# Step 2: Compute quartiles *within* each active ingredient group
-medication_summary_5y <- meds_per_dog_5y%>%
-  group_by(active_ingredient_groups) %>%
-  summarise(
-    min=min(count),
-    Q1 = quantile(count, 0.25, na.rm = TRUE),
-    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
-    Q3 = quantile(count, 0.75, na.rm = TRUE),
-    .groups = "drop",
-    max = max(count)
-  )
+meds_per_dog_5y <- medication_features_5y$counts
+medication_summary_5y <- medication_features_5y$summary
+meds_per_dog_quart_5y <- medication_features_5y$categorised
+meds_wide_quart_5y <- medication_features_5y$wide
 
 write.csv(medication_summary_5y,here::here("Output/MCT_study_medication_quartiles_summaries_5y.csv"))
-
-
-
-# Step 3: Join quartiles back to individual dog data and assign quartile categories
-meds_per_dog_quart_5y <- meds_per_dog_5y %>%
-  left_join(medication_summary_5y, by = "active_ingredient_groups") %>%
-  mutate(
-    quartile = case_when(
-      count <= Q1 ~ "Q1",
-      count > Q1 & count <= median_count_per_dog ~ "Q2",
-      count > median_count_per_dog & count <= Q3 ~ "Q3",
-      count > Q3 ~ "Q4"
-    ),
-    # Assign halves based on median
-    half = ifelse(count <= median_count_per_dog, "lower_half", "upper_half")
-  ) %>%
-  dplyr::select(c(subject_id, active_ingredient_groups, quartile, half))
-
-
-# Step 4: Reshape so each medication group is a column with Q1-Q4 values per dog
-meds_wide_quart_5y <- meds_per_dog_quart_5y %>%
-  pivot_wider(names_from = active_ingredient_groups, values_from = c(half,quartile))
-
-# View the final data
 meds_wide_quart_5y
-
-meds_wide_quart_5y <- meds_wide_quart_5y %>%
-  rename_with(~ paste0(.x, "_5y"), -1)
-
-#replace Nas in DF with "medication_not_prescribed"
-meds_wide_quart_5y <- meds_wide_quart_5y %>% 
-  mutate_if(is.character, ~ ifelse(is.na(.), "medication_not_used", .))
 ```
 
 ### Examine for specific potential RF medications:
