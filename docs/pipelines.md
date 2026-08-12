@@ -60,11 +60,10 @@ The denominator currently uses `Data/dog_profile_for_MCT.csv`, `Data/study_endpo
 
 Shared functions under `R/` now cover cancer-cohort preparation, deprivation,
 environmental exposure windows, smoke dosage, sleep location, comorbidities,
-lifestyle, household/location, medication, and reproduction features for the
-lymphoma and MCT routes. The variable notebooks still contain duplicated
-derivations for weight and activity; these are the next candidates for extraction,
-with cancer-specific cohort definitions and output names kept in the entry-point
-notebooks.
+lifestyle, household/location, medication, reproduction, and weight/height
+features for the lymphoma and MCT routes. Activity is the remaining large
+duplicated derivation, with cancer-specific cohort definitions and output names
+kept in the entry-point notebooks.
 
 Household and location histories use `multiple` when the most frequent value is
 tied. The curated broad water-source grouping is used for all derived water
@@ -78,6 +77,15 @@ not the number of heats. Pregnancy and mating mean ever recorded and are not
 restricted to neutered dogs. Reproduction date checks currently identify two
 neuter dates before birth (`094-000441`, `094-023124`) and ten neuter dates after
 the MCT cohort endpoint; these deliberately stop dataset creation until resolved.
+
+Weight and height summaries use examination rows from the endpoint study year
+and the five preceding study years. Primary summaries retain the historical
+minimum of five examination rows, while the `any_records` medians do not apply
+that threshold. Adult conversions use 0.453 kg per pound and 2.54 cm per inch;
+converted summaries are missing for dogs younger than 18 months at the endpoint.
+Tied BCS modes are recorded as `multiple` (431 dogs in each current cohort
+snapshot). The endpoint upper bound is explicit even though the current snapshots
+contain no physical-examination rows after a dog's endpoint.
 
 Important generated prerequisites include:
 
