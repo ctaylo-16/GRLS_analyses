@@ -8,6 +8,7 @@ The source data consist of annual owner and veterinarian questionnaire extracts 
 
 - Read `HANDOVER.md` for setup, local-data requirements, and the fail-fast operating policy.
 - Read `docs/analysis-register.md` before choosing a notebook to run.
+- Read `docs/pipelines.md` for the current execution order, handoff datasets, and censoring dates.
 - Open `GRLS_analyses.Rproj` and run `Rscript scripts/check_setup.R` from the project root.
 
 All file references now use `here::here()` and resolve from the repository root. A notebook should not depend on a particular Windows username or working directory.
@@ -27,7 +28,7 @@ This remains a single multi-cancer repository: HSA, lymphoma, and MCT have disti
 
 ## Reproducibility status
 
-The project is undergoing a handover refactor. Machine-specific paths have been removed, obvious cross-analysis output errors corrected, shared helpers made fail-fast, and the author's R 4.4.1 package environment recorded in `renv.lock`. The current HSA reports have been identified. The next stages are to document the lymphoma and MCT execution routes, extract the remaining shared feature engineering, and create cancer-specific execution entry points.
+The project is undergoing a handover refactor. Machine-specific paths have been removed, obvious cross-analysis output errors corrected, shared helpers made fail-fast, and the author's R 4.4.1 package environment recorded in `renv.lock`. The current cancer workflows and dataset handoffs are documented. The next stages are to separate active HSA preparation from inactive Cox modelling, extract the remaining shared feature engineering, and create cancer-specific execution entry points.
 
 Until those stages are complete, run notebooks only in the documented dependency order and do not assume similarly named dated or `updated` files are interchangeable.
 

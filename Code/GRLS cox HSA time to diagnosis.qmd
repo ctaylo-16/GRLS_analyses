@@ -6,6 +6,8 @@ editor: visual
 
 # Time to HSA diagnosis in GRLS cohort
 
+> **Workflow status:** The data preparation through the write of `Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv` is active provenance for the current HSA analyses. The factor setup and Cox modelling after that handoff are retained but inactive and were not pursued through publication. See `docs/pipelines.md`.
+
 -   Examining all 3044 dogs in cohort through Cox PH model to determine time to HSA diagnosis
 
 -   Endpoint - date of HSA diagnosis or censor date December 1 2024
@@ -1057,6 +1059,8 @@ cohort_abr <- cohort_abr %>%
 ```{r}
 write.csv(cohort_abr,here::here("Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv"))
 ```
+
+> **Active HSA dataset handoff ends here.** The remaining sections belong to the inactive Cox-analysis route.
 
 ## Setting factors with baselines correct
 

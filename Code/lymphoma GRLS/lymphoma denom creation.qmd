@@ -6,6 +6,8 @@ editor: visual
 
 ## GRLS lymphoma population
 
+> **Workflow status:** This notebook is retained as the future cohort-refresh route. The current reproducible workflow starts from `Data/lymphoma_cohort_241201.csv`, which is censored at 1 December 2024. Refresh that cohort from updated manually coded clinical records before the next substantive lymphoma analysis. See `docs/pipelines.md`.
+
 Using RP2 students project where cut-off date was Dec 1 2024
 
 ```{r}

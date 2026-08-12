@@ -7,7 +7,7 @@ This register is the source of truth for notebook status. Entries marked **autho
 | Notebook | Apparent role | Status |
 |---|---|---|
 | `Code/Creating HSA study population.qmd` | Assemble the HSA cohort and feature-domain outputs | Upstream workflow; exact dependency mapping still required |
-| `Code/GRLS cox HSA time to diagnosis.qmd` | Alternative Cox-analysis route | Retained but inactive; not pursued through publication |
+| `Code/GRLS cox HSA time to diagnosis.qmd` | Build the tidied HSA handoff dataset, then perform the alternative Cox analysis | Dataset-building section is active provenance; subsequent Cox modelling is retained but inactive and unpublished |
 | `Code/GRLS HSA updated analysis_all_cases.qmd` | Updated all-case modelling | Current |
 | `Code/GRLS HSA updated analysis confirmed cases.qmd` | Confirmed-case modelling | Current |
 | `Code/GRLS HSA cohort descriptives.qmd` | Descriptive, incidence, and survival outputs | Current |
@@ -18,15 +18,15 @@ This register is the source of truth for notebook status. Entries marked **autho
 
 | Notebook | Apparent role | Status |
 |---|---|---|
-| `Code/lymphoma GRLS/lymphoma denom creation.qmd` | Create lymphoma study denominator/endpoints | Active candidate; author confirmation required |
-| `Code/lymphoma GRLS/lymphoma dataset variable creation.qmd` | Create lymphoma analysis variables | Active candidate; author confirmation required |
+| `Code/lymphoma GRLS/lymphoma denom creation.qmd` | Refresh the lymphoma study denominator/endpoints from manually coded records | Future refresh route; current routine workflow uses the frozen end-of-2024 cohort |
+| `Code/lymphoma GRLS/lymphoma dataset variable creation.qmd` | Create lymphoma analysis variables from `Data/lymphoma_cohort_241201.csv` | Current; input cohort is frozen at 1 December 2024 and must be refreshed before future substantive analysis |
 
 ## Mast cell tumours
 
 | Notebook | Apparent role | Status |
 |---|---|---|
-| `Code/MCT GRLS/MCT denom creation.qmd` | Create MCT study denominator/endpoints | Active candidate; author confirmation required |
-| `Code/MCT GRLS/MCT dataset variable creation.qmd` | Create MCT analysis variables | Active candidate; author confirmation required |
+| `Code/MCT GRLS/MCT denom creation.qmd` | Create MCT study denominator/endpoints | Current |
+| `Code/MCT GRLS/MCT dataset variable creation.qmd` | Create MCT analysis variables | Current |
 
 ## Shared feature notebooks
 
