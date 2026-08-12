@@ -73,194 +73,48 @@ outside house exposures=
 'any_treated_weeds','any_treated_insects','any_treated_fertilizer'
 
 ```{r}
-#exposures dataset
-environment_exposures<-read.csv(here::here("Data/environment_conditions.csv"),na.strings=c ("","NA"))
-environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
+# Environmental-condition and sleep-location questionnaires are separate source
+# tables because sleep location can contain a different number of rows per dog.
+source(here::here("Code", "GRLS_functions.R"))
+source(here::here("R", "environment.R"))
+
+environment_exposures <- read.csv(
+  here::here("Data/environment_conditions.csv"),
+  na.strings = c("", "NA")
+)
 sleep_environment <- read.csv(here::here("Data/environment_sleep_location.csv"),na.strings=c("","NA"))
 sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
 
 ```
 
-### Tidy to binary version of ever exposed (equiv of whole life):
+### Tidy to binary exposure windows
 
-#### Indoor variables
+Indoor exposures are aerosol use, air cleaners, HEPA filters, moth balls,
+incense/candles, and household smoke. Outdoor exposures are treatment of weeds,
+insects, and lawns with fertiliser.
 
-```{r}
-#indoor variables to keep
-indoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure))
-##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
-aerosol <- environment_exposures %>% 
-  group_by(subject_id) %>%
-  mutate(aerosol_ever = if_else(any(use_aerosol == 1), 1, 0))
+For every exposure, the shared function creates indicators and counts for:
 
-#exposures ever for all of the indoors variables
-environment_exposures_2 <- environment_exposures %>% 
-  group_by(subject_id) %>%
-#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
-  mutate(across(use_aerosol:smoke_exposure,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
-```
+- early life (study years 0–2);
+- rest of life (study years 3–10);
+- whole observed life (study years 0–10); and
+- the five years preceding the cancer endpoint.
 
-#### Outdoor variables
+The sleep-location table remains separate because dogs may have multiple sleep
+locations within a questionnaire year.
 
 ```{r}
-#outdoors variables to keep
-outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
-##create a 2nd variable for each of the 6 variables for exposure to that ever eg. aerosol ever Y N
+environment_features <- build_environment_binary_features(
+  environment_exposures,
+  dog_pop_deprivation
+)
 
-#exposures ever for all of the outdoors variables
-environment_exposures_out <- outdoors %>% 
-  group_by(subject_id) %>%
-#go across each column and if the subject has a 1 in any of its rows for each column then put it as a 1 in the new column else it is a 0
-  mutate(across(any_treated_weeds:any_treated_fertilizer,~if_else(any(.==1),1,0),.names="ever_{.col}")) %>% ungroup()
-```
-
-```{r}
-# combine indoors and outdoors (cant combine sleeping as is different length)
-indoors_outdoors <- environment_exposures %>% select(c(subject_id,year_in_study,record_date,use_aerosol,use_air_cleaner,use_hepa_filter,use_moth_balls,use_incense_or_candles,smoke_exposure,hours_of_smoke,any_treated_weeds,any_treated_insects,any_treated_fertilizer))
-
-#set indoors outdoors date column as date then parse year from it
-indoors_outdoors$date_2 <-parse_date_time(indoors_outdoors$record_date,"ym")
-#parse year from
-indoors_outdoors <- indoors_outdoors %>% mutate(exposure_year = as.numeric(format(date_2, "%Y")))
-
-
-#remove rows where it is the NA record date column
-indoors_outdoors_1_row_year <- indoors_outdoors %>%
-  filter(!is.na(record_date))
-
-
-#join this to deprivation data made above
-indoors_outdoors_1_row_year <- indoors_outdoors_1_row_year %>% 
-  left_join(dog_pop_deprivation,by="subject_id")
-```
-
-### Early life
-
-```{r}
-
-#read in function file for all GRLS functions:
-source(here::here("Code/GRLS_functions.R"))
-
-
-# apply check exposure function
-columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
-                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
-                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
-
-study_years <- c(0,1,2)
-
-year_column <-"year_in_study"
-
-
-dog_pop_deprivation_enviro_early<- check_exposure2(indoors_outdoors_1_row_year, columns_to_check, study_years,year_column)
-    
-```
-
-### Rest of life
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-
-# apply check exposure function
-columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
-                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
-                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
-
-study_years <- c(3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-
-
-dog_pop_deprivation_enviro_early_rest <- check_exposure2(dog_pop_deprivation_enviro_early, columns_to_check, study_years,year_column)
-    
-#count how many years exposed for (sum up the 1s)
-```
-
-### Whole life exposure
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-# apply check exposure function
-columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
-                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
-                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
-
-study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-
-
-dog_pop_deprivation_enviro__early_rest_whole<- check_exposure2(dog_pop_deprivation_enviro_early_rest, columns_to_check, study_years,year_column)
-```
-
-### 5y prior to endpoint exposure
-
-```{r}
-#read in function file for all GRLS functions:
-source(here::here("Code/GRLS_functions.R"))
-
-#delete rows with NA of record date in it in the indoors_outdoors
-indoors_outdoors2 <- indoors_outdoors %>%
-  filter(!is.na(record_date))
-#join records - do it this way so that each of the years of study for enviro exposures are retained 
-exposure <- left_join(indoors_outdoors2,dog_pop_deprivation,by="subject_id")
-
-#then fill in all rows for that patient with its diagnosis date (or else lose all the rwos except 1 for each dog)
-exposure <- exposure %>%
-  group_by(subject_id)%>%
-  fill(diagnosis_year_month,.direction="downup")
-exposure <- exposure %>%
-  group_by(subject_id)%>%
-  fill(diagnosis_year,.direction="downup")
-exposure <- exposure %>%
-  group_by(subject_id)%>%
-  fill(diagnosis_year_month_date2,.direction="downup")
-
-
-dog_pop_deprivation_2 <- years_prior_to(dog_pop_deprivation,diagnosis_year,5)
-# Specify the columns to check
-columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
-                       "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
-                       "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
-
-#code to check for all relevant columns 
-exposure_years <-5
-dog_pop_deprivation_enviro5y<- check_exposure(exposure, columns_to_check, diagnosis_year, exposure_years)
-
-#strip down to single row for each dog
-```
-
-Tidy column outputs from these functions:
-
-Want to recode study years 0,1,2,3,4,5,6,7,8,9,10 = whole study period, 0,1,2 = early life, 3,4,5,6,7,8,9,10 = rest of life
-
-```{r}
-dog_pop_deprivation_enviro__early_rest_whole
-
-print(colnames(dog_pop_deprivation_enviro__early_rest_whole))
-
-dog_pop_deprivation_enviro__early_rest_whole2 <- dog_pop_deprivation_enviro__early_rest_whole %>%
-    rename_with(
-      ~ gsub("_0_1_2$", "_early_life", .), 
-      ends_with("_0_1_2")
-    ) 
-
-dog_pop_deprivation_enviro__early_rest_whole3 <- dog_pop_deprivation_enviro__early_rest_whole2 %>%
-  rename_with(
-      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
-      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
-    ) 
-  
-dog_pop_deprivation_enviro__early_rest_whole4 <- dog_pop_deprivation_enviro__early_rest_whole3 %>%
-    rename_with(
-      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
-      ends_with("_3_4_5_6_7_8_9_10")
-    )
-#check renaming all OK
-print(colnames(dog_pop_deprivation_enviro__early_rest_whole4))
-
+# Retain the established object names used by the smoke and sleep sections below.
+indoors_outdoors <- environment_features$longitudinal %>%
+  dplyr::select(-dplyr::all_of(setdiff(names(dog_pop_deprivation), "subject_id")))
+dog_pop_deprivation_enviro__early_rest_whole4 <-
+  environment_features$exposure_windows
+dog_pop_deprivation_enviro5y <- environment_features$within_five_years
 ```
 
 #### Hours of smoke exposure - early, rest, whole, 5y prior
