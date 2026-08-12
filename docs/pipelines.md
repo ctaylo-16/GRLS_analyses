@@ -2,6 +2,16 @@
 
 This document records the currently intended execution routes and the provenance of their handoff datasets. It distinguishes source data under `Data/` from reproducible generated artifacts under `Output/`.
 
+After restoring the R environment and installing Quarto, run a documented route from the project root with:
+
+```powershell
+Rscript scripts/render_pipeline.R hsa
+Rscript scripts/render_pipeline.R lymphoma
+Rscript scripts/render_pipeline.R mct
+```
+
+Each command renders its notebooks sequentially and stops on the first failed render. It does not generate missing upstream prerequisites or substitute alternative inputs.
+
 ## Haemangiosarcoma
 
 Analysis censoring date: **1 December 2024**.

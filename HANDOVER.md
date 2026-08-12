@@ -41,6 +41,8 @@ Do not rename columns or source files in `Data/` without updating the consuming 
 
 The setup check deliberately fails on missing packages or directories.
 
+Run a cancer workflow with `Rscript scripts/render_pipeline.R <hsa|lymphoma|mct>`. The exact notebook sequence and required handoffs are documented in `docs/pipelines.md`.
+
 ## Before rerunning analyses
 
 - Check the notebook statuses in `docs/analysis-register.md` and the execution route in `docs/pipelines.md`.

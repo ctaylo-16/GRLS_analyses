@@ -10,6 +10,7 @@ The source data consist of annual owner and veterinarian questionnaire extracts 
 - Read `docs/analysis-register.md` before choosing a notebook to run.
 - Read `docs/pipelines.md` for the current execution order, handoff datasets, and censoring dates.
 - Open `GRLS_analyses.Rproj` and run `Rscript scripts/check_setup.R` from the project root.
+- Run a documented cancer workflow with `Rscript scripts/render_pipeline.R <hsa|lymphoma|mct>`.
 
 All file references now use `here::here()` and resolve from the repository root. A notebook should not depend on a particular Windows username or working directory.
 
