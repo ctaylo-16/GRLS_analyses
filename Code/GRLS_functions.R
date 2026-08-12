@@ -1,365 +1,496 @@
-##Current functions to be used in GRLS 
-# explanatory file currently at this location - here::here("Code/240103_GRLS_functions.qmd")
+# Shared GRLS data-derivation helpers.
+#
+# These functions deliberately stop on missing columns, inconsistent group-level
+# values, invalid dates, or ambiguous ties. They do not repair malformed data.
 
+.require_columns <- function(data, columns) {
+  missing_columns <- setdiff(columns, names(data))
 
+  if (length(missing_columns) > 0) {
+    stop(
+      "Missing required columns: ",
+      paste(missing_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
 
-#create first exposure date function
-#3 inputs required
+  invisible(TRUE)
+}
+
+.require_positive_whole_number <- function(value, name) {
+  if (
+    length(value) != 1L ||
+      is.na(value) ||
+      !is.numeric(value) ||
+      value <= 0 ||
+      value != as.integer(value)
+  ) {
+    stop(name, " must be one positive whole number.", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
+.as_date_strict <- function(value, column_name) {
+  parsed <- tryCatch(
+    as.Date(value),
+    error = function(error) {
+      stop("Invalid date value in column '", column_name, "'.", call. = FALSE)
+    }
+  )
+  supplied <- !is.na(value) & as.character(value) != ""
+
+  if (any(supplied & is.na(parsed))) {
+    stop("Invalid date value in column '", column_name, "'.", call. = FALSE)
+  }
+
+  parsed
+}
+
+.single_group_value <- function(value, column_name, subject_id) {
+  values <- unique(value[!is.na(value)])
+
+  if (length(values) != 1L) {
+    stop(
+      "Expected exactly one non-missing '", column_name,
+      "' value for subject_id ", subject_id, ".",
+      call. = FALSE
+    )
+  }
+
+  values[[1]]
+}
+
+.mode_or_fail <- function(value, column_name, subject_id) {
+  value <- value[!is.na(value)]
+
+  if (length(value) == 0L) {
+    return(NA_character_)
+  }
+
+  counts <- table(value)
+  modes <- names(counts)[counts == max(counts)]
+
+  if (length(modes) != 1L) {
+    stop(
+      "Tied mode for column '", column_name,
+      "' and subject_id ", subject_id, ".",
+      call. = FALSE
+    )
+  }
+
+  modes[[1]]
+}
+
+# Return the earliest dated exposure for each dog, repeated across that dog's
+# rows. exposure_column and record_date use tidy-evaluation syntax.
 first_exposure_point <- function(data, exposure_column, record_date) {
-  #dynamic column naming code to create a column name depending on what exposure column is called
-  col_name <- paste0(quo_name(enquo(exposure_column)), "_", "first_exposure_date")
-  
-  data %>%
-    mutate(
-      #!! and := used in dynamic col naming. if the dog is exposed (==1) and the record date is not NA then find earliest record date , else record NA
-      !!col_name := ifelse({{ exposure_column }} == 1,
-                           ifelse(!is.na(first(record_date, order_by = record_date)),
-                                  format(first(record_date, order_by = record_date), "%Y-%m-%d"),
-                                  NA),
-                           NA)
-    )
+  exposure_quo <- rlang::enquo(exposure_column)
+  record_date_quo <- rlang::enquo(record_date)
+  exposure_name <- rlang::as_name(exposure_quo)
+  record_date_name <- rlang::as_name(record_date_quo)
+  output_name <- paste0(exposure_name, "_first_exposure_date")
+
+  .require_columns(data, c("subject_id", exposure_name, record_date_name))
+
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      !!output_name := {
+        dates <- .as_date_strict(!!record_date_quo, record_date_name)
+        exposed <- !is.na(!!exposure_quo) & !!exposure_quo == 1 & !is.na(dates)
+
+        if (any(exposed)) min(dates[exposed]) else as.Date(NA)
+      }
+    ) |>
+    dplyr::ungroup()
 }
 
-
-#requires 3 inputs
-first_exposure_age <- function(data, first_exposure_point_col, birth_date_col) {
-  # code checks that the columns listed are in df or else stops and prints an error message
-  required_cols <- c(first_exposure_point_col, birth_date_col)
-  
-  if (!all(required_cols %in% colnames(data))) {
-    stop("One or more required columns not found in the data frame.")
-  }
-  #create new columns in data that calculate difference between first exposure date and birth date and then turn into years or months values
-  data %>%
-    mutate(
-      first_exposure_point_col = as.POSIXct(.data[[first_exposure_point_col]], format = "%Y-%m-%d"),
-      birth_date_col = as.POSIXct(.data[[birth_date_col]], format = "%Y-%m-%d"),
-      first_exposure_age = as.numeric(first_exposure_point_col - birth_date_col, units = "days"),
-      first_exposure_age_years = first_exposure_age / 365.25,
-      first_exposure_age_months = first_exposure_age / 12
-    )
-}
-#Calculate age at first exposure to a variable
-#this function creates dynamic column names so can apply to all variables and will have what the 'exposure' is in col names
+# Add age in days and years at first exposure. Column names are strings.
 first_exposure_age2 <- function(data, first_exposure_point_col, birth_date_col) {
-  # code checks that the columns listed are in df or else stops and prints an error message
-  required_cols <- c(first_exposure_point_col, birth_date_col)
-  
-  if (!all(required_cols %in% colnames(data))) {
-    stop("One or more required columns not found in the data frame.")
+  .require_columns(data, c(first_exposure_point_col, birth_date_col))
+
+  output_name <- paste0(first_exposure_point_col, "_age")
+  exposure_date <- .as_date_strict(
+    data[[first_exposure_point_col]],
+    first_exposure_point_col
+  )
+  birth_date <- .as_date_strict(data[[birth_date_col]], birth_date_col)
+  age_days <- as.numeric(exposure_date - birth_date)
+
+  if (any(age_days < 0, na.rm = TRUE)) {
+    stop("First exposure occurs before birth for at least one row.", call. = FALSE)
   }
-  
-  # Extract the dynamic column name
-  dynamic_col_name <- paste0(quo_name(enquo(first_exposure_point_col)), "_age")
-  
-  data %>%
-    mutate(
-      first_exposure_point_col = as.POSIXct(.data[[first_exposure_point_col]], format = "%Y-%m-%d"),
-      birth_date_col = as.POSIXct(.data[[birth_date_col]], format = "%Y-%m-%d"),
-      !!dynamic_col_name := as.numeric(first_exposure_point_col - birth_date_col, units = "days"),
-      !!paste0(dynamic_col_name, "_years") := .data[[dynamic_col_name]] / 365.25,
-    )
+
+  data[[output_name]] <- age_days
+  data[[paste0(output_name, "_years")]] <- age_days / 365.25
+  data
 }
 
+# Count dated exposures before an event for each dog. Column names are strings.
+num_exposures <- function(data, exposure_column, record_date, date_of_event) {
+  .require_columns(
+    data,
+    c("subject_id", exposure_column, record_date, date_of_event)
+  )
 
-#this function creates dynamic column names so can apply to all variables and will have what the 'exposure' is in col names
-first_exposure_age2 <- function(data, first_exposure_point_col, birth_date_col) {
-  # code checks that the columns listed are in df or else stops and prints an error message
-  required_cols <- c(first_exposure_point_col, birth_date_col)
-  
-  if (!all(required_cols %in% colnames(data))) {
-    stop("One or more required columns not found in the data frame.")
-  }
-  
-  # Extract the dynamic column name
-  dynamic_col_name <- paste0(quo_name(enquo(first_exposure_point_col)), "_age")
-  
-  data %>%
-    mutate(
-      first_exposure_point_col = as.POSIXct(.data[[first_exposure_point_col]], format = "%Y-%m-%d"),
-      birth_date_col = as.POSIXct(.data[[birth_date_col]], format = "%Y-%m-%d"),
-      !!dynamic_col_name := as.numeric(first_exposure_point_col - birth_date_col, units = "days"),
-      !!paste0(dynamic_col_name, "_years") := .data[[dynamic_col_name]] / 365.25,
-    )
+  record_dates <- .as_date_strict(data[[record_date]], record_date)
+  event_dates <- .as_date_strict(data[[date_of_event]], date_of_event)
+  data$.grls_record_date <- record_dates
+  data$.grls_event_date <- event_dates
+  output_name <- paste0(exposure_column, "_num_exposures")
+
+  result <- data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      !!output_name := sum(
+        .data[[exposure_column]] == 1 &
+          .data$.grls_record_date < .data$.grls_event_date,
+        na.rm = TRUE
+      )
+    ) |>
+    dplyr::ungroup()
+
+  dplyr::select(result, -dplyr::all_of(c(".grls_record_date", ".grls_event_date")))
 }
 
-#number of times an exposure happens before an event
-# requires 4 inputs
-num_exposures <- function(data,exposure_column,record_date,date_of_event){
-  
-  #this creates a column name dynamically in function using exposure column name, underscore then exposure name
-  col_name <- paste0(quo_name(enquo(exposure_column)), "_", "num_exposures")
-  #code checks that the columns listed are in df or else stops and prints an error message
-  required_cols <- c(exposure_column, record_date,date_of_event)
-  if (!all(required_cols %in% colnames(data))) {
-    stop("One or more required columns not found in the data frame.")}
-  
-  data %>%
-    group_by(subject_id) %>%
-    #new col which sums the number of rows per dog with a 1 that happen before a specific event happened
-    mutate(!!col_name := sum((.data[[exposure_column]] == 1) & (.data[[record_date]] < .data[[date_of_event]]), na.rm = TRUE))
-}
-
-#Calculate the year for a specific number of years prior to diagnosis date
-#3 inputs
 years_prior_to <- function(data, event, num_years) {
-  col_name <- paste0("prediagnosis", num_years, "year")
-  # calculate the date of event minus X num of years 
-  data %>% 
-    mutate({{ col_name }} := (as.numeric({{ event }} - num_years)))
+  event_quo <- rlang::enquo(event)
+  event_name <- rlang::as_name(event_quo)
+  .require_columns(data, event_name)
+  .require_positive_whole_number(num_years, "num_years")
+
+  output_name <- paste0("prediagnosis", num_years, "year")
+  dplyr::mutate(data, !!output_name := !!event_quo - num_years)
 }
 
-
-# Example usage
-#end_HSA <- years_prior_to(end_HSA,diagnosis_year,5)
-
-# were they exposed in previous X years
-#4 inputs
+# Determine whether an exposure occurred in the specified number of years before
+# diagnosis. diagnosis_year uses tidy-evaluation syntax; exposure_year is an
+# explicit required input column retained for compatibility with current calls.
 check_exposure <- function(data, columns_to_check, diagnosis_year, exposure_years) {
-  data %>%
-    group_by(subject_id) %>%
-    #check for each dog for each column in list if there is a 1 for exposure recorded and that this is within the desired range between diagnosis and exposure
-    mutate(across(all_of(columns_to_check), 
-                  list(~ if_else(
-                    any(. == 1 & (diagnosis_year - exposure_year) <= exposure_years),
-                    #within = 1, not within = 0
-                    paste0("Within ", exposure_years, "y"),
-                    paste0("Not within ", exposure_years, "y")
-                  )), 
-                  .names = "{.col}_{exposure_years}y"))
+  diagnosis_quo <- rlang::enquo(diagnosis_year)
+  diagnosis_name <- rlang::as_name(diagnosis_quo)
+  .require_positive_whole_number(exposure_years, "exposure_years")
+  .require_columns(
+    data,
+    c("subject_id", diagnosis_name, "exposure_year", columns_to_check)
+  )
+
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(columns_to_check),
+        ~ {
+          diagnosis <- .single_group_value(
+            !!diagnosis_quo,
+            diagnosis_name,
+            dplyr::first(.data$subject_id)
+          )
+          lag_years <- diagnosis - .data$exposure_year
+          exposed <- any(
+            .x == 1 & lag_years >= 0 & lag_years <= exposure_years,
+            na.rm = TRUE
+          )
+
+          if (exposed) {
+            paste0("Within ", exposure_years, "y")
+          } else {
+            paste0("Not within ", exposure_years, "y")
+          }
+        },
+        .names = "{.col}_{exposure_years}y"
+      )
+    ) |>
+    dplyr::ungroup()
 }
 
-
-#variant on check_exposure to apply it to different subsets of years to just get a Y N exposed eg. was dog exposed to aerosols in SY 0-2
 check_exposure2 <- function(data, columns_to_check, study_years, year_column) {
+  .require_columns(data, c("subject_id", year_column, columns_to_check))
+
+  if (length(study_years) == 0L || anyNA(study_years)) {
+    stop("study_years must contain at least one non-missing year.", call. = FALSE)
+  }
+
   suffix <- paste(study_years, collapse = "_")
-  data %>%
-    group_by(subject_id) %>%
-    mutate(across(
-      all_of(columns_to_check),
-      ~ if_else(
-        any(. == 1 & !!sym(year_column) %in% study_years),
-        paste0("Within ", paste(study_years, collapse = ","), " years"),
-        paste0("Not within ", paste(study_years, collapse = ","), " years")
-      ),
-      .names = "{.col}_study_years_{suffix}"
-    )) %>%
-    # Calculate the count of 1s within the study years for each column = sum of exposure
-    mutate(across(
-      all_of(columns_to_check),
-      ~ sum(. == 1 & !!sym(year_column) %in% study_years, na.rm = TRUE),
-      .names = "{.col}_sum_{suffix}"
-    )) %>%
-    ungroup()
-}
 
-
-#variation on this to use diagnosis date and X years prior 
-check_exposure_binary <- function(data, columns_to_check, year_range, year_column, study_year_column) {
-  data %>%
-    group_by(subject_id) %>%
-    mutate(across(
-      all_of(columns_to_check),
-      ~ {
-        # Calculate the range of years to check
-        diagnosis_year <- !!sym(year_column)
-        years_to_check <- (diagnosis_year - year_range):(diagnosis_year - 1)
-        
-        # Filter binary values within the calculated years_to_check
-        values <- .[!!sym(study_year_column) %in% years_to_check]
-        
-        # Check if any exposure exists (binary: 1/Yes)
-        if (any(values == 1, na.rm = TRUE)) {
-          "Yes"
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(columns_to_check),
+        ~ if (any(.x == 1 & .data[[year_column]] %in% study_years, na.rm = TRUE)) {
+          paste0("Within ", paste(study_years, collapse = ","), " years")
         } else {
-          "No"
-        }
-      },
-      .names = "{.col}_exposed_{year_range}yrs_prior" # Dynamic column naming
-    )) %>%
-    ungroup()
+          paste0("Not within ", paste(study_years, collapse = ","), " years")
+        },
+        .names = paste0("{.col}_study_years_", suffix)
+      ),
+      dplyr::across(
+        dplyr::all_of(columns_to_check),
+        ~ sum(.x == 1 & .data[[year_column]] %in% study_years, na.rm = TRUE),
+        .names = paste0("{.col}_sum_", suffix)
+      )
+    ) |>
+    dplyr::ungroup()
 }
 
+check_exposure_binary <- function(
+    data,
+    columns_to_check,
+    year_range,
+    year_column,
+    study_year_column) {
+  .require_positive_whole_number(year_range, "year_range")
+  .require_columns(
+    data,
+    c("subject_id", year_column, study_year_column, columns_to_check)
+  )
 
-
-# Example usage:
-#columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
-#                     "use_moth_balls", "use_incense_or_candles", "smoke_exposure",
-#                   "any_treated_weeds", "any_treated_insects", "any_treated_fertilizer")
-
-#exposure_years <- 3
-
-#result_df <- check_exposure(merged_df, columns_to_check, diagnosis_year, exposure_years)
-
-
-#3rd variant on check exposure function to check if exposed in X years. for categorical variables - what was the mode class in X years
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(columns_to_check),
+        ~ {
+          endpoint_year <- .single_group_value(
+            .data[[year_column]],
+            year_column,
+            dplyr::first(.data$subject_id)
+          )
+          years_to_check <- seq.int(endpoint_year - year_range, endpoint_year - 1L)
+          values <- .x[.data[[study_year_column]] %in% years_to_check]
+          if (any(values == 1, na.rm = TRUE)) "Yes" else "No"
+        },
+        .names = paste0("{.col}_exposed_", year_range, "yrs_prior")
+      )
+    ) |>
+    dplyr::ungroup()
+}
 
 check_exposure_mode <- function(data, columns_to_check, study_years, year_column) {
+  .require_columns(data, c("subject_id", year_column, columns_to_check))
+
+  if (length(study_years) == 0L || anyNA(study_years)) {
+    stop("study_years must contain at least one non-missing year.", call. = FALSE)
+  }
+
   suffix <- paste(study_years, collapse = "_")
-  
-  data %>%
-    group_by(subject_id) %>%
-    mutate(across(
-      all_of(columns_to_check),
-      ~ {
-        # Filter values within the study years
-        values <- .[!!sym(year_column) %in% study_years]
-        
-        # Calculate mode (most frequent value)
-        if (length(values) == 0) {
-          NA_character_
-        } else {
-          mode_val <- names(which.max(table(values)))
-          mode_val
-        }
-      },
-      .names = "{.col}_mode_{suffix}" # Name new columns dynamically
-    )) %>%
-    ungroup()
+
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(columns_to_check),
+        ~ .mode_or_fail(
+          .x[.data[[year_column]] %in% study_years],
+          dplyr::cur_column(),
+          dplyr::first(.data$subject_id)
+        ),
+        .names = paste0("{.col}_mode_", suffix)
+      )
+    ) |>
+    dplyr::ungroup()
 }
 
-##checking exposure mode based on an end date/diagnosis date and X number of years prior
-check_exposure_mode_X_prev_years <- function(data, columns_to_check, year_range, year_column, study_year_column) {
-  data %>%
-    group_by(subject_id) %>%
-    mutate(across(
-      all_of(columns_to_check),
-      ~ {
-        # Calculate the range of years to check
-        diagnosis_year <- !!sym(year_column)
-        years_to_check <- (diagnosis_year - year_range):(diagnosis_year - 1)
-        
-        # Filter values within the calculated years_to_check based on study_year_column
-        values <- .[!!sym(study_year_column) %in% years_to_check]
-        
-        # Calculate mode (most frequent value)
-        if (length(values) == 0) {
-          NA_character_
-        } else {
-          mode_val <- names(which.max(table(values)))
-          mode_val
-        }
-      },
-      .names = "{.col}_mode_{year_range}yrs_prior" # Dynamic column naming
-    )) %>%
-    ungroup()
+check_exposure_mode_X_prev_years <- function(
+    data,
+    columns_to_check,
+    year_range,
+    year_column,
+    study_year_column) {
+  .require_positive_whole_number(year_range, "year_range")
+  .require_columns(
+    data,
+    c("subject_id", year_column, study_year_column, columns_to_check)
+  )
+
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(columns_to_check),
+        ~ {
+          endpoint_year <- .single_group_value(
+            .data[[year_column]],
+            year_column,
+            dplyr::first(.data$subject_id)
+          )
+          years_to_check <- seq.int(endpoint_year - year_range, endpoint_year - 1L)
+          .mode_or_fail(
+            .x[.data[[study_year_column]] %in% years_to_check],
+            dplyr::cur_column(),
+            dplyr::first(.data$subject_id)
+          )
+        },
+        .names = paste0("{.col}_mode_", year_range, "yrs_prior")
+      )
+    ) |>
+    dplyr::ungroup()
 }
-
-
-#function to calculate dosage/amount exposed to
-
 
 exposure_dosage <- function(data, column_of_exposure, record_date, date_of_event) {
-  col_name <- paste0(column_of_exposure, "_prediagnosis")
-  
-  data %>%
-    group_by(subject_id) %>%
-    mutate(!!col_name := sum(ifelse(.data[[record_date]] < .data[[date_of_event]], .data[[column_of_exposure]], 0), na.rm = TRUE)) %>%
-    ungroup()
+  .require_columns(
+    data,
+    c("subject_id", column_of_exposure, record_date, date_of_event)
+  )
+  output_name <- paste0(column_of_exposure, "_prediagnosis")
+
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      !!output_name := sum(
+        dplyr::if_else(
+          .data[[record_date]] < .data[[date_of_event]],
+          .data[[column_of_exposure]],
+          0
+        ),
+        na.rm = TRUE
+      )
+    ) |>
+    dplyr::ungroup()
 }
 
-
-
-###modification of exposure_dosage function to calculate amount of exposure using year_in_study rather than time between 2 dates as above
 exposure_dosage2 <- function(data, column_of_exposure, study_years) {
-  # Create a dynamic column name based on exposure column and study years
-  col_name <- paste0(column_of_exposure, "_", paste(study_years, collapse = "_"), "_total_dosage")
-  
-  data %>%
-    group_by(subject_id) %>%
-    mutate(!!col_name := sum(ifelse(year_in_study %in% study_years, .data[[column_of_exposure]], 0), na.rm = TRUE)) %>%
-    ungroup()
+  .require_columns(data, c("subject_id", "year_in_study", column_of_exposure))
+
+  if (length(study_years) == 0L || anyNA(study_years)) {
+    stop("study_years must contain at least one non-missing year.", call. = FALSE)
+  }
+
+  output_name <- paste0(
+    column_of_exposure,
+    "_",
+    paste(study_years, collapse = "_"),
+    "_total_dosage"
+  )
+
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      !!output_name := sum(
+        dplyr::if_else(
+          .data$year_in_study %in% study_years,
+          .data[[column_of_exposure]],
+          0
+        ),
+        na.rm = TRUE
+      )
+    ) |>
+    dplyr::ungroup()
 }
 
+check_exposure_hours <- function(
+    data,
+    columns_to_check,
+    year_range,
+    year_column,
+    study_year_column) {
+  .require_positive_whole_number(year_range, "year_range")
+  .require_columns(
+    data,
+    c("subject_id", year_column, study_year_column, columns_to_check)
+  )
 
-#exposure dosage using diagnosis year
-check_exposure_hours <- function(data, columns_to_check, year_range, year_column, study_year_column) {
-  data %>%
-    group_by(subject_id) %>%
-    mutate(across(
-      all_of(columns_to_check),
-      ~ {
-        # Calculate the range of years to check
-        diagnosis_year <- !!sym(year_column)
-        years_to_check <- (diagnosis_year - year_range):(diagnosis_year - 1)
-        
-        # Filter exposure hours within the calculated years_to_check based on study_year_column
-        values <- .[!!sym(study_year_column) %in% years_to_check]
-        
-        # Sum exposure hours (assuming values represent hours of exposure)
-        total_exposure_hours <- sum(values, na.rm = TRUE)
-        
-        total_exposure_hours
-      },
-      .names = "{.col}_exposure_hours_{year_range}yrs_prior" # Dynamic column naming
-    )) %>%
-    ungroup()
+  data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(columns_to_check),
+        ~ {
+          endpoint_year <- .single_group_value(
+            .data[[year_column]],
+            year_column,
+            dplyr::first(.data$subject_id)
+          )
+          years_to_check <- seq.int(endpoint_year - year_range, endpoint_year - 1L)
+          sum(.x[.data[[study_year_column]] %in% years_to_check], na.rm = TRUE)
+        },
+        .names = paste0("{.col}_exposure_hours_", year_range, "yrs_prior")
+      )
+    ) |>
+    dplyr::ungroup()
 }
 
-
-#main location -do they ever sleep at X location
-#3 inputs
 split_column <- function(data, original_column, outcomes) {
-  #create a new column name where the name of the outcome column and a seperater of_ are made
-  outcome_columns <- paste(outcomes, sep = "_")
-  #for each outcome in the list of outcomes if it ever = 1 for the dog then will be a 1 in the new column
+  if (length(original_column) != nrow(data)) {
+    stop("original_column must have one value per data row.", call. = FALSE)
+  }
+  if (length(outcomes) == 0L || anyNA(outcomes) || anyDuplicated(outcomes)) {
+    stop("outcomes must be non-missing and unique.", call. = FALSE)
+  }
+
   for (outcome in outcomes) {
-    data <- mutate(data, !!paste(outcome, "YN", sep = "_") := if_else(original_column == outcome, "1", "0"))
+    data[[paste0(outcome, "_YN")]] <- ifelse(
+      is.na(original_column),
+      NA_character_,
+      ifelse(original_column == outcome, "1", "0")
+    )
   }
-  
-  return(data)
+
+  data
 }
 
+majority_location <- function(data, columns_to_count) {
+  .require_columns(data, c("subject_id", columns_to_count))
 
-#majority location function
-# 2 inputs
-majority_location <- function(data,columns_to_count) {
-  data %>%
-    group_by(subject_id)%>%
-    #count the number of 1s for each dog for each column seperately
-    summarise(across(all_of(columns_to_count), ~sum(. == 1, na.rm = TRUE))) %>%
-    #majority location is the column with biggest count in the previous step, a +1 is added for the indexing between relative df created in summarise vs actual df the fucntion is applied to
-    mutate(majority_location = names(.)[max.col(select(., all_of(columns_to_count)))+1]) %>%
-    ungroup()
-}
-#same function but dynamic column labelling - cant make this work currently
-majority_location2 <- function(data, columns_to_count) {
-  col_name <- paste0(columns_to_count, "_lifetime_exposure")
-  
-  data %>%
-    group_by(subject_id) %>%
-    summarise(across(all_of(columns_to_count), ~sum(. == 1, na.rm = TRUE))) %>%
-    mutate(!!col_name := names(.data)[max.col(select(., all_of(columns_to_count)))+1])
-}
+  result <- data |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(columns_to_count),
+        ~ sum(.x == 1, na.rm = TRUE)
+      ),
+      .groups = "drop"
+    )
 
+  counts <- as.matrix(result[, columns_to_count, drop = FALSE])
+  maximum <- apply(counts, 1L, max)
+  tied <- rowSums(counts == maximum) != 1L
 
-
-
-### function for using dictionary to remap terms
-map_frequency_to_df <- function(data, column_to_map, mapping_list, new_column_name = "mapped_frequency") {
-  # Check if the specified column exists
-  if (!column_to_map %in% names(data)) {
-    stop("The specified column does not exist in the data frame.")
+  if (any(tied)) {
+    stop(
+      "No unique majority location for subject_id: ",
+      paste(result$subject_id[tied], collapse = ", "),
+      call. = FALSE
+    )
   }
-  
-  # Define the mapping function
-  map_frequency <- function(frequency, mapping_list) {
-    match <- sapply(mapping_list, function(x) frequency %in% x)
-    if (any(match)) {
-      return(names(mapping_list)[which(match)[1]]) # Use the first match to ensure a single value
-    } else {
-      return("unspecified")
+
+  result$majority_location <- columns_to_count[
+    max.col(counts, ties.method = "first")
+  ]
+  result
+}
+
+map_frequency_to_df <- function(
+    data,
+    column_to_map,
+    mapping_list,
+    new_column_name = "mapped_frequency") {
+  .require_columns(data, column_to_map)
+
+  if (is.null(names(mapping_list)) || any(names(mapping_list) == "")) {
+    stop("mapping_list must have a name for every mapping group.", call. = FALSE)
+  }
+
+  map_frequency <- function(frequency) {
+    matches <- vapply(
+      mapping_list,
+      function(values) frequency %in% values,
+      FUN.VALUE = logical(1)
+    )
+
+    if (sum(matches) > 1L) {
+      stop("A value appears in more than one mapping group.", call. = FALSE)
     }
+
+    if (any(matches)) names(mapping_list)[which(matches)] else "unspecified"
   }
-  
-  # Apply the mapping function to the specified column and create the new column
-  data[[new_column_name]] <- vapply(data[[column_to_map]], map_frequency, FUN.VALUE = character(1), mapping_list = mapping_list)
-  
-  # Return the updated data frame
-  return(data)
+
+  data[[new_column_name]] <- vapply(
+    data[[column_to_map]],
+    map_frequency,
+    FUN.VALUE = character(1)
+  )
+  data
 }
-
-
-
-
-

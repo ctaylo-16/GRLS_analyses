@@ -3009,10 +3009,7 @@ mutate(
                         "Q4(4-17)" ="5-17 times",
                         "no_med_use_recorded"="No medical records in time period")
   )
-df <- df %>%   
-  mutate(endo_5y_quantiles = factor(endo_5y_quantiles,levels=c(
-    "1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medical records in time period"
-=======
+df <- df %>%
   mutate(endo_5y_quantiles = factor(endo_5y_quantiles,levels=c("Endoparasiticide not administered",
     "1-2 times","3 times ","4 times","5-17 times","No medical records in time period"
   )))
@@ -3145,9 +3142,6 @@ final_df[33, 1] <- "Smoke exposure- early life"
 
 
 final_df$category <- factor(final_df$category, 
-                        levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","1-2 times","3 times ","4 times","5-17 times","Endoparasiticide not administered","No medications records for this time period", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period","Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
-=======
-final_df$category <- factor(final_df$category, 
                         levels = c(">7-<9y","<5y",">5-<7y",">9-<11y",">11-<13y",">13y","Female","Male",">15-<=25kg",">25-<=35kg",">35kg","Weight not recorded","No other cancer reported","Other cancer reported", "GI comorb not present", "GI comorb present","Endoparasiticide not administered","1-2 times","3 times ","4 times","5-17 times","No medications records for this time period", "NSAID not administered", "1 time","2 times","3 times","4-11 times", "No medical records in time period","Weekly","Daily or more","Rarely","Activity freq. not recorded","Not within early life", "Within early life"))
 final_df$AutoNumber <- factor(final_df$AutoNumber, 
                         levels = c("1","2","3","4","5","6","7","8","9","10","11","12",
@@ -3227,8 +3221,6 @@ ggsave(here::here("Output/logreg_forestplot_2_endo.svg"), plot = forest_log, wid
 ggsave(here::here("Output/logreg_forestplot_2_endo.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
 ggsave(here::here("Output/logreg_forestplot_2_endo_2.tif"), plot = forest_log, width = 15, height = 10, dpi = 300)
-=======
-
 ```
 
 Create seperate endo only values plot to put underneath

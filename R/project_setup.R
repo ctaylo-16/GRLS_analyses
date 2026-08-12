@@ -5,7 +5,7 @@ grls_required_packages <- c(
   "ezfun", "finalfit", "flextable", "forcats", "ggplot2", "ggsurvfit",
   "gtable", "gtsummary", "here", "kableExtra", "lme4", "lubridate",
   "officer", "patchwork", "pROC", "pscl", "purrr", "RColorBrewer",
-  "readr", "stringr", "survival", "survminer", "tibble", "tidycmprsk",
+  "readr", "stringr", "survival", "survminer", "testthat", "tibble", "tidycmprsk",
   "tidyr", "tidyverse", "writexl"
 )
 

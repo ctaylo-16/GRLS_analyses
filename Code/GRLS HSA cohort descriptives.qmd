@@ -410,10 +410,8 @@ source(here::here("Code/functions/age_calc_funct.R"))
 
 HSA_dogs3 <- age_calc(HSA_dogs2,"subject_id","diagnosis_date","death_date")
 
-#across all these rows replace any negative values with 0
-HSA_dogs3 <- HSA_dogs3 %>%
-  mutate(across(13:16, ~ as.numeric(.))) %>%   # convert to numeric
-  mutate(across(13:16, ~ ifelse(. < 0, 0, .))) # replace negatives with 0
+# age_calc() returns numeric durations and stops if a death date precedes a
+# diagnosis date. Negative survival times are not repaired in this report.
 
 
 #need to create a status variable for calc MST - status by 31/12/24. 0 = censored, 1=dead
@@ -2627,7 +2625,7 @@ survival_time_1 <- HSA_dogs4 %>%
 
 
 
-survfit(Surv(survival_time_1$time_between_diagnosis_date_death_date_days, survival_time_1$status) ~ 1, data = HSA_dogs_confirmed _survival_time_1) %>% 
+survfit(Surv(time_between_diagnosis_date_death_date_days, status) ~ 1, data = survival_time_1) %>%
   ggsurvfit() +
   labs(
     x = "Days",

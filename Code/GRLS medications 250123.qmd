@@ -618,7 +618,7 @@ Ones that are worth tidying for calculations here:
 
 -   ml
 
--   specific parasiticide ones eg. 460 mg lufenuron, 23 mg milbemycin oxime?
+-   specific parasiticide ones eg. 460Â mgÂ lufenuron,Â 23Â mgÂ milbemycinÂ oxime?
 
 ```{r}
 dose <- medications_2 %>%
@@ -1518,7 +1518,7 @@ Non use vs intermediate use vs long term use.
 
 There is a few papers defining this usage:
 
-"We classiﬁed use as non-use (0–1 prescription), in- termediate use (2–7 prescriptions), and long-term use (≥8 prescrip- tions). Eight prescriptions was chosen as a cut-off as drugs for chronic treatment are typically supplied for 3 months use for each dispensing in Denmark, whereby our deﬁnition oflong-termusewould correspond to two years' cumulative treatment." - Pottegard et al., 2016
+"We classiï¬ed use as non-use (0â€“1 prescription), in- termediate use (2â€“7 prescriptions), and long-term use (â‰¥8 prescrip- tions). Eight prescriptions was chosen as a cut-off as drugs for chronic treatment are typically supplied for 3 months use for each dispensing in Denmark, whereby our deï¬nition oflong-termusewould correspond to two years' cumulative treatment." - Pottegard et al., 2016
 
 -   exclude drug usage for the year prior to diagnosis (recognised that increased prescribing in year prior to diagnosis possibly due to cancer diagnosing issues PLUS likely wont be involved in cancer diagnosis
 
@@ -1681,7 +1681,7 @@ core_only <- c("canine distemper, adenovirus type 2, parainfluenza, parvovirus",
           
 non_core_only <- c("borrelia burgdorferi","canine influenza (unspecified)","bordetella bronchiseptica, parainfluenza","bordetella bronchiseptica","rattlesnake venin" ,"canine coronavirus","melanoma vaccine","canine giardia")
 
-both_core_non_core <- c("adenovirus type 2, bordetella bronchiseptica, parainfluenza", "borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)",      "canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  , "canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus","canine parvovirus","canine distemper, adenovirus type 2, measles, parainfluenza","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)" ,,"canine distemper, adenovirus type 2, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,   "canine distemper, adenovirus type 2, coronavirus, parvovirus" ,"canine coronavirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine coronavirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,"canine distemper, adenovirus type 2, coronavirus, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"
+both_core_non_core <- c("adenovirus type 2, bordetella bronchiseptica, parainfluenza", "borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)",      "canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)"  , "canine distemper, adenovirus type 2, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus","canine parvovirus","canine distemper, adenovirus type 2, measles, parainfluenza","canine distemper, adenovirus type 2, coronavirus, parainfluenza, parvovirus, leptospirosis 2 (canicola, icterohaemorrhagiae)","canine distemper, adenovirus type 2, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,   "canine distemper, adenovirus type 2, coronavirus, parvovirus" ,"canine coronavirus, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)","canine coronavirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)" ,"canine distemper, adenovirus type 2, coronavirus, parvovirus, borrelia burgdorferi, leptospirosis 4 (canicola, grippotyphosa, icterohaemorrhagiae, pomona)")
 
 ```
 
