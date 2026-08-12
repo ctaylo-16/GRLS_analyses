@@ -34,13 +34,6 @@ The environmental, activity, reproductive, medication, comorbidity, deprivation,
 
 HSA, lymphoma, and MCT remain in one repository because they reuse substantial feature-engineering and helper code. Refactoring should create clear cancer-specific entry points while keeping genuinely shared implementations under `R/`; it should not split the repository and duplicate those implementations.
 
-## Generated or duplicate source files
+## Output policy
 
-The following tracked `Output/` copies differ from their similarly named current analyses under `Code/`:
-
-| Current analysis | Disputed `Output/` copy |
-|---|---|
-| `Code/GRLS HSA updated analysis_all_cases.qmd` | `Output/GRLS_HSA_updated_analysis_all_cases.qmd` |
-| `Code/GRLS HSA updated analysis confirmed cases.qmd` | `Output/GRLS_HSA_updated_analysis_confirmed_cases.qmd` |
-
-Their origin and authority must be confirmed before either copy is consolidated or archived. They are an intentional temporary exception to the general rule that generated `Output/` content is not tracked.
+Quarto source files belong under `Code/`, not `Output/`. The `Output/` directory is reserved for generated figures, data, tables, and rendered analysis products, which are not tracked in Git.
