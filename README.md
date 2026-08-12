@@ -35,14 +35,14 @@ This remains a single multi-cancer repository: HSA, lymphoma, and MCT have disti
 
 The main lymphoma and MCT feature domains now use shared, tested helpers under
 `R/`, including endpoint, deprivation, environment, smoke/sleep, lifestyle,
-household, medication summaries, reproduction, weight, activity, and final
-dataset handling. The author's R 4.4.1 package environment is recorded in
-`renv.lock`, and cancer-specific command-line entry points are available.
+household, comorbidity/neoplasia, medication summaries and specific exposures,
+reproduction, weight, activity, and final dataset handling. The author's R
+4.4.1 package environment is recorded in `renv.lock`, and cancer-specific
+command-line entry points are available.
 
-The important remaining refactor work is narrower but still real: HSA feature
-preparation consumes legacy generated inputs, while the active lymphoma/MCT
-comorbidity assembly and cancer-specific medication sections still contain
-positional column selections. These are documented rather than hidden.
+The important remaining refactor work is now concentrated in HSA. Its feature
+preparation still consumes legacy generated inputs and its duplicated all-case
+and confirmed-case analyses have not yet been parameterised.
 
 Until those stages are complete, run notebooks only in the documented dependency order and do not assume similarly named dated or `updated` files are interchangeable.
 

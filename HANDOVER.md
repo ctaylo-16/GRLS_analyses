@@ -70,8 +70,6 @@ The current lymphoma workflow uses the frozen `Data/lymphoma_cohort_241201.csv` 
 
 - Extract the active HSA dataset preparation from its legacy generated feature
   files and separate it fully from the inactive Cox analysis.
-- Replace positional column selections in the lymphoma/MCT comorbidity assembly
-  and cancer-specific medication blocks with named transformations.
 - Parameterise duplicated all-case and confirmed-case HSA analyses.
 - Restore `renv.lock` and run all routes on a clean handover machine, including
   Quarto and any operating-system dependencies.

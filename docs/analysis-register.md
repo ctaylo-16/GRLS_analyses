@@ -33,10 +33,9 @@ This register is the source of truth for notebook status. Entries marked **autho
 The environmental, activity, reproductive, medication, comorbidity,
 deprivation, and exploratory notebooks mix derivation, checking, and reporting.
 Their shared lymphoma/MCT implementations have largely been mapped into `R/`,
-but HSA still consumes several legacy generated outputs and the active
-lymphoma/MCT comorbidity and cancer-specific medication blocks remain partly
-positional. Keep these notebooks as provenance until those remaining routes are
-extracted and verified.
+including the comorbidity, neoplasia, and cancer-specific medication sections.
+HSA still consumes several legacy generated outputs. Keep the shared notebooks
+as provenance until that remaining route is extracted and verified.
 
 HSA, lymphoma, and MCT remain in one repository because they reuse substantial feature-engineering and helper code. Refactoring should create clear cancer-specific entry points while keeping genuinely shared implementations under `R/`; it should not split the repository and duplicate those implementations.
 

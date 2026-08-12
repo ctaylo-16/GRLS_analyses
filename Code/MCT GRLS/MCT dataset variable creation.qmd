@@ -241,77 +241,14 @@ source(here::here("R/comorbidities.R"))
 # Join domain extracts by the unique dog/year/to-date key. The extracts contain
 # the same keys in different row orders, so row-wise cbind is not valid.
 comorbs_all <- read_condition_domains(here::here("Data"))
-comorbs_unique <- comorbs_all
-#for 5y variables
-comorbs_unique2 <- comorbs_all
-#for other calcs
-comorbs_unique3 <- comorbs_all
+conditions_neoplasia <- read.csv(
+  here::here("Data", "conditions_neoplasia.csv")
+)
 ```
 
 Comorbs to find:
 
 ```{r}
-#potential chronic inflam conditions
-comorbs_to_find <-c("congestive_heart_failure",
-  "cardiomyopathy",
-  "hypertension",
-  "heartworm_infection",
-  "lower_airway_disease",
-  "dental_tarter_calculus",
-  "addisons_disease",
-  "autoimmune_thyroiditis",
-  "cushings_disease",
-  "diabetes_insipidus",
-  "diabetes_mellitus",
-  "hyperadrenalestrogenism",
-  "hypercalcemia",
-  "hypothyroidism",
-  "pancreatic_insufficiency",
-  "keratoconjunctivitis_sicca",
-  "pigmentary_uveitis",
-  "uveitis",
-  "chronic_colitis",
-  "malabsorptive_disorder",
-  "megaesophagus",
-  "pancreatitis",
-  "anaplasma",
-  "babesia",
-  "canine_herpesvirus",
-  "coccidia",
-  "cryptosporidium",
-  "ear_mites",
-  "ehrlichia",
-  "eimeria",
-  "fleas",
-  "fungal_infection",
-  "giardia",
-  "granuloma",
-  "hookworms",
-  "influenza",
-  "isospora",
-  "leptospirosis",
-  "lyme_disease",
-  "other_ectoparasite",
-  "parvovirus",
-  "rocky_mountain_spotted_fever",
-  "roundworms",
-  "tapeworms",
-  "ticks",
-  "tracheobronchitis",
-  "unspecified_gastrointestinal_parasite",
-  "valley_fever",
-  "whipworms",
-  "immune_related_musculoskeletal_disorder",
-  "osteoarthritis",
-  "rheumatoid_arthritis",
-  "laryngeal_paralysis",
-  "meningitis",
-  "meningoencephalitis",
-  "myasthenia_gravis",
-  "erythema_multiforme",
-  "flea_allergy_dermatitis",
-  "food_allergy_dermatitis",
-  "r_o_atopy")
 #specific comorb groups 
 intestinal_parasitism <- c("giardia", "hookworms", "coccidia", "tapeworms", "whipworms", "roundworms", "eimeria", "isospora","cryptosporidium","eimeria","tapeworms")
 tick_borne_parasitism <-c("lyme_disease", "anaplasma", "rocky_mountain_spotted_fever", "ticks", "ehrlichia", "lyme disease", "lyme diseases, oa?", "lyme/anaplasma", "lyme+", "anaplasma and lyme +", "positive anaplasma", "erlichia +", "erlichia","valley_fever","babesia","anaplasma","ehrlichia","lyme_disease")
@@ -388,134 +325,14 @@ chronic_inflammatory <-c("congestive_heart_failure",
   "r_o_atopy")
 ```
 
-#### Chronic inflam conditions ever in all years of study
+#### Lifetime and final-five-year condition groups
+
+The shared helper calculates each condition group by its column names. Lifetime
+flags use all available annual records. The final-five-year flags use each dog's
+five most recent study years, and the six groups below also retain diagnoses
+that are treated as permanent once recorded.
 
 ```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
-
-comorbs_unique_2 <- comorbs_unique %>%
-  #get rid of the to_date row for each dog
-  filter(to_date !=1) %>%
-  #get rid of the NA rows in the dataset - then add in later at the 3044 level to be "no_records_available" across the comorbs
-  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
-###not using currently as want to keep the NA to tidy at end into "no_records_available"
-#comorbs_unique_2<- comorbs_unique_2%>%
-# replacing NA values with 0 across comorbidity columns
- # mutate_at(vars(3:196), ~replace_na(., 0))
-
-
-#remove the rows in the comorbs_unique_2 that have got NAs across whole dataset for each dog. then when creating cohort variable at end can recode any of these dogs with no records as "no_records_available" (very few missing records across WHOLE study period, generally just occ year)
-
-cols_to_check <- c(7:21,164:196)
-comorbs_unique_2 <- comorbs_unique_2[complete.cases(comorbs_unique_2[, cols_to_check]), ]
-#checking all dogs have some records to see if need to code any with "no_records_available" at end - all dogs have comorbs records in their lifetime
-comorbs_unique <- unique(comorbs_unique_2$subject_id)
-
-df_result2 <- comorbs_unique_2 %>%
-  group_by(subject_id) %>%
-  mutate(
-    #is there any chronic inflam condition present in at least 1 row for subject id
-    chronic_inflam_present_lifetime = if_else(
-      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
-        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
-      1, 
-      0
-    ),
-    #how many chronic inflam conditions
-    number_comorbs_present_lifetime = if_else(
-      chronic_inflam_present_lifetime == 1,
-      rowSums(across(all_of(conditions_in_df_and_list))),
-      0
-    ),
-    ,
-    #what were the comorbidities
-    comorbidities_lifetime = if_else(
-      chronic_inflam_present_lifetime == 1,
-      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
-      "")
-  ) %>%
-  ungroup()
-
-
-```
-
-#### Comorbs in final 5y prior to endpoint
-
-```{r}
-#keeping record_date for linking up to cancer diagnosis but remove to_date column
-comorbs_unique_3 <- comorbs_unique2 %>%
-#  mutate_at(vars(5:200), ~replace_na(., 0)) %>%
-  filter(to_date !=1) %>%
-  dplyr::select(-c(relationship_category,to_date)) %>%
-  rename(year_in_study_comorb = year_in_study)
-cols_to_check <- c(5:23,26:164,165:198)
-comorbs_unique_3 <- comorbs_unique_3[complete.cases(comorbs_unique_3[, cols_to_check]), ]
-
-##checking all dogs have some records to see if need to code any with "no_records_available" at end - all dogs have comorbs records for at least some of last 5y = dont need to do "record_unavailable"
-comorbs_unique_5y <- unique(comorbs_unique_3$subject_id)
-
-#run all functions above onto this dataset
-df_result3 <- comorbs_unique_3 %>%
-  group_by(subject_id) %>%
-  mutate(
-    #is there any chronic inflam condition present in at least 1 row for subject id
-    chronic_inflam_present_5y = if_else(
-      rowSums(across(all_of(conditions_in_df_and_list))) > 0 & 
-        rowSums(across(all_of(conditions_in_df_and_list), ~ sum(. == 1)) > 1), 
-      1, 
-      0
-    ),
-    #how many chronic inflam conditions
-    number_comorbs_present_5y = if_else(
-      chronic_inflam_present_5y == 1,
-      rowSums(across(all_of(conditions_in_df_and_list))),
-      0
-    ),
-    ,
-    #what were the comorbidities
-    comorbidities_5y = if_else(
-      chronic_inflam_present_5y == 1,
-      apply(across(all_of(conditions_in_df_and_list)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
-      "")
-  ) %>%
-  ungroup()
-
-
-#keep only top 5 rows per patient 
-df_result_restricted <- df_result3 %>%
-  group_by(subject_id) %>%
-  filter(year_in_study_comorb %in% sort(unique(year_in_study_comorb), decreasing = TRUE)[1:5]) %>%
-  ungroup()
-  
-
-
-# Function to detect comorbidities for each subject_id based on index range
-detect_comorbidity <- function(df, subject_id_col, index_range, comorbidity_groups) {
-  # Extract actual column names within the index range
-  valid_columns <- colnames(df)[index_range]
-
-  df %>%
-    group_by(!!sym(subject_id_col)) %>%  # Group by subject_id
-    summarise(across(all_of(valid_columns), ~ any(. == 1), .names = "temp_{.col}"), .groups = "drop") %>%  # Check for 1s
-    mutate(
-      !!!map(comorbidity_groups, function(cols) {
-        # Identify valid columns that exist in the dataset
-        matched_cols <- intersect(paste0("temp_", cols), colnames(.))
-        
-        # Assign "Y" if any value in matched columns is 1, else "N"
-        if (length(matched_cols) > 0) {
-          ifelse(rowSums(dplyr::select(., all_of(matched_cols))) > 0, "Y", "N")
-        } else {
-          "N"  # If no matching columns exist, default to "N"
-        }
-      })
-    ) %>%
-    dplyr::select(-starts_with("temp_"))  # Remove temporary columns
-}
-
-# Define comorbidity groups (list of column names matching each category)
 comorbidity_groups <- list(
   intestinal_parasitism = intestinal_parasitism,
   tick_borne_parasitism = tick_borne_parasitism,
@@ -530,43 +347,6 @@ comorbidity_groups <- list(
   chronic_inflammatory = chronic_inflammatory
 )
 
-# Apply function to data
-GRLS_data <- df_result_restricted %>%
-  left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
-            by = "subject_id")
-
-
-#keep only a single row for each patient
-# Define the index range of comorbidity columns
-comorbidity_index <- c(199:212)  # Keep subject_id out of this list
-
-# Create a second dataframe with one row per subject_id, summarizing only the selected columns - not using this as need to ensure rows with a 1 are preferentially kept
-#GRLS_summary <- GRLS_data %>%
-#  group_by(subject_id) %>%
-#   arrange(desc(number_comorbs_present_5y)) %>%
-#  summarise(
-#    subject_id = first(subject_id),  # Keep subject_id as is
-#    across(all_of(colnames(GRLS_data)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
- #   .groups = "drop"
- # )
-
-
-GRLS_summary <- GRLS_data %>%
-  group_by(subject_id) %>%
-  arrange(desc(number_comorbs_present_5y)) %>%  # prioritise higher values
-  slice(1) %>%  # keep only the top row per subject
-  ungroup()
-
-
-### recode any NA as "no_record_available"
-GRLS_summary <- GRLS_summary%>%
-  mutate(across(where(~ is.character(.) | is.factor(.)| is.numeric(.)),
-                ~ replace(., is.na(.) | . == "", "no_records_available")))
-```
-
-There are also a separate subset of conditions that if ever reported as diagnosed then will have for life (so do not need \>1 y study records with it available):
-
-```{r}
 comorbs_single_record <- c(
   "atrial_enlargement",
   "cardiomegaly",
@@ -600,363 +380,64 @@ comorbs_single_record <- c(
   "spondylosis"
 )
 
-#identify in records
-
-comorbs_ever <- comorbs_unique3 %>%
-  dplyr::select(-c(relationship_category,year_in_study,record_date,to_date))
-
-#comorbs_ever<- comorbs_ever%>%
-# replacing NA values with 0 across comorbidity columns
- # mutate_at(vars(3:196), ~replace_na(., 0))
-
-
-### restrict columns so that those with all NAs are removed and then can recode back as "no_records_available" later
-cols_to_check <- c(3:21,24:162,164:196)
-comorbs_ever<- comorbs_ever[complete.cases(comorbs_ever[, cols_to_check]), ]
-#all dogs have at least some records here
-unique_comorbs_ever <- unique(comorbs_ever$subject_id)
-#remove all the columns that are not in comorbs_single_record list or subject_id
-comorbs_ever <- comorbs_ever %>%
-  dplyr::select(subject_id, all_of(comorbs_single_record))
-
-#
-lifetime_comorbs_ever <- comorbs_ever %>%
-  group_by(subject_id) %>%
-  mutate(
-    ## ANY lifetime comorb inflam present
-    lifelong_comorb_present = if_else(rowSums(across(all_of(comorbs_single_record))) > 0, 1, 0),
-    
-    ### NUMBER OF chronic inflam conditions present
-    number_lifelong_comorbs_present = rowSums(across(all_of(comorbs_single_record))),
-    
-    # what were the comorbidities
-    lifelong_comorbidities = if_else(
-      lifelong_comorb_present == 1,
-      apply(across(all_of(comorbs_single_record)), 1, function(x) paste(names(which(x == 1)), collapse = "_")),
-      NA_character_
-    )
-  ) %>%
-  ungroup()
-
-#keep count of comorbs and if present and then only a unique row for each patient
-lifetime_comorbs_ever_abr <- lifetime_comorbs_ever %>%
-    dplyr::select(c(subject_id,lifelong_comorb_present,number_lifelong_comorbs_present))%>%
-  group_by(subject_id) %>%
-  arrange(desc(number_lifelong_comorbs_present)) %>%  # prioritise higher values
-  slice(1) %>%  # keep only the top row per subject
-  ungroup()
+GRLS_5yprior_lifetime <- build_condition_group_features(
+  comorbs_all,
+  comorbidity_groups,
+  comorbs_single_record
+)
 ```
 
-Grouping the lifelong_comorbidities column into type of condition e.g endocrine, ocular etc based on earlier lists
+#### Other neoplasia variables
+
+The all-cancer count includes every named neoplasia field, including leukemia
+and melanoma, except the cancer defining this analysis
+(`mast_cell_tumor`). Each reported cancer is counted once per annual record.
+The existing malignant and benign subgroup definition is retained separately.
 
 ```{r}
-
-valid_comorbidity_groups <- lapply(comorbidity_groups, function(cols) {
-  intersect(cols, colnames(lifetime_comorbs_ever))  # Keep only columns that exist in df
-})
-
-# Remove empty comorbidity groups
-valid_comorbidity_groups <- valid_comorbidity_groups[lengths(valid_comorbidity_groups) > 0]
-
-
-
-
-
-# Compute 'lifetime' flags for each comorbidity category
-df_lifetime <- lifetime_comorbs_ever %>%
-  group_by(subject_id) %>%
-  summarise(across(everything(), \(x) max(x, na.rm = TRUE))) %>%  # Collapse per patient (1 if present, 0 otherwise)
-  mutate(!!!setNames(
-    lapply(valid_comorbidity_groups, function(cols) {
-      if (length(cols) > 0) {
-        as.integer(rowSums(.[cols], na.rm = TRUE) > 0)  # Correctly sum across selected columns
-      } else {
-        rep(0, n())  # Handle cases where no valid columns exist
-      }
-    }),
-    paste0("lifelong_", names(valid_comorbidity_groups))  # Create new column names
-  )) %>%
-  select(subject_id, starts_with("lifelong_"))  # Keep only new columns
-
-# View output
-print(df_lifetime)
-```
-
-Combine the lifetime_comorbs_ever_abr and df_lifetime so that we have counts and groupings of these comorbs:
-
-```{r}
-lifelong_data <- df_lifetime %>%
-  left_join(lifetime_comorbs_ever_abr,by="subject_id")
-
-lifelong_data <- lifelong_data %>%
-  dplyr::select(-c(lifelong_comorb_present.y))
-
-
-GRLS_summary_lifelong<- lifelong_data %>%
-  left_join(GRLS_summary,by="subject_id")
-
-#add in _5y to the GRLS summary columns that are from 5y prior to final record
-colnames(GRLS_summary_lifelong)[211:221] <- paste0(colnames(GRLS_summary_lifelong)[211:221], "_5y")
-
-```
-
-Lifetime comorbs now classify into the parasitism/infectious/cardio/ etc
-
-```{r}
-
-# Apply function to data
-GRLS_data_lifetime <- df_result3 %>%
-  left_join(detect_comorbidity(df_result_restricted, "subject_id", 5:198, comorbidity_groups),
-            by = "subject_id")
-
-#add in _5y to the GRLS summary columns that are from 5y prior to final record
-#colnames(GRLS_data_lifetime)[202:212] <- paste0(colnames(GRLS_data_lifetime)[202:212], "_5y")
-
-#keep only a single row for each patient
-# Define the index range of comorbidity columns
-comorbidity_index <- c(199:212)  # Keep subject_id out of this list
-
-# Create a second dataframe with one row per subject_id, summarizing only the selected columns
-GRLS_summary_lifetime <- GRLS_data_lifetime %>%
-  group_by(subject_id) %>%
-  summarise(
-    subject_id = first(subject_id),  # Keep subject_id as is
-    across(all_of(colnames(GRLS_data_lifetime)[comorbidity_index]), ~ ifelse(any(. == "Y"), "Y", "N")),
-    .groups = "drop"
-  )
-#add lifetime to end of columns at 5:15 indices
-names(GRLS_summary_lifetime)[5:15] <- paste0(names(GRLS_summary_lifetime)[5:15], "_lifetime")
-
-```
-
-Combine lifelong and 5y values into one as consider these comorbs to be permanent once diagnosed:
-
-```{r}
-#mutate the Y N in 5y cols to be 0 and 1 for counting in next step
-
-
-
-GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
-  mutate(across(c(4:9, 211:221), ~ case_when(
-    . == "N" ~ 0,
-    . == "Y" ~ 1,
-    TRUE ~ as.numeric(.)
-  )))
-
-#combining counts in 5y columns and then remove the lifelong ones 
-GRLS_summary_lifelong <- GRLS_summary_lifelong %>%
-  mutate(
-    orthopaedic_5y2 = pmax(lifelong_orthopaedic, orthopaedic_5y, na.rm = TRUE),
-    cardiovascular_5y2=pmax(lifelong_cardiovascular,cardiovascular_5y,na.rm=TRUE),
-    immune_mediated_5y2=pmax(lifelong_immune_mediated,immune_mediated_5y,na.rm=TRUE),
-    gastrointestinal_5y2=pmax(lifelong_gastrointestinal,gastrointestinal_5y,na.rm=TRUE),
-    inflammatory_other_5y2=pmax(lifelong_inflammatory_other,inflammatory_other_5y,na.rm=TRUE),
-    chronic_inflammatory_5y2=pmax(lifelong_chronic_inflammatory,chronic_inflammatory_5y,na.rm=TRUE))
-
-#remove the earlier 5y columns and just keep the ones where lifelong + 5y ar ecombined
-GRLS_summary_lifelong_2 <- GRLS_summary_lifelong %>%
-  dplyr::select(c(subject_id,222:227))
-```
-
-Combine all of the 5y prior and ever comorb datasets
-
-```{r}
-GRLS_5yprior_lifetime <- GRLS_summary_lifelong_2 %>%
-  left_join(GRLS_summary_lifetime,by="subject_id")
-
-GRLS_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
-  dplyr::select(-c(8:10))
-
-GRLS_5yprior_lifetime <- GRLS_5yprior_lifetime %>%
-  mutate(across(c(8:18), ~ case_when(
-    . == "N" ~ 0,
-    . == "Y" ~ 1,
-    TRUE ~ as.numeric(.)
-  )))
-```
-
-#### Add neoplasia variables in comorb dataset - lifetime
-
-NB. remove lymphoma from lists as will skew for all the cases to have a 1 and none of the controls by definition
-
-```{r}
-#ggrouping these
-all_cancers <- c("adrenal_tumor","basal_cell_tumor","bile_duct_tumor","bladder_tumor","brain_spinal_cord_tumor","breast_or_mammary_tumor","eye_tumor","hair_matrix_tumor","heart_tumor","hemangiosarcoma",
-                 "histiocytic_sarcoma","kidney_tumor","liver_tumor","lung_tumor","mast_cell_tumor","melanmoma","multiple_myeloma","nasal_tumor","osteosarcoma","pancreatic_tumor","perianal_adenoma","pituitary_tumor","plasma_cell_tumor","plasmacytoma","prostate_tumor","soft_tissue_sarcoma","splenic_tumor","squamous_cell_carcinoma","stomach_intestinal_tumor","testicular_tumor","thymoma","thyroid_tumor")
-malig_cancers <- c("hemangiosarcoma",
-  "histiocytic_sarcoma",  "melanoma", "multiple_myeloma", "osteosarcoma", "pancreatic_tumor", "plasma_cell_tumor", "plasmacytoma", "soft_tissue_sarcoma", "squamous_cell_carcinoma")
-benign_cancers <- c("adrenal_tumor", "basal_cell_tumor", "bile_duct_tumor", "bladder_tumor", "brain_spinal_cord_tumor", "breast_or_mammary_tumor", "eye_tumor", "hair_matrix_tumor", "heart_tumor", "kidney_tumor", "liver_tumor", "lung_tumor", "mast_cell_tumor", "nasal_tumor", "perianal_adenoma", "pituitary_tumor", "prostate_tumor", "splenic_tumor", "stomach_intestinal_tumor", "testicular_tumor", "thymoma", "thyroid_tumor")
-
-```
-
-Create YN and counts for all cancers, benign and malig
-
-```{r}
-comorbs_neoplasia_2 <- conditions_neoplasia %>%
-  filter(to_date != 1)%>%
-  dplyr::select(-other_specify)
-
-#for next step of 5y
-comorbs_neoplasia_3 <- conditions_neoplasia %>%
-  filter(to_date != 1)%>%
-  dplyr::select(-other_specify)
-#remove rows where comorbs NA
-cols_to_check <- c(6:40)
-comorbs_neoplasia_2 <- comorbs_neoplasia_2[complete.cases(comorbs_neoplasia_2[, cols_to_check]), ]
-
-
-#check if any dogs have no neoplasia records - all do have some records at least for lifetime calcs
-unique_cancer <- unique(comorbs_neoplasia_2$subject_id)
-comorbs_neoplasia_2$all_cancers_count_lifetime <- 0
-comorbs_neoplasia_2$malig_cancers_count_lifetime <- 0
-comorbs_neoplasia_2$benign_cancers_count_lifetime <- 0
-
-
-# Define the cancer columns indices (from index 2 to the last column)
-cancer_columns <- 7:40
-
-# Loop through the cancer columns by index
-for (col_index in cancer_columns) {
-  col_name <- colnames(comorbs_neoplasia_2)[col_index]  # Get column name
-  
-  # Count for all cancers
-  comorbs_neoplasia_2$all_cancers_count_lifetime <- comorbs_neoplasia_2$all_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
-  
-  # Count for all cancers
-  comorbs_neoplasia_2$all_cancers_count_lifetime <- comorbs_neoplasia_2$all_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
-  
-  # Count for malignant cancers
-  if (col_name %in% malig_cancers) {
-    comorbs_neoplasia_2$malig_cancers_count_lifetime <- comorbs_neoplasia_2$malig_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
-  }
-  
-  # Count for benign cancers
-  if (col_name %in% benign_cancers) {
-    comorbs_neoplasia_2$benign_cancers_count_lifetime <- comorbs_neoplasia_2$benign_cancers_count_lifetime + (comorbs_neoplasia_2[[col_name]] == 1)
-  }
-}
-
-#create Y N columns for each in addition to counts
-comorbs_neoplasia_2 <- comorbs_neoplasia_2 %>%
-  mutate(
-    all_cancers_YN_lifetime = ifelse(all_cancers_count_lifetime >= 1, 1, 0),
-    malig_cancers_YN_lifetime = ifelse(malig_cancers_count_lifetime >= 1, 1, 0),
-    benign_cancers_YN_lifetime = ifelse(benign_cancers_count_lifetime >= 1, 1, 0),
-
-  )
-
-
-#code to get to unique rows and keep the max count for each dog
-#get the max count value for each of the counts for each dog 
-cancer_count_summary <- comorbs_neoplasia_2 %>%
-  group_by(subject_id) %>%
-  summarise(
-    malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
-    benign_cancers_count_lifetime = if_else(all(is.na(benign_cancers_count_lifetime)), 0, max(benign_cancers_count_lifetime, na.rm = TRUE)),
-    all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
-    malig_cancers_count_lifetime = if_else(all(is.na(malig_cancers_count_lifetime)), 0, max(malig_cancers_count_lifetime, na.rm = TRUE)),
-    all_cancers_count_lifetime = if_else(all(is.na(all_cancers_count_lifetime)), 0, max(all_cancers_count_lifetime, na.rm = TRUE)),
-
-    malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
-    benign_cancers_YN_lifetime = if_else(all(is.na(benign_cancers_YN_lifetime)), 0, max(benign_cancers_YN_lifetime, na.rm = TRUE)),
-    all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
-    malig_cancers_YN_lifetime = if_else(all(is.na(malig_cancers_YN_lifetime)), 0, max(malig_cancers_YN_lifetime, na.rm = TRUE)),
-    all_cancers_YN_lifetime = if_else(all(is.na(all_cancers_YN_lifetime)), 0, max(all_cancers_YN_lifetime, na.rm = TRUE)),
-    
-    .groups = "drop"
-  )
-
-```
-
-#### Neoplasia YN and counts - 5y prior to endpoint
-
-```{r}
-#keep only the max 5 rows for that dog in year_in_study then same calcs as above
-comorbs_neoplasia_3 <- comorbs_neoplasia_3 %>%
-  group_by(subject_id) %>%
-  #keeping only the 5 most recent records
-  filter(year_in_study %in% sort(unique(year_in_study), decreasing = TRUE)[1:5]) %>%
-  ungroup()
-
-
-#remove rows where comorbs NA
-cols_to_check <- c(6:40)
-comorbs_neoplasia_3 <- comorbs_neoplasia_3[complete.cases(comorbs_neoplasia_3[, cols_to_check]), ]
-
-
-#check if any dogs have no neoplasia records - only 2165 have records fo final 5y
-unique_cancer2 <- unique(comorbs_neoplasia_3$subject_id)
-  
-
-comorbs_neoplasia_3$all_cancers_count_5y <- 0
-comorbs_neoplasia_3$malig_cancers_count_5y <- 0
-comorbs_neoplasia_3$benign_cancers_count_5y <- 0
-
-
-# Define the cancer columns indices (from index 2 to the last column)
-cancer_columns <- 6:41
-
-# Loop through the cancer columns by index
-for (col_index in cancer_columns) {
-  col_name <- colnames(comorbs_neoplasia_3)[col_index]  # Get column name
-  
-  # Count for all cancers
-  comorbs_neoplasia_3$all_cancers_count_5y <- comorbs_neoplasia_3$all_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
-  
-  # Count for all cancers
-  comorbs_neoplasia_3$all_cancers_count_5y <- comorbs_neoplasia_3$all_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
-  
-  # Count for malignant cancers
-  if (col_name %in% malig_cancers) {
-    comorbs_neoplasia_3$malig_cancers_count_5y <- comorbs_neoplasia_3$malig_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
-  }
-  
-  # Count for benign cancers
-  if (col_name %in% benign_cancers) {
-    comorbs_neoplasia_3$benign_cancers_count_5y <- comorbs_neoplasia_3$benign_cancers_count_5y + (comorbs_neoplasia_3[[col_name]] == 1)
-  }
-}
-
-#create Y N columns for each in addition to counts
-comorbs_neoplasia_3 <- comorbs_neoplasia_3 %>%
-  mutate(
-    all_cancers_YN_5y = ifelse(all_cancers_count_5y >= 1, 1, 0),
-    malig_cancers_YN_5y = ifelse(malig_cancers_count_5y >= 1, 1, 0),
-    benign_cancers_YN_5y = ifelse(benign_cancers_count_5y >= 1, 1, 0),
-
-  )
-
-
-#code to get to unique rows and keep the max count for each dog
-#get the max count value for each of the counts for each dog 
-cancer_count_summary_2 <- comorbs_neoplasia_3 %>%
-  group_by(subject_id) %>%
-  summarise(
-    malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
-    benign_cancers_count_5y = if_else(all(is.na(benign_cancers_count_5y)), 0, max(benign_cancers_count_5y, na.rm = TRUE)),
-    all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
-    malig_cancers_count_5y = if_else(all(is.na(malig_cancers_count_5y)), 0, max(malig_cancers_count_5y, na.rm = TRUE)),
-    all_cancers_count_5y = if_else(all(is.na(all_cancers_count_5y)), 0, max(all_cancers_count_5y, na.rm = TRUE)),
-
-    malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
-    benign_cancers_YN_5y = if_else(all(is.na(benign_cancers_YN_5y)), 0, max(benign_cancers_YN_5y, na.rm = TRUE)),
-    all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
-    malig_cancers_YN_5y = if_else(all(is.na(malig_cancers_YN_5y)), 0, max(malig_cancers_YN_5y, na.rm = TRUE)),
-    all_cancers_YN_5y = if_else(all(is.na(all_cancers_YN_5y)), 0, max(all_cancers_YN_5y, na.rm = TRUE)),
-    
-    .groups = "drop"
-  )
-
-#combine the 2 cancer summaries
-cancer_summary_5y_lifetime <- cancer_count_summary %>%
-  left_join(cancer_count_summary_2,by="subject_id")
-
-#replace all NAs with "no_records_available" for the 5y prior ones which dont have any records for neoplasia in final 5y
-cancer_summary_5y_lifetime <- cancer_summary_5y_lifetime %>%
-  mutate(across(2:13, ~ case_when(
-    is.na(.) ~ "no_records_available",
-    TRUE ~ as.character(.)
-  )))
+malig_cancers <- c(
+  "hemangiosarcoma",
+  "histiocytic_sarcoma",
+  "melanoma",
+  "multiple_myeloma",
+  "osteosarcoma",
+  "pancreatic_tumor",
+  "plasma_cell_tumor",
+  "plasmacytoma",
+  "soft_tissue_sarcoma",
+  "squamous_cell_carcinoma"
+)
+
+benign_cancers <- c(
+  "adrenal_tumor",
+  "basal_cell_tumor",
+  "bile_duct_tumor",
+  "bladder_tumor",
+  "brain_spinal_cord_tumor",
+  "breast_or_mammary_tumor",
+  "eye_tumor",
+  "hair_matrix_tumor",
+  "heart_tumor",
+  "kidney_tumor",
+  "liver_tumor",
+  "lung_tumor",
+  "nasal_tumor",
+  "perianal_adenoma",
+  "pituitary_tumor",
+  "prostate_tumor",
+  "splenic_tumor",
+  "stomach_intestinal_tumor",
+  "testicular_tumor",
+  "thymoma",
+  "thyroid_tumor"
+)
+
+cancer_summary_5y_lifetime <- build_neoplasia_features(
+  conditions_neoplasia,
+  target_cancer = "mast_cell_tumor",
+  malignant_cancers = malig_cancers,
+  benign_cancers = benign_cancers
+)
 ```
 
 Combine all comorbs data back into the main df

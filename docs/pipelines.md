@@ -82,6 +82,12 @@ lifestyle, household/location, medication, reproduction, weight/height, and
 activity features for the lymphoma and MCT routes. Cancer-specific cohort
 definitions and output names remain in the entry-point notebooks.
 
+Neoplasia summaries count each named cancer once per annual record. The
+lymphoma route excludes lymphoma from its other-cancer count, and the MCT route
+excludes mast-cell tumour; leukemia and melanoma are included in both
+other-cancer definitions. The existing malignant and MCT benign subgroup lists
+remain separate definitions.
+
 Household and location histories use `multiple` when the most frequent value is
 tied. The curated broad water-source grouping is used for all derived water
 features. Subject `094-000461` has no endpoint study year in either frozen cancer
