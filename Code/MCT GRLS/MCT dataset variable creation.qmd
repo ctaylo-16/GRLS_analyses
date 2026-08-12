@@ -2877,7 +2877,6 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
     median_weight_5y_prior_endpoint_any_records = median(weight, na.rm = TRUE),
     median_height_5y_prior_endpoint = if (count_rows[1] >= 5) median(height, na.rm = TRUE) else NA_real_,
     median_height_5y_prior_endpoint_any_records = median(height, na.rm = TRUE),
-    ,
     avg_purina_BCS_5y_prior_endpoint = if (count_rows[1] >= 5) mean(purina_body_condition_score, na.rm = TRUE) else NA_real_,
     mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score)
   ) %>%
@@ -2905,34 +2904,51 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
   mutate(median_weight_5y_prior_endpoint_kg = if_else(age_at_final_date < 1.5, NA_real_, median_weight_5y_prior_endpoint_kg))
 
-#avg height to cm
+# Convert both height summaries without overwriting the first derived column.
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
+  mutate(
+    avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54,
+    median_height_5y_prior_endpoint_cm = median_height_5y_prior_endpoint * 2.54,
+    avg_height_5y_prior_endpoint_cm = if_else(
+      age_at_final_date < 1.5,
+      NA_real_,
+      avg_height_5y_prior_endpoint_cm
+    ),
+    median_height_5y_prior_endpoint_cm = if_else(
+      age_at_final_date < 1.5,
+      NA_real_,
+      median_height_5y_prior_endpoint_cm
+    )
+  )
 
-#avg height to cm
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
-  mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
+weight_feature_columns <- c(
+  "avg_weight_5y_prior_endpoint",
+  "avg_height_5y_prior_endpoint",
+  "median_weight_5y_prior_endpoint",
+  "median_weight_5y_prior_endpoint_any_records",
+  "median_height_5y_prior_endpoint",
+  "median_height_5y_prior_endpoint_any_records",
+  "avg_purina_BCS_5y_prior_endpoint",
+  "mode_purina_BCS_5y_prior_endpoint",
+  "avg_weight_5y_prior_endpoint_kg",
+  "median_weight_5y_prior_endpoint_kg",
+  "avg_height_5y_prior_endpoint_cm",
+  "median_height_5y_prior_endpoint_cm"
+)
 
-#### remove height values for dogs that have their age at final date as <18m (ie. non adult heights) = 6 dogs
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_medsdog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
-  mutate(avg_height_5y_prior_endpoint_cm = if_else(age_at_final_date < 1.5, NA_real_, avg_height_5y_prior_endpoint_cm))
-#median
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight3 %>%
-  mutate(median_height_5y_prior_endpoint_cm = median_height_5y_prior_endpoint * 2.54)
+weight_features <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
+  dplyr::select(subject_id, all_of(weight_feature_columns)) %>%
+  distinct()
 
-#### remove height values for dogs that have their age at final date as <18m (ie. non adult heights) = 6 dogs
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
-  mutate(median_height_5y_prior_endpoint_cm = if_else(age_at_final_date < 1.5, NA_real_, median_height_5y_prior_endpoint_cm))
+if (anyDuplicated(weight_features$subject_id)) {
+  stop("Weight feature values are inconsistent within at least one subject_id.")
+}
+if (anyDuplicated(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3$subject_id)) {
+  stop("The pre-weight MCT dataset is not one row per subject_id.")
+}
 
-
-#keep only distinct rows
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
-  distinct(subject_id,.keep_all = TRUE)
-
-#for some reason, losing records of ~23 dogs with this distinct function - take weight data and re-add to last 3044 df
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_abr <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4 %>%
-  dplyr::select(subject_id,283:293)
-
-#rejoin back
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 %>% left_join(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_abr,by="subject_id")
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3 %>%
+  left_join(weight_features, by = "subject_id", relationship = "one-to-one")
 ```
 
 ```{r}
