@@ -49,40 +49,31 @@ build_lifestyle_features <- function(lifestyle) {
     dplyr::filter(.data$.observations == max(.data$.observations)) |>
     dplyr::ungroup()
 
-  tied_subjects <- maxima |>
-    dplyr::count(.data$subject_id, name = ".number_of_maxima") |>
-    dplyr::filter(.data$.number_of_maxima > 1L) |>
-    dplyr::pull("subject_id")
-
-  if (length(tied_subjects) > 0L) {
-    shown <- head(tied_subjects, 10L)
-    remainder <- length(tied_subjects) - length(shown)
-    suffix <- if (remainder > 0L) {
-      paste0(" (and ", remainder, " more)")
-    } else {
-      ""
-    }
-
-    stop(
-      "No unique main lifestyle for subject_id: ",
-      paste(shown, collapse = ", "),
-      suffix,
-      call. = FALSE
-    )
-  }
-
   main_lifestyle <- maxima |>
-    dplyr::select("subject_id", "lifestyle") |>
-    dplyr::rename(main_lifestyle = "lifestyle")
+    dplyr::arrange(.data$lifestyle, .by_group = TRUE) |>
+    dplyr::group_by(.data$subject_id) |>
+    dplyr::summarise(
+      main_lifestyle = if (dplyr::n() == 1L) {
+        .data$lifestyle[[1L]]
+      } else {
+        paste(
+          ifelse(is.na(.data$lifestyle), "not recorded", .data$lifestyle),
+          collapse = ", "
+        )
+      },
+      main_lifestyle_category = if (dplyr::n() == 1L) {
+        categorise_main_lifestyle(.data$lifestyle[[1L]])
+      } else {
+        "multiple"
+      },
+      .groups = "drop"
+    )
 
   lifestyle |>
     dplyr::left_join(
       main_lifestyle,
       by = "subject_id",
       relationship = "many-to-one"
-    ) |>
-    dplyr::mutate(
-      main_lifestyle_category = categorise_main_lifestyle(.data$main_lifestyle)
     ) |>
     dplyr::distinct(.data$subject_id, .keep_all = TRUE) |>
     dplyr::select(

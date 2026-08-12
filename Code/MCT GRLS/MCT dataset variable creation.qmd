@@ -158,11 +158,10 @@ dog_pop_deprivation_enviro_smoking_sleep_all <-
 - The established broad groups are competitive, working, breed/showing,
   miscellaneous, companion/pet, and other. Category precedence remains the same
   as in the original notebook when a recorded role contains more than one term.
-- A dog's main lifestyle is its uniquely most frequently recorded raw role. The
-  previous `slice_max(..., with_ties = FALSE)` silently selected one role on a
-  tie. The shared helper now stops instead; the current source snapshot contains
-  403 tied dogs and therefore requires an explicit subject-matter rule before an
-  analysis dataset can be accepted.
+- A dog's main lifestyle is its most frequently recorded raw role. For the 403
+  dogs with equally frequent roles, all tied roles are retained together and the
+  broad category is `multiple`; this replaces the previous order-dependent
+  selection of one role.
 
 ```{r}
 source(here::here("R", "lifestyle.R"))

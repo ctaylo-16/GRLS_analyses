@@ -33,7 +33,7 @@ test_that("lifestyle features retain the unique most frequent role", {
   )
 })
 
-test_that("lifestyle features reject tied main roles", {
+test_that("lifestyle features retain and label tied main roles", {
   lifestyle <- data.frame(
     subject_id = c("A", "A"),
     year_in_study = c(0, 1),
@@ -41,10 +41,10 @@ test_that("lifestyle features reject tied main roles", {
     lifestyle = c("agility", "companion/pet")
   )
 
-  expect_error(
-    build_lifestyle_features(lifestyle),
-    "No unique main lifestyle"
-  )
+  result <- build_lifestyle_features(lifestyle)
+
+  expect_identical(result$main_lifestyle, "agility, companion/pet")
+  expect_identical(result$main_lifestyle_category, "multiple")
 })
 
 test_that("window labels are standardised without coercing numeric columns", {
