@@ -23,7 +23,11 @@ test_that("pipeline manifests reference existing notebooks", {
 test_that("the HSA pipeline stops before inactive Cox modelling", {
   hsa <- get_analysis_pipeline("hsa")
 
-  expect_identical(hsa[[1]]$params, c(run_cox_analysis = "false"))
+  expect_identical(
+    hsa[[1]]$path,
+    c("Code", "Creating HSA study population.qmd")
+  )
+  expect_identical(hsa[[2]]$params, c(run_cox_analysis = "false"))
 })
 
 test_that("unknown pipelines fail", {

@@ -1,6 +1,7 @@
 analysis_pipeline_steps <- function() {
   list(
     hsa = list(
+      list(path = c("Code", "Creating HSA study population.qmd")),
       list(
         path = c("Code", "GRLS cox HSA time to diagnosis.qmd"),
         params = c(run_cox_analysis = "false")

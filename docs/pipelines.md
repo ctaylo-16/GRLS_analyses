@@ -24,6 +24,24 @@ Analysis censoring date: **1 December 2024**.
 | 4a | `Code/GRLS HSA updated analysis confirmed cases.qmd` | Confirmed-case results |
 | 4b | `Code/GRLS HSA cohort descriptives.qmd` | Descriptive, incidence, and survival outputs |
 
+The `hsa` command starts with `Code/Creating HSA study population.qmd`. That
+notebook assembles, but does not regenerate, the following legacy feature
+handoffs under `Output/`:
+
+- `GRLS_dogs_MDI_2019.csv`
+- `HSA_cohort_house_location_enviro_exposures.csv`
+- `HSA_cohort_comorbs_incl_cancer.csv`
+- `HSA_cohort_comorbidities.csv`
+- `HSA_cohort_activity_classification.csv`
+- `HSA_cohort_lifestyle_exposures.csv`
+- `all_cases_all_records_repro.csv`
+- `HSA_cohort_medications_5y_and_lifetime.csv`
+- `HSA_cohort_early_rest_whole_5y_activity__level_classification.csv`
+
+These files must accompany the approved data snapshot until HSA preparation is
+rebuilt on the shared functions. Missing files stop the HSA route; they are not
+substituted or regenerated from similarly named artifacts.
+
 The Cox notebook has two distinct roles. Everything through the write of `HSA_cohort_all_RFs_data_tidied_from_cox.csv` is active dataset provenance and was used to construct the later logistic-regression analysis dataset. Its default `run_cox_analysis: false` parameter stops rendering at that point. The factor setup, Kaplan-Meier work, and Cox modelling after that handoff are retained but inactive and were not pursued through publication; they require an explicit `run_cox_analysis: true` render.
 
 The active preparation section should be extracted into a dedicated HSA dataset-building workflow. Until that extraction is verified, do not delete or skip the preparation section merely because the later Cox modelling is inactive.

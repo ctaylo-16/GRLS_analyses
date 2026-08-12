@@ -41,9 +41,13 @@ Do not rename columns or source files in `Data/` without updating the consuming 
 4. Place the agreed source-data snapshot in `Data/` and create `Output/`.
 5. Run `Rscript scripts/check_setup.R` from the project root.
 
-The setup check deliberately fails on missing packages or directories.
+The setup check deliberately fails on missing packages, directories, or Quarto.
 
 Run a cancer workflow with `Rscript scripts/render_pipeline.R <hsa|lymphoma|mct>`. The exact notebook sequence and required handoffs are documented in `docs/pipelines.md`.
+
+The HSA command begins by assembling `HSA_cohort_all_RFs_data.csv` from the
+legacy generated feature files listed in `docs/pipelines.md`; it does not yet
+regenerate all of those feature files from raw data.
 
 ## Before rerunning analyses
 
@@ -62,14 +66,18 @@ The preparation section of `Code/GRLS cox HSA time to diagnosis.qmd` produced th
 
 The current lymphoma workflow uses the frozen `Data/lymphoma_cohort_241201.csv` cohort. It is censored at 1 December 2024 and should be refreshed from updated manually coded records before future substantive lymphoma analysis.
 
-## Known refactor work
+## Remaining refactor work
 
-- Convert shared feature creation into functions under `R/`.
-- Replace the remaining order-dependent or positional joins outside the MCT and lymphoma condition-domain assembly.
-- Replace positional column selection with named selections.
+- Extract the active HSA dataset preparation from its legacy generated feature
+  files and separate it fully from the inactive Cox analysis.
+- Replace positional column selections in the lymphoma/MCT comorbidity assembly
+  and cancer-specific medication blocks with named transformations.
 - Parameterise duplicated all-case and confirmed-case HSA analyses.
-- Restore `renv.lock` on a clean machine and resolve any operating-system dependencies reported by R.
-- Add executable cancer-specific entry points for the documented routes.
+- Restore `renv.lock` and run all routes on a clean handover machine, including
+  Quarto and any operating-system dependencies.
+- Revisit machine-specific paths only if the associated historical or inactive
+  analyses are reactivated; they are not dependencies of the current active
+  preparation routes.
 
 Known current data-definition blockers are documented beside the affected
 pipeline steps. In particular, subject `094-000461` has no endpoint study year

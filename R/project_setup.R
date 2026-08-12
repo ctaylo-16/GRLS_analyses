@@ -46,9 +46,21 @@ check_project_layout <- function() {
   invisible(TRUE)
 }
 
+check_quarto <- function(quarto = Sys.which("quarto")) {
+  if (!nzchar(quarto)) {
+    stop(
+      "Quarto is not installed or is not available on PATH.",
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
+}
+
 check_project_setup <- function() {
   check_project_layout()
   check_required_packages()
+  check_quarto()
   invisible(TRUE)
 }
 

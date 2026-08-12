@@ -12,7 +12,11 @@ The source data consist of annual owner and veterinarian questionnaire extracts 
 - Open `GRLS_analyses.Rproj` and run `Rscript scripts/check_setup.R` from the project root.
 - Run a documented cancer workflow with `Rscript scripts/render_pipeline.R <hsa|lymphoma|mct>`.
 
-All file references now use `here::here()` and resolve from the repository root. A notebook should not depend on a particular Windows username or working directory.
+The current lymphoma and MCT routes, plus the active preparation portion of the
+HSA route, use project-relative paths. Some historical notebooks and the
+inactive Cox-modelling section retain links to the author's former external
+repositories or manually curated files; their status is recorded in the
+analysis register and handover notes.
 
 ## Repository layout
 
@@ -29,7 +33,16 @@ This remains a single multi-cancer repository: HSA, lymphoma, and MCT have disti
 
 ## Reproducibility status
 
-The project is undergoing a handover refactor. Machine-specific paths have been removed, obvious cross-analysis output errors corrected, shared helpers made fail-fast, and the author's R 4.4.1 package environment recorded in `renv.lock`. The current cancer workflows and dataset handoffs are documented. The next stages are to separate active HSA preparation from inactive Cox modelling, extract the remaining shared feature engineering, and create cancer-specific execution entry points.
+The main lymphoma and MCT feature domains now use shared, tested helpers under
+`R/`, including endpoint, deprivation, environment, smoke/sleep, lifestyle,
+household, medication summaries, reproduction, weight, activity, and final
+dataset handling. The author's R 4.4.1 package environment is recorded in
+`renv.lock`, and cancer-specific command-line entry points are available.
+
+The important remaining refactor work is narrower but still real: HSA feature
+preparation consumes legacy generated inputs, while the active lymphoma/MCT
+comorbidity assembly and cancer-specific medication sections still contain
+positional column selections. These are documented rather than hidden.
 
 Until those stages are complete, run notebooks only in the documented dependency order and do not assume similarly named dated or `updated` files are interchangeable.
 
