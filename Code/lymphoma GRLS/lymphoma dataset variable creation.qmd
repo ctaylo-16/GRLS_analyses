@@ -153,146 +153,30 @@ dog_pop_deprivation_enviro_smoking_sleep_all <-
 
 ## Lifestyle
 
--   like with the enviro exposures/sleep data, no dogs are missing this bit of data so there will not be a "not_recorded/records_not_available" category
+- As with the environmental and sleep data, every dog has lifestyle records, so
+  this domain does not use a `not_recorded` or `records_not_available` category.
+- The established broad groups are competitive, working, breed/showing,
+  miscellaneous, companion/pet, and other. Category precedence remains the same
+  as in the original notebook when a recorded role contains more than one term.
+- A dog's main lifestyle is its uniquely most frequently recorded raw role. The
+  previous `slice_max(..., with_ties = FALSE)` silently selected one role on a
+  tie. The shared helper now stops instead; the current source snapshot contains
+  403 tied dogs and therefore requires an explicit subject-matter rule before an
+  analysis dataset can be accepted.
 
 ```{r}
-lifestyle <-read.csv(here::here("Data/lifestyle.csv"),na.strings=c ("","NA"))
+source(here::here("R", "lifestyle.R"))
 
-#check if all dogs have lifestyle recorded - they do
-unique_lifestyle <- unique(lifestyle$subject_id)
-# groupings
+lifestyle <- read.csv(
+  here::here("Data", "lifestyle.csv"),
+  na.strings = c("", "NA")
+)
 
-
-companion <- c("companion/pet")
-
-therapy <- c("therapy dog", "greeter", "service dog", "blood donor", "ambassador", "service dog, therapy dog")
-
-breeding <- c("breeder", "retired breeder")
-
-competitive <- c("dog athlete", "show", "agility", "field trials", "rally", 
-                 "field trials, obedience", "barn hunt, rally, scent work", 
-                 "agility, companion/pet, rally, tracking", "agility, scent work", 
-                 "agility, hunt test, obedience, scent work", 
-                 "hunt test, obedience, scent work", "agility, companion/pet, hunt test", 
-                 "obedience", "hunt test", "actor/model", "dock diving", 
-                 "dock diving, scent work", "barn hunt", "scent work", 
-                 "dock diving, scent work", "barn hunt, scent work", 
-                 "hunt test, scent work", "scent work, therapy dog")
-
-working <- c("tracking", "search and rescue", "hunting", "fishing dog", "scent work, tracking")
-
-no_lifestyle_misc <- c("none", NA, "other", "receiving medical treatment", "retired from akc activities")
-
-all_groups <- c(companion, therapy, breeding, competitive, working, no_lifestyle_misc)
-
-
-```
-
-Majority lifestyle
-
-```{r}
-main_lifestyle <- lifestyle %>%
-  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
-  group_by(subject_id) %>%                                # Group by subject_id
-  slice_max(n, with_ties = FALSE) %>%                    # Get the lifestyle with the max count, no ties
-  ungroup() %>%                                           # Ungroup for a clean output
-  select(subject_id, lifestyle)                           # Select relevant columns
-
-# View the result
-print(main_lifestyle)
-
-main_lifestyle <- main_lifestyle %>%
-  rename(main_lifestyle = lifestyle)
-```
-
-Further division of main lifestyle into larger groups
-
-```{r}
-competitive <-c("agility","dog athlete", "field trials","obedience","hunt test","demonstration dog","tracking")
-working <-c("hunting","search and rescue","service dog")
-breed_showing <- c("breeder","show")
-misc <- c("other","therapy dog")
-companion <- "companion/pet"
-
-all_groups <- c(competitive, working,breed_showing,misc,companion)
-
-```
-
-```{r}
-
-
-main_lifestyles_combined <- lifestyle %>%
-  count(subject_id, lifestyle) %>%                       # Count occurrences of each lifestyle per subject
-  group_by(subject_id) %>%                                # Group by subject_id
-  slice_max(n, n = 2, with_ties = TRUE) %>%              # Get the top 2 lifestyles by count, allowing ties
-  summarise(main_lifestyles = paste(lifestyle, collapse = ", "), # Combine into a single string
-            .groups = 'drop')                             # Drop grouping
-
-# View the result
-print(main_lifestyles_combined)
-print(table(main_lifestyles_combined$main_lifestyles))
-
-# add main lifestyle df in left join to original lifestyle df
-
-
-lifestyle2 <- lifestyle %>%
-  left_join(main_lifestyle, by = "subject_id")  
-
-lifestyle2 <- lifestyle2 %>%
-  dplyr::select(c(subject_id,year_in_study,record_date,lifestyle,main_lifestyle,main_lifestyle))
-
-  
-  
-lifestyle3 <- lifestyle2 %>%
-  mutate(main_lifestyle_category = case_when(
-    str_detect(main_lifestyle, paste(competitive, collapse = "|")) ~ "competitive",
-    str_detect(main_lifestyle, paste(working, collapse = "|")) ~ "working",
-    str_detect(main_lifestyle, paste(breed_showing, collapse = "|")) ~ "breed/showing",
-    str_detect(main_lifestyle, paste(misc, collapse = "|")) ~ "miscellaneous",
-    main_lifestyle == companion ~ "companion/pet",
-    TRUE ~ "other"  # For any lifestyle not matching the above categories
-  ))
-
-# View the updated dataframe
-print(lifestyle3)
-
-table(lifestyle3$main_lifestyle_category)
-
-
-#keep one row for each dog
-lifestyle_by_dog <- lifestyle3 %>%
-  distinct(subject_id, .keep_all = TRUE)
-```
-
-Add back to previous enviro df
-
-```{r}
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_all %>%
-  left_join(lifestyle_by_dog,by="subject_id")
-```
-
-Tidy up some values that are messy
-
-```{r}
-#replace all not withins
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
-    mutate(across(everything(), ~str_replace_all(., "Not within 3,4,5,6,7,8,9,10 years", "Not within rest of life")))
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
-    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2 years", "Not within early life")))
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
-    mutate(across(everything(), ~str_replace_all(., "Not within 0,1,2,3,4,5,6,7,8,9,10 years", "Not within whole life")))
-
-#all withins
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
-    mutate(across(everything(), ~str_replace_all(., "Within 3,4,5,6,7,8,9,10 years", "Within rest of life")))
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
-    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2 years", "Within early life")))
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all %>%
-    mutate(across(everything(), ~str_replace_all(., "Within 0,1,2,3,4,5,6,7,8,9,10 years", "Within whole life")))
+dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all <-
+  add_lifestyle_features(
+    dog_pop_deprivation_enviro_smoking_sleep_all,
+    lifestyle
+  )
 ```
 
 ## Household exposures

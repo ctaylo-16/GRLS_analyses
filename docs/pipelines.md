@@ -60,11 +60,11 @@ The denominator currently uses `Data/dog_profile_for_MCT.csv`, `Data/study_endpo
 
 Shared functions under `R/` now cover cancer-cohort preparation, deprivation,
 environmental exposure windows, smoke dosage, sleep location, comorbidities,
-and medication features for the lymphoma and MCT routes. The variable notebooks
-still contain duplicated derivations for lifestyle, household exposures,
-reproduction, weight, and activity; these are the next candidates for extraction,
-with cancer-specific cohort definitions and output names kept in the entry-point
-notebooks.
+lifestyle, and medication features for the lymphoma and MCT routes. The variable
+notebooks still contain duplicated derivations for household exposures,
+reproduction, weight, and activity; these are the next candidates for
+extraction, with cancer-specific cohort definitions and output names kept in the
+entry-point notebooks.
 
 Important generated prerequisites include:
 
