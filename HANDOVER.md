@@ -4,7 +4,7 @@
 
 This repository derives analysis datasets and reports for cancers in the Golden Retriever Lifetime Study. Its current subject areas are haemangiosarcoma (HSA), lymphoma, and mast cell tumours (MCT).
 
-The repository contains both active and historical exploratory Quarto notebooks. Until the analysis register has been confirmed by the original author, do not infer that the most recently named or longest notebook is authoritative.
+The repository contains both active and historical exploratory Quarto notebooks. The original author has confirmed the current HSA reports in `docs/analysis-register.md`; the lymphoma and MCT workflow roles still need to be recorded in equivalent detail. Do not infer that the most recently named or longest notebook is authoritative.
 
 ## Fail-fast policy
 
@@ -43,10 +43,18 @@ The setup check deliberately fails on missing packages or directories.
 
 ## Before rerunning analyses
 
-- Confirm the canonical notebook list in `docs/analysis-register.md`.
+- Check the notebook statuses in `docs/analysis-register.md`; confirm the lymphoma and MCT execution routes before running them.
 - Confirm the source-data snapshot and the analysis censoring date.
 - Check `git status` and record the commit used for the run.
 - Do not run MCT, lymphoma, and HSA notebooks concurrently because some historical notebooks still share intermediate filenames.
+
+For HSA, the current reports are:
+
+- `Code/GRLS HSA updated analysis_all_cases.qmd`
+- `Code/GRLS HSA updated analysis confirmed cases.qmd`
+- `Code/GRLS HSA cohort descriptives.qmd`
+
+`Code/GRLS cox HSA time to diagnosis.qmd` is a retained, inactive alternative analysis route that was not pursued through publication. The two earlier HSA logistic-analysis notebooks are historical.
 
 ## Known refactor work
 
@@ -55,4 +63,4 @@ The setup check deliberately fails on missing packages or directories.
 - Replace positional column selection with named selections.
 - Parameterise duplicated all-case and confirmed-case HSA analyses.
 - Restore `renv.lock` on a clean machine and resolve any operating-system dependencies reported by R.
-- Add a single documented execution entry point after the canonical analysis list is confirmed.
+- Add documented cancer-specific execution entry points after the lymphoma and MCT routes are confirmed.

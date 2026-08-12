@@ -23,9 +23,11 @@ docs/       analysis status and project documentation
 scripts/    command-line project checks and execution entry points
 ```
 
+This remains a single multi-cancer repository: HSA, lymphoma, and MCT have distinct analysis routes but reuse substantial feature engineering. The intended structure is cancer-specific entry points backed by shared implementations under `R/`.
+
 ## Reproducibility status
 
-The project is undergoing a handover refactor. Machine-specific paths have been removed, obvious cross-analysis output errors corrected, shared helpers made fail-fast, and the author's R 4.4.1 package environment recorded in `renv.lock`. The next stages are to confirm the canonical notebooks, extract the remaining shared feature engineering, and create a single execution entry point.
+The project is undergoing a handover refactor. Machine-specific paths have been removed, obvious cross-analysis output errors corrected, shared helpers made fail-fast, and the author's R 4.4.1 package environment recorded in `renv.lock`. The current HSA reports have been identified. The next stages are to document the lymphoma and MCT execution routes, extract the remaining shared feature engineering, and create cancer-specific execution entry points.
 
 Until those stages are complete, run notebooks only in the documented dependency order and do not assume similarly named dated or `updated` files are interchangeable.
 

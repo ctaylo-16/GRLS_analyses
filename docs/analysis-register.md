@@ -6,13 +6,13 @@ This register is the source of truth for notebook status. Entries marked **autho
 
 | Notebook | Apparent role | Status |
 |---|---|---|
-| `Code/Creating HSA study population.qmd` | Assemble the HSA cohort and feature-domain outputs | Active upstream candidate; author confirmation required |
-| `Code/GRLS cox HSA time to diagnosis.qmd` | Historical Cox analysis and creation of a tidied analysis dataset | Intermediate/historical status requires confirmation |
-| `Code/GRLS HSA updated analysis_all_cases.qmd` | Updated all-case modelling | Current candidate; author confirmation required |
-| `Code/GRLS HSA updated analysis confirmed cases.qmd` | Confirmed-case modelling | Current candidate; author confirmation required |
-| `Code/GRLS HSA cohort descriptives.qmd` | Descriptive, incidence, and survival outputs | Current candidate; author confirmation required |
-| `Code/GRLS HSA updated analysis.qmd` | Near-duplicate of the all-case analysis | Superseded status requires confirmation |
-| `Code/GRLS log reg HSA.qmd` | Earlier logistic-regression analysis | Historical status requires confirmation |
+| `Code/Creating HSA study population.qmd` | Assemble the HSA cohort and feature-domain outputs | Upstream workflow; exact dependency mapping still required |
+| `Code/GRLS cox HSA time to diagnosis.qmd` | Alternative Cox-analysis route | Retained but inactive; not pursued through publication |
+| `Code/GRLS HSA updated analysis_all_cases.qmd` | Updated all-case modelling | Current |
+| `Code/GRLS HSA updated analysis confirmed cases.qmd` | Confirmed-case modelling | Current |
+| `Code/GRLS HSA cohort descriptives.qmd` | Descriptive, incidence, and survival outputs | Current |
+| `Code/GRLS HSA updated analysis.qmd` | Earlier HSA analysis | Historical |
+| `Code/GRLS log reg HSA.qmd` | Earlier logistic-regression analysis | Historical |
 
 ## Lymphoma
 
@@ -32,6 +32,15 @@ This register is the source of truth for notebook status. Entries marked **autho
 
 The environmental, activity, reproductive, medication, comorbidity, deprivation, and exploratory notebooks currently mix derivation, checking, and reporting. They should remain in place until their outputs have been mapped to the active cancer pipelines.
 
+HSA, lymphoma, and MCT remain in one repository because they reuse substantial feature-engineering and helper code. Refactoring should create clear cancer-specific entry points while keeping genuinely shared implementations under `R/`; it should not split the repository and duplicate those implementations.
+
 ## Generated or duplicate source files
 
-`Output/GRLS_HSA_updated_analysis_all_cases.qmd` and `Output/GRLS_HSA_updated_analysis_confirmed_cases.qmd` differ from the similarly named files under `Code/`. Their origin and authority must be confirmed before either copy is archived.
+The following tracked `Output/` copies differ from their similarly named current analyses under `Code/`:
+
+| Current analysis | Disputed `Output/` copy |
+|---|---|
+| `Code/GRLS HSA updated analysis_all_cases.qmd` | `Output/GRLS_HSA_updated_analysis_all_cases.qmd` |
+| `Code/GRLS HSA updated analysis confirmed cases.qmd` | `Output/GRLS_HSA_updated_analysis_confirmed_cases.qmd` |
+
+Their origin and authority must be confirmed before either copy is consolidated or archived. They are an intentional temporary exception to the general rule that generated `Output/` content is not tracked.
