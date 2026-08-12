@@ -119,232 +119,36 @@ dog_pop_deprivation_enviro5y <- environment_features$within_five_years
 
 #### Hours of smoke exposure - early, rest, whole, 5y prior
 
-##### 5y prior
+Rows recorded as "see detail rows" do not contain a usable dosage and are
+excluded. The shared helper converts the remaining values to numeric hours and
+calculates total exposure in early life, the rest of life, the whole observed
+life, and before diagnosis. It also retains the binary five-year exposure
+features created above.
 
 ```{r}
-#remove rows that say see detail rows as these are meaningless - this may have been done in an earlier tidying step
-smoking_df <- dog_pop_deprivation_enviro__early_rest_whole4%>%
-  filter(!grepl("see detail rows", hours_of_smoke))
-#convert column to numeric now
-smoking_df <- smoking_df %>% 
-  mutate(hours_of_smoke= as.numeric(hours_of_smoke))
-
-#create a record_year variable 
-#had to use lubridate not as.POSIX for getting character string into date
-smoking_df <- smoking_df %>% 
-  mutate(record_date2=ym(record_date)) %>%
-  mutate(record_year = as.numeric(format(record_date2, "%Y")))
-  
-# function to calculate hours of smoke exposed to prior to diagnosis 
-#dosage function applied 
-smoking_df2 <- exposure_dosage(smoking_df,"hours_of_smoke","record_year","diagnosis_year")
-
-```
-
-##### early
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-
-study_years <- c(0,1,2)
-smoking_df3 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
-```
-
-##### rest
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-
-study_years <- c(3,4,5,6,7,8,9,10)
-smoking_df4 <- exposure_dosage2(smoking_df3,"hours_of_smoke",study_years)
-
-```
-
-##### whole
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-
-study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
-smoking_df5 <- exposure_dosage2(smoking_df4,"hours_of_smoke",study_years)
-```
-
-```{r}
-smoking_df6 <- smoking_df5 %>%
-  rename("hours_of_smoke_early_life_total_dosage"= "hours_of_smoke_0_1_2_total_dosage") %>%
-  rename("hours_of_smoke_rest_of_life_total_dosage" = "hours_of_smoke_3_4_5_6_7_8_9_10_total_dosage") %>%
-  rename("hours_of_smoke_whole_life_total_dosage"= "hours_of_smoke_0_1_2_3_4_5_6_7_8_9_10_total_dosage")
-
-print(colnames(smoking_df6))
-```
-
-Now tidy these dfs down to 1 row per dog and same for the 5y prior endpoint variable then combine
-
-```{r}
-#all the binary for 5y prior to endpoint here
-dog_pop_deprivation_enviro5y_distinct <- dog_pop_deprivation_enviro5y %>% distinct(subject_id,.keep_all = TRUE) 
-#keep only the rows not in the smoking_hours_df_below
-dog_pop_deprivation_enviro5y_distinct <- dog_pop_deprivation_enviro5y_distinct %>% dplyr::select(c(subject_id,use_aerosol_5y,use_air_cleaner_5y,use_hepa_filter_5y,use_moth_balls_5y,use_incense_or_candles_5y,smoke_exposure_5y,any_treated_weeds_5y,any_treated_insects_5y,any_treated_fertilizer_5y))
-
-#smoking hours df 
-smoking_df6_distinct <- smoking_df6 %>% distinct(subject_id,.keep_all = TRUE)
-
-#combine all 
-dog_pop_deprivation_enviro_smoking_all <- dog_pop_deprivation_enviro5y_distinct  %>% left_join(smoking_df6_distinct , by = "subject_id")
+dog_pop_deprivation_enviro_smoking_all <- build_smoke_dosage_features(
+  dog_pop_deprivation_enviro__early_rest_whole4,
+  dog_pop_deprivation_enviro5y
+)
 ```
 
 ### Sleep location
 
-NB. Lots of dogs have multiple 'specific_sleep_location' for same record year.
+Lots of dogs have multiple `specific_sleep_location` values in the same record
+year. Duplicate rows are removed, but distinct locations are retained. The
+three recorded locations are garage, house, and outside; the shared helper
+creates early-life, rest-of-life, whole-life, and five-year indicators for each.
+
+The main lifetime sleep location is the uniquely most frequent location. A tie
+deliberately stops the analysis so that a subject-matter tie rule can be chosen
+rather than silently selecting one location.
 
 ```{r}
-sleep <- sleep_environment %>% select(c(subject_id,year_in_study,record_date,sleep_location,specific_sleep_location))
-
-
-#set indoors outdoors date column as date then parse year from it
-sleep$record_date2 <-parse_date_time(sleep$record_date,"ym")
-#parse year from
-sleep <- sleep %>% 
-  mutate(exposure_year = as.numeric(format(record_date2, "%Y")))
-
-#how many sleep locations are there
-table(sleep_environment$sleep_location)
-
-#some patients have duplicate rows within a year ?/there are no differences between the rows so going to remove all rows where the row above is identical
-
-sleep <- unique(sleep)
-
-# 3 locations , need to create 3 columns with a Y/N for each location before then calculating exposure to it
-
-# Specify outcomes for the function
-desired_outcomes <- c("in the garage", "in the house", "outside")
-
-# Applying the function
-sleep2 <- split_column(sleep, sleep$sleep_location, desired_outcomes)
-```
-
-```{r}
-sleep_smoking_enviro <- left_join(sleep2,dog_pop_deprivation_enviro_smoking_all,by=c("subject_id","year_in_study"))
-# remove the .x suffix
-sleep_smoking_enviro <- sleep_smoking_enviro %>%
-  rename_at('exposure_year.x',~'exposure_year')
-```
-
-#### early
-
-```{r}
-#read in function file for all GRLS functions:
-source(here::here("Code/GRLS_functions.R"))
-
-
-# apply check exposure function
-columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
-
-study_years <- c(0,1,2)
-
-year_column <-"year_in_study"
-
-
-sleep_smoking_enviro_early<- check_exposure2(sleep_smoking_enviro, columns_to_check, study_years,year_column)
-    
-```
-
-#### rest of life
-
-```{r}
-#read in function file for all GRLS functions:
-source(here::here("Code/GRLS_functions.R"))
-
-
-# apply check exposure function
-columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
-
-study_years <- c(3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-
-
-sleep_smoking_enviro_early_rest<- check_exposure2(sleep_smoking_enviro_early, columns_to_check, study_years,year_column)
-```
-
-#### whole life
-
-```{r}
-source(here::here("Code/GRLS_functions.R"))
-
-# apply check exposure function
-columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
-
-study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
-
-year_column <-"year_in_study"
-
-
-sleep_smoking_enviro_early_rest_whole <- check_exposure2(sleep_smoking_enviro_early_rest, columns_to_check, study_years,year_column)
-```
-
-#### 5y prior
-
-```{r}
-#5
-columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
-
-exposure_years <- 5
-
-sleep_smoking_enviro_early_rest_whole_5y <- check_exposure(sleep_smoking_enviro_early_rest_whole, columns_to_check, diagnosis_year, exposure_years)
-```
-
-Recoding column names for tidyness
-
-```{r}
-print(colnames(sleep_smoking_enviro_early_rest_whole_5y))
-
-sleep_smoking_enviro_early_rest_whole_5y2 <- sleep_smoking_enviro_early_rest_whole_5y %>%
-    rename_with(
-      ~ gsub("_0_1_2$", "_early_life", .), 
-      ends_with("_0_1_2")
-    ) 
-
-sleep_smoking_enviro_early_rest_whole_5y2<- sleep_smoking_enviro_early_rest_whole_5y2 %>%
-  rename_with(
-      ~ gsub("_0_1_2_3_4_5_6_7_8_9_10$", "_whole_life", .), 
-      ends_with("_0_1_2_3_4_5_6_7_8_9_10")
-    ) 
-  
-sleep_smoking_enviro_early_rest_whole_5y2 <- sleep_smoking_enviro_early_rest_whole_5y2%>%
-    rename_with(
-      ~ gsub("_3_4_5_6_7_8_9_10$","_rest_of_life",.),
-      ends_with("_3_4_5_6_7_8_9_10")
-    )
-#check renaming all OK
-print(colnames(sleep_smoking_enviro_early_rest_whole_5y2))
-```
-
-#### Main sleep location for whole lifetime only
-
-```{r}
-#initially checking that there is variation in locaiton for the dogs sleep location
-multi_location_count <- sleep_smoking_enviro_early_rest_whole_5y2 %>%
-  group_by(subject_id,sleep_location) %>%
-   summarise(count = n())
-print(multi_location_count)
-#there is, although infrequent 
-# edit above code to determine majority location
-columns_to_count <- c("in the garage_YN","in the house_YN","outside_YN")
-
-
-
-sleep_smoking_enviro_early_rest_whole_5y3 <- majority_location(sleep_smoking_enviro_early_rest_whole_5y2,columns_to_count)
-```
-
-Combine back to other df
-
-```{r}
-
-dog_pop_deprivation_enviro_smoking_sleep_all <- dog_pop_deprivation_enviro_smoking_all %>% left_join(sleep_smoking_enviro_early_rest_whole_5y3, by="subject_id")
+dog_pop_deprivation_enviro_smoking_sleep_all <-
+  build_sleep_location_features(
+    sleep_environment,
+    dog_pop_deprivation_enviro_smoking_all
+  )
 ```
 
 ## Lifestyle
