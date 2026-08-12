@@ -9,25 +9,16 @@ editor: visual
 ```{r}
 library(tidyverse)
 library(lubridate)
+source(here::here("R", "cohort_preparation.R"))
 dog_pop <- read.csv(here::here("Output/MCT_cohort_250531.csv"))
-#remove excess cols
-dog_pop <- dog_pop %>%
-  dplyr::select(-c(record_date))
 ```
 
 Make sure population has the endpoint in date format (but also only to the year level to match to questinoaire etc. data which only annual)
 
 ```{r}
-dog_pop$diagnosis_year_month_date <- as.Date(dog_pop$end_date)
-# create a year column in  file so can do calculations on year (no point being more precise as questionaire done annually and may not match diagnosis time)
-dog_pop$diagnosis_year <- as.numeric(format(dog_pop$diagnosis_year_month_date,"%Y"))
-
-# set to month level (not day of month) = all on 1st day of month
-dog_pop$diagnosis_year_month_date2 <- as.POSIXct(floor_date(dog_pop$diagnosis_year_month_date,unit="month"))
-
-# get year month bit from column
-# set to month level (not day of month) = all on 1st day of month
-dog_pop$diagnosis_year_month <- format(dog_pop$diagnosis_year_month_date, "%Y-%m")
+# Remove the excess record-date column and create endpoint values at year and
+# month levels. Annual owner questionnaires do not justify day-level matching.
+dog_pop <- prepare_cancer_cohort(dog_pop)
 ```
 
 Datasets to join up to:
@@ -64,11 +55,9 @@ created in this file for all the clinics based on 2019 values so can use these a
 
 ```{r}
 deprivation <- read.csv(here::here("Output/GRLS_dogs_MDI_2019.csv"))
-deprivation <- deprivation %>%
-  dplyr::select(c(subject_id,MDI_quintile,owner_MDI_quintile))
 
-#now join onto dog pop
-dog_pop_deprivation <- dog_pop %>% left_join(deprivation, by="subject_id")
+# Join clinic and owner deprivation onto the cancer cohort by subject ID.
+dog_pop_deprivation <- add_deprivation_features(dog_pop, deprivation)
 ```
 
 ## Environment exposures
