@@ -1016,38 +1016,16 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location2 <- dog_po
 Load in all the comorbidity files:
 
 ```{r}
-#read in all csvs that start with the string "conditions_
-folder_path <- here::here("Data")
+source(here::here("R/comorbidities.R"))
 
-# Get a list of all CSV files that start with "conditions_with"
-csv_files <- list.files(path = folder_path, pattern = "^conditions_.*\\.csv$", full.names = TRUE)
-
-for (file in csv_files) {
-  # Extract the file name (without the path and extension) for the data frame name
-  dataframe_name <- tools::file_path_sans_ext(basename(file))
-  
-  # Dynamically assign each file to a data frame with the extracted name
-  assign(dataframe_name, read.csv(file))
-}
-
-#remove not relevant ones
-rm(conditions_dictionary)
-
-
-#combine the comorbidities datasets
-comorbs_all <- cbind(conditions_cardio,conditions_dental,conditions_ear_nose_throat,conditions_endocrine,conditions_eye,conditions_gastrointestinal,conditions_hematologic,conditions_infectious,conditions_musculoskeletal)
-
-
-
-#remove duplicate subjectid columns
-comorbs_unique <- comorbs_all %>%
-  dplyr::select(unique(names(.)))
+# Join domain extracts by the unique dog/year/to-date key. The extracts contain
+# the same keys in different row orders, so row-wise cbind is not valid.
+comorbs_all <- read_condition_domains(here::here("Data"))
+comorbs_unique <- comorbs_all
 #for 5y variables
-comorbs_unique2 <- comorbs_all %>%
-  dplyr::select(unique(names(.)))
+comorbs_unique2 <- comorbs_all
 #for other calcs
-comorbs_unique3 <- comorbs_all %>%
-  dplyr::select(unique(names(.)))
+comorbs_unique3 <- comorbs_all
 ```
 
 Comorbs to find:

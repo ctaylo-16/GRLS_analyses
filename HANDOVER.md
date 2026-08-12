@@ -51,7 +51,7 @@ The setup check deliberately fails on missing packages or directories.
 ## Known refactor work
 
 - Convert shared feature creation into functions under `R/`.
-- Replace order-dependent `cbind()` operations with explicit keyed joins.
+- Replace the remaining order-dependent or positional joins outside the MCT and lymphoma condition-domain assembly.
 - Replace positional column selection with named selections.
 - Parameterise duplicated all-case and confirmed-case HSA analyses.
 - Restore `renv.lock` on a clean machine and resolve any operating-system dependencies reported by R.
