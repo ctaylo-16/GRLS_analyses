@@ -1,22 +1,34 @@
-# Golden Retriever Lifetime Study Dataset Tidying
+# Golden Retriever Lifetime Study analyses
 
-## Description
+This R and Quarto project derives datasets and analyses for cancers in the Golden Retriever Lifetime Study (GRLS), principally haemangiosarcoma, lymphoma, and mast cell tumours.
 
-This repository was created to tidy and explore datasets collected from the Golden Retriever Lifetime Study (https://www.morrisanimalfoundation.org/golden-retriever-lifetime-study).
+The source data consist of annual owner and veterinarian questionnaire extracts covering demographics, lifestyle, environment, health, medication, reproductive history, and clinical outcomes. Source data are not stored in Git.
 
-This project is exploring cancers in golden retriever dogs and examines frequency and factors associated with diagnosis and survival, as part of a post-doctoral research project I am undertaking at the RVC. The main cancers of interest are: haemangiosarcoma, lymphoma and mast cell tumours.
+## Start here
 
-The datasets to be used in these analyses come from csv files from the database manager for GRLS. The datasets consist of owner and veterinarian annual questionnaire information. Broadly, the information relates to: dog demographics, dog lifestyle, dog environment, dog health, dog medications. In future there will also be data on diet.
+- Read `HANDOVER.md` for setup, local-data requirements, and the fail-fast operating policy.
+- Read `docs/analysis-register.md` before choosing a notebook to run.
+- Open `GRLS_analyses.Rproj` and run `Rscript scripts/check_setup.R` from the project root.
 
-Seperate repositories will be created for specific analyses.
+All file references now use `here::here()` and resolve from the repository root. A notebook should not depend on a particular Windows username or working directory.
 
-## Features
+## Repository layout
 
-There are several main files in this repository:
-- Functions file (GRLS_functions.R) - where all functions used for data manipulation and tidying are stored. There is a .qmd also with further information
-- GRLS_repro.qmd = file generating variables associated with reproductive information
-- GRLS_medications.qmd = file exploring and tidying medication use
-- GRLS comorbidities dataset.qmd = file exploring the comorbidities data and tidying for analysis
-- GRLS activity classification method.qmd = file exploring dog exercise frequency, intensity, duration from owner questionaires to generate variables for analysis
-- 240103 GRLS enviro_lifestyle.qmd = file exploring home and environmental data from owner questionaires and creating variables for analysis
+```text
+Code/       Quarto analyses and legacy shared R helpers
+R/          reusable project code and setup checks
+Data/       local source data; ignored by Git
+Output/     generated datasets, tables, and figures; ignored by Git
+docs/       analysis status and project documentation
+scripts/    command-line project checks and execution entry points
+```
 
+## Reproducibility status
+
+The project is undergoing a handover refactor. Machine-specific paths have been removed and obvious cross-analysis output errors corrected. The next stages are to confirm the canonical notebooks, extract shared feature engineering into tested functions, and create a package lockfile and single execution entry point.
+
+Until those stages are complete, run notebooks only in the documented dependency order and do not assume similarly named dated or `updated` files are interchangeable.
+
+## Data access
+
+GRLS data access is managed separately from this code repository. A reproducible handover must include the exact approved data snapshot or instructions for retrieving it, together with its release date and any manually curated inputs.
