@@ -1,38 +1,35 @@
+# R and IDE state
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
 
-*.csv
+# Local dependency and render state
+renv/library/
+renv/staging/
+.quarto/
+_site/
+*_files/
+
+# Source data are managed outside Git
+Data/
 *.zip
+
+# Generated analysis data and publication artifacts
+Output/
+*.csv
 *.xlsx
-*.css
-*.woff
-*.js
+*.docx
 *.png
-Output/HSA_cross_table_case_control_output.docx
-Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx
-Output/~$A_cross_table_case_control_output_no_missing.docx
-Output/~$A_GRLS_time_to_HSA_cox_ph_univar_no_missing.docx
-Output/~$nalfit_logreg_table_all_variables.docx
-Output/~$A_cross_table_case_control_output.docx
-Output/finalfit_logreg_table_all_variables.docx
-Output/~$A_cross_table_case_control_output.docx
-finalfit_logreg_table_all_variables.docx
-*.docx
-*.docx
-*.docx
-Output/HSA_cross_table_case_control_output.docx
-Output/logreg_forestplot.pdf
-Output/logreg_forestplot.svg
-Output/logreg_forestplot_casecontrol_numbers.pdf
-Output/logreg_forestplot.tif
-Output/HSA_cross_table_case_control_output.docx
-Output/logreg_forestplot_casecontrol_numbers.svg
-Output/logreg_forestplot_casecontrol_numbers.tif
-Output/HSA_cross_table_case_control_output.docx
 *.tif
+*.tiff
 *.svg
 *.pdf
-*.docx
-*.docx
-Output/HSA_cross_table_case_control_output.docx
 
-=======
+# Office temporary files
+~$*
 
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.lnk

@@ -352,8 +352,6 @@ plot2<- location_df %>%
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_barplot.tiff", plot = plot2, width = 8, height = 6, dpi = 600)
-
 # Plot
 ggplot(location_df, aes(x = fct_reorder(location, count), y = count)) +
   geom_col(fill = "steelblue") +
@@ -1733,7 +1731,7 @@ ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_se
 ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.pdf", plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.tif", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.tif", plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
 
 ```
 

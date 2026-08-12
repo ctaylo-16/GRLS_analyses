@@ -99,7 +99,7 @@ cohort <- cohort %>%
       (age_at_final_date >= 5 & age_at_final_date < 8) ~ ">5-<8y",
       (age_at_final_date >= 8 & age_at_final_date < 11) ~ ">8-<11y",
       (age_at_final_date >= 11 & age_at_final_date < 13) ~ ">11-<13y",
-      (age_at_final_date >= 13 & age_at_final_date < 15) ~ ">13y"
+      (age_at_final_date >= 13) ~ ">=13y"
     )
   )
 ```

@@ -1800,7 +1800,7 @@ medication_summary_lifetime <- meds_per_dog_lifetime%>%
     max = max(count)
   )
 
-write.csv(medication_summary_lifetime,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_study_medication_quartiles_summaries_lifetime.csv")
+write.csv(medication_summary_lifetime,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/MCT_study_medication_quartiles_summaries_lifetime.csv")
 
 
 
@@ -1864,7 +1864,7 @@ medication_summary_5y <- meds_per_dog_5y%>%
     max = max(count)
   )
 
-write.csv(medication_summary_5y,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_study_medication_quartiles_summaries_5y.csv")
+write.csv(medication_summary_5y,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/MCT_study_medication_quartiles_summaries_5y.csv")
 
 
 
@@ -2980,7 +2980,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 ```
 
 ```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_lymphoma_variables_dataset_interim.csv")
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset_interim.csv")
 ```
 
 ## Activity
