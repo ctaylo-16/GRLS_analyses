@@ -1,67 +1,39 @@
 ---
-title: "GRLS clinic postcode deprivation linkup"
+title: "GRLS clinic and owner deprivation linkage"
 format: html
 editor: visual
 ---
 
-## GRLS clinic postcode to deprivation linkup
+## GRLS deprivation linkage
 
-Further info on MDI = https://www.census.gov/topics/income-poverty/poverty/about/related-sites/rates.html
+This workflow links both veterinary-clinic and owner home ZIP codes to county-level 2019 Multidimensional Deprivation Index (MDI) values.
 
-US equiv of UK IMD
-
-Using vet clinic zip codes/postal code to get a FIPS code then link this to county level MDI
+- Clinic ZIP is the first five digits of `vet_address.csv::postal_code`. This explicitly handles ZIP+4 values.
+- Owner ZIP is the most frequently recorded `house_details.csv::primary_zip_code` for each dog. On ties, the first observed ZIP is retained to preserve the established analysis definition.
+- MDI quintiles are calculated across all counties in `MDI_2019.csv` before being applied to clinic and owner counties.
 
 ```{r}
 library(tidyverse)
-#GRLS clinics
-clinics <- read.csv(here::here("Data/vet_address.csv"))
+source(here::here("R", "deprivation.R"))
 
-#strip to only have first 5 digits of postcode as some have a second part for full zipcode
-clinic <- clinics %>%
-  mutate(postal_code = substr(postal_code, 1, 5))
+clinics <- read.csv(here::here("Data", "vet_address.csv"))
+owner_addresses <- read.csv(here::here("Data", "house_details.csv"))
+zip_lookup <- read.csv(here::here("Data", "uszips.csv"))
+mdi <- read.csv(
+  here::here("Data", "MDI_2019.csv"),
+  fileEncoding = "UTF-8-BOM"
+)
 
+deprivation <- build_deprivation_dataset(
+  clinics,
+  owner_addresses,
+  zip_lookup,
+  mdi
+)
 
-clinics$postal_code <- as.numeric(clinics$postal_code)
-#FIPS database from https://simplemaps.com/data/us-zips
-FIPS <- read.csv(here::here("Data/uszips.csv"))
-FIPS <- FIPS %>%
-  rename(postal_code = zip)
-
-#join clinics up to the FIPS data
-clinics_and_fips <- clinics %>% left_join(FIPS, by = "postal_code")
-
-#delete redundant columns
-clinics_and_fips2 <- clinics_and_fips %>%
-  dplyr::select(-c(address_line2))
-
-```
-
-MDI data from https://www.census.gov/topics/income-poverty/poverty/about/related-sites/rates.html - just going to use most recent values available of 2019 MDI
-
-```{r}
-MDI_2019 <- read.csv(here::here("Data/MDI_2019.csv"))
-MDI_2019 <- MDI_2019 %>%
-  rename(county_fips=County)
-
-
-
-```
-
-Need to calculate quintiles for MDI 2019 rate across all counties and then apply this quintile value to our clinics
-
-```{r}
-MDI_quintiles <- quantile(MDI_2019$MDI.rate, probs = seq(0, 1, 0.2))
-
-
-MDI_2019$MDI_quintile <- cut(MDI_2019$MDI.rate, breaks = MDI_quintiles, include.lowest = TRUE, labels = 1:5)
-
-```
-
-Join MDI data to clinics
-
-```{r}
-clinics_and_fips2_mdi <- clinics_and_fips2 %>% left_join (MDI_2019,by="county_fips" )
-
-write.csv(clinics_and_fips2_mdi,here::here("Output/GRLS_dogs_MDI_2019.csv"))
+write.csv(
+  deprivation,
+  here::here("Output", "GRLS_dogs_MDI_2019.csv"),
+  row.names = FALSE
+)
 ```

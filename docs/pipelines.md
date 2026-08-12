@@ -64,11 +64,11 @@ Important generated prerequisites include:
 
 | Generated prerequisite | Producer or source |
 |---|---|
-| `Output/GRLS_dogs_MDI_2019.csv` | `Code/GRLS clinic and deprivation indices linkup.qmd` using `Data/vet_address.csv`, `Data/uszips.csv`, and `Data/MDI_2019.csv` |
+| `Output/GRLS_dogs_MDI_2019.csv` | `Code/GRLS clinic and deprivation indices linkup.qmd` using `Data/vet_address.csv`, `Data/house_details.csv`, `Data/uszips.csv`, and `Data/MDI_2019.csv` |
 | `Output/GRLS_medications_initial_tidy.csv` | `Code/GRLS medications.qmd` |
 | Condition-domain features | Raw condition extracts under `Data/`, read by `R/comorbidities.R` |
 
-`Code/GRLS clinic and deprivation indices linkup.qmd` now reads all three inputs from the project-local `Data/` directory. At the time this map was recorded, `Data/vet_address.csv` and `Data/MDI_2019.csv` were present locally, while `Data/uszips.csv` was still missing. Because `Data/` is ignored by Git, these files must be transferred as part of the approved data snapshot rather than committed.
+`Code/GRLS clinic and deprivation indices linkup.qmd` reads all four inputs from the project-local `Data/` directory. Owner deprivation uses the modal primary home ZIP from `house_details.csv`, matching the existing 3,044-dog output. Clinic ZIP+4 values are deliberately reduced to five digits; this corrects historical missing clinic MDI values for 205 dogs. Because `Data/` is ignored by Git, all four inputs must be transferred as part of the approved data snapshot rather than committed.
 
 ## Execution rules
 
