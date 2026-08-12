@@ -60,10 +60,9 @@ The denominator currently uses `Data/dog_profile_for_MCT.csv`, `Data/study_endpo
 
 Shared functions under `R/` now cover cancer-cohort preparation, deprivation,
 environmental exposure windows, smoke dosage, sleep location, comorbidities,
-lifestyle, household/location, medication, reproduction, and weight/height
-features for the lymphoma and MCT routes. Activity is the remaining large
-duplicated derivation, with cancer-specific cohort definitions and output names
-kept in the entry-point notebooks.
+lifestyle, household/location, medication, reproduction, weight/height, and
+activity features for the lymphoma and MCT routes. Cancer-specific cohort
+definitions and output names remain in the entry-point notebooks.
 
 Household and location histories use `multiple` when the most frequent value is
 tied. The curated broad water-source grouping is used for all derived water
@@ -88,6 +87,20 @@ each current cohort snapshot). Nominal modes, such as household/location and
 lifestyle fields, continue to use `multiple` for ties because they have no
 meaningful maximum. The endpoint upper bound is explicit even though the current
 snapshots contain no physical-examination rows after a dog's endpoint.
+
+Activity records after a dog's endpoint are excluded before every summary. The
+early and SY3+ detail tables use their full record dates; the month-resolution
+overview table is compared with the endpoint month. In the current source
+snapshot this excludes 3 early-detail rows (3 dogs), 8 SY3+ detail rows (4 dogs),
+and 5 overview rows (5 dogs). Study years 0--2 retain the combined walk/aerobic
+scoring, while study year 3 onward retains the later frequency/pace scale. SY3+
+and overview values are averaged once (the legacy code divided both means by
+record count a second time), and the five-year frequency is now the actual
+combined early/later window rather than an accidental copy of the all-SY3 mean.
+Tied ordinal modes use the maximum tied value. The lymphoma schema retains
+early/rest/whole ordinal overview distributions; the established MCT schema
+retains the shared mean and other activity features without adding those 15
+lymphoma-only columns.
 
 Important generated prerequisites include:
 
