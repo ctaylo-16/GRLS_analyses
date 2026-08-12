@@ -54,7 +54,7 @@ For HSA, the current reports are:
 - `Code/GRLS HSA updated analysis confirmed cases.qmd`
 - `Code/GRLS HSA cohort descriptives.qmd`
 
-The preparation section of `Code/GRLS cox HSA time to diagnosis.qmd` produced the dataset used by the current HSA analyses. Its subsequent Cox modelling is a retained, inactive alternative analysis route that was not pursued through publication. The two earlier HSA logistic-analysis notebooks are historical.
+The preparation section of `Code/GRLS cox HSA time to diagnosis.qmd` produced the dataset used by the current HSA analyses. Its default render stops after writing that dataset. The subsequent Cox modelling is a retained, inactive alternative analysis route that was not pursued through publication and requires the explicit parameter `run_cox_analysis: true`. The two earlier HSA logistic-analysis notebooks are historical.
 
 The current lymphoma workflow uses the frozen `Data/lymphoma_cohort_241201.csv` cohort. It is censored at 1 December 2024 and should be refreshed from updated manually coded records before future substantive lymphoma analysis.
 
