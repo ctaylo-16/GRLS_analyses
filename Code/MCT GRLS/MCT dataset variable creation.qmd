@@ -1152,194 +1152,73 @@ fenbendazole_names<-c("fenbendazole","fenbendazole, maropitant citrate, metronid
 ","panacur","safe-guard")
 ```
 
-Lifetime
+Lifetime and final five years
 
 ```{r}
-#NSAID
-NSAID_ever<- medications %>%
-  mutate(NSAID_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
-                            1, 
-                            function(row) {
-                              # Check each column in the row for a match with NSAID_names
-                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
-                            })) %>%
-  mutate(NSAID_ever= ifelse(NSAID_ever, 1, 0)) %>%
-  arrange(subject_id, desc(NSAID_ever)) %>%  # Ensure NSAID_5y = 1 rows come first
-  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
-  select(subject_id, NSAID_ever)
+specific_medication_features <- summarise_specific_medication_flags(
+  medications,
+  medications_5y,
+  list(
+    NSAID = NSAID_names,
+    steroid = steroid_names,
+    fenbendazole = fenbendazole_names
+  )
+)
 
-#steroid
-steroid_ever<- medications %>%
-  mutate(steroid_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
-                            1, 
-                            function(row) {
-                              # Check each column in the row for a match with NSAID_names
-                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
-                            })) %>%
-  mutate(steroid_ever = ifelse(steroid_ever, 1, 0)) %>%
-  arrange(subject_id, desc(steroid_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
-  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
-  select(subject_id, steroid_ever)
-#fenbendazole
-fenbendazole_ever <- medications %>%
-  mutate(fenbendazole_ever = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
-                            1, 
-                            function(row) {
-                              # Check each column in the row for a match with NSAID_names
-                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
-                            })) %>%
-  mutate(fenbendazole_ever = ifelse(fenbendazole_ever, 1, 0)) %>%
-  arrange(subject_id, desc(fenbendazole_ever)) %>%  # Ensure NSAID_ever = 1 rows come first
-  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
-  select(subject_id, fenbendazole_ever)
-```
+meds_5y_lifetime <- meds_wide_quart_5y |>
+  dplyr::full_join(
+    meds_wide_quart_lifetime,
+    by = "subject_id",
+    relationship = "one-to-one"
+  )
 
-5y prior
+medication_features <- meds_5y_lifetime |>
+  dplyr::full_join(
+    specific_medication_features,
+    by = "subject_id",
+    relationship = "one-to-one"
+  )
 
-```{r}
-
-#NSAID
-NSAID_5y <-medications_5y %>%
-  ungroup()%>%
-  mutate(NSAID_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
-                            1, 
-                            function(row) {
-                              # Check each column in the row for a match with NSAID_names
-                              any(tolower(str_trim(row)) %in% tolower(str_trim(NSAID_names)))
-                            })) %>%
-  mutate(NSAID_5y = ifelse(NSAID_5y, 1, 0)) %>%
-  arrange(subject_id, desc(NSAID_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
-  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
-  select(subject_id, NSAID_5y)
-
-#steroid
-steroid_5y <- medications_5y %>%
-    ungroup()%>%
-  mutate(steroid_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
-                            1, 
-                            function(row) {
-                              # Check each column in the row for a match with NSAID_names
-                              any(tolower(str_trim(row)) %in% tolower(str_trim(steroid_names)))
-                            })) %>%
-  mutate(steroid_5y = ifelse(steroid_5y, 1, 0)) %>%
-  arrange(subject_id, desc(steroid_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
-  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
-  select(subject_id, steroid_5y)
-#fenbendazole
-fenbendazole_5y <-medications_5y %>%
-    ungroup()%>%
-  mutate(fenbendazole_5y = apply(select(., medication_name, medication_name_specify, medication_ingredients), 
-                            1, 
-                            function(row) {
-                              # Check each column in the row for a match with NSAID_names
-                              any(tolower(str_trim(row)) %in% tolower(str_trim(fenbendazole_names)))
-                            })) %>%
-  mutate(fenbendazole_5y = ifelse(fenbendazole_5y, 1, 0)) %>%
-  arrange(subject_id, desc(fenbendazole_5y)) %>%  # Ensure NSAID_5y = 1 rows come first
-  distinct(subject_id, .keep_all = TRUE) %>%  # Keep first row for each subject_id
-  select(subject_id, fenbendazole_5y)
-```
-
-Combine these dfs
-
-```{r}
-#all med counts of interest
-meds_5y_lifetime <- meds_wide_quart_5y %>% left_join (meds_wide_quart_lifetime,by="subject_id")
-
-#specific drugs of interest
-combined_df <- reduce(list(NSAID_ever,NSAID_5y,steroid_ever,steroid_5y,fenbendazole_ever,fenbendazole_5y), full_join, by = "subject_id")
-
-#combine both of these
-meds_5y_lifetime_NSAID_steroid_fenbendazole <- meds_5y_lifetime %>%
-  left_join(combined_df,by="subject_id")
-
-
-#add onto the comorbs and all other variables df
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs %>% left_join(meds_5y_lifetime_NSAID_steroid_fenbendazole,by="subject_id")
-
-
-#now add onto these for the ~150 dogs that dont have medicine records that they "no_medical_records_available"
 dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds <-
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds %>%
-  mutate(across(187:250, ~ case_when(
-    is.na(.) ~ "no_medication_records_for_this_time_period",
-    TRUE ~ as.character(.)
-  )))
+  join_medication_features(
+    dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs,
+    medication_features
+  )
 ```
 
 #### Examine also an NSAID number of times variable
 
 ```{r}
-# use HSA medications df to get list of NSAIDs in df
-table(medications_5y $medication_ingredients_100)
-unique(medications_5y $medication_ingredients_100)
-unique(medications_5y $medication_ingredients)
-NSAID_meds <- c("carprofen","meloxicam","firocoxib","deracoxib","flurbiprofen","ketoprofen")
+NSAID_meds <- c(
+  "carprofen",
+  "meloxicam",
+  "firocoxib",
+  "deracoxib",
+  "flurbiprofen",
+  "ketoprofen"
+)
 
-medications_5y  <- medications_5y  %>%
-  mutate(NSAID_use = if_else(
-    str_detect(tolower(medication_ingredients), str_c(NSAID_meds, collapse = "|")),
-    "NSAID_yes",
-    "NSAID_no"
-  ))
-
-#a count of these for each dog exc if NSAID no then just NSAID no
-NSAID_5y_meds_per_dog <- medications_5y  %>%
-  group_by(subject_id, NSAID_use) %>%
-  summarise(count = n(), .groups = "drop")
-  #remove rows where if subject has ANY NSAID_yes value then remove the NSAID_no row/s for that subject id
-  # Step 1: Get subject_ids that have NSAID_yes
-NSAID_yes_subjects <- NSAID_5y_meds_per_dog %>%
-  filter(NSAID_use == "NSAID_yes") %>%
-  pull(subject_id)
-
-# Step 2: Keep NSAID_yes rows or NSAID_no only if no NSAID_yes exists for that dog
-NSAID_5y_meds_per_dog_clean <- NSAID_5y_meds_per_dog %>%
-  filter(NSAID_use == "NSAID_yes" | !(subject_id %in% NSAID_yes_subjects))
-
-#calculate NSAID yes quartiles
-NSAID_yes <- NSAID_5y_meds_per_dog_clean %>%
-  filter(NSAID_use=="NSAID_yes")
-
-NSAID_summary <- NSAID_yes %>%
-  summarise(
-    min=min(count),
-    Q1 = quantile(count, 0.25, na.rm = TRUE),
-    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
-    Q3 = quantile(count, 0.75, na.rm = TRUE),
-    max=max(count),
-    .groups = "drop"
-  )
-
-NSAID_5y_meds_per_dog_clean_quartiles <- NSAID_5y_meds_per_dog_clean %>%
-  mutate(NSAID_quantile = case_when(
-    NSAID_use == "NSAID_no" ~ "no_NSAID_admin",
-    NSAID_use == "NSAID_yes" & count <= 1 ~ "Q1(1)",
-    NSAID_use == "NSAID_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
-    NSAID_use == "NSAID_yes" & count > 2 & count <= 3 ~ "Q3(2-3)",
-    NSAID_use == "NSAID_yes" & count > 3 ~ "Q4(3-8)"
-  ))
-#then filt down to unique single row for each dog of its count or NSAID no, then join back to the 3044 dogs and if no count or no NSAID no then "no_NSAID_recorded_in_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds %>% left_join(NSAID_5y_meds_per_dog_clean_quartiles, by="subject_id")
-
-#now replace NAs in NSAID_quantile column with "no_med_records_this_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>%
-    mutate(NSAID_quantile = replace_na(NSAID_quantile, "no_med_use_recorded"))
-
-#ditch count column 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID%>%
-  dplyr::select(c(-"count"))
-#rename NSAID_quantile to make clear its a 5y column
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>%
-  rename(NSAID_5y_quantiles = NSAID_quantile)
-
+NSAID_5y_features <- summarise_medication_count_feature(
+  medications_5y,
+  NSAID_meds,
+  "NSAID",
+  function(count) {
+    dplyr::case_when(
+      count == 0L ~ "no_NSAID_admin",
+      count == 1L ~ "Q1(1)",
+      count == 2L ~ "Q2(1-2)",
+      count == 3L ~ "Q3(2-3)",
+      count > 3L ~ "Q4(3-8)"
+    )
+  },
+  amount_column = "NSAID_5y_quantiles"
+)
 
 dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID <-
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>%
-  mutate(across(251:252, ~ case_when(
-    is.na(.) ~ "no_medication_records_for_this_time_period",
-    TRUE ~ as.character(.)
-  )))
+  join_medication_features(
+    dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds,
+    NSAID_5y_features
+  )
 ```
 
 #### Examine also a steroid number of times variable
@@ -1416,308 +1295,85 @@ steroids <- c(
 Use steroids list to do counting now
 
 ```{r}
-# use HSA medications df to get list of NSAIDs in df
-table(medications_5y $medication_ingredients_100)
-unique(medications_5y $medication_ingredients_100)
-unique(medications_5y $medication_ingredients)
-
-
-medications_5y  <- medications_5y  %>%
-  mutate(steroid_use = if_else(
-    str_detect(tolower(medication_ingredients), str_c(steroids, collapse = "|")),
-    "steroid_yes",
-    "steroid_no"
-  ))
-
-#a count of these for each dog exc if steroid no then just steroid no
-steroid_5y_meds_per_dog <- medications_5y  %>%
-  group_by(subject_id, steroid_use) %>%
-  summarise(count = n(), .groups = "drop")
-  #remove rows where if subject has ANY steroid_yes value then remove the steroid_no row/s for that subject id
-  # Step 1: Get subject_ids that have steroid_yes
-steroid_yes_subjects <- steroid_5y_meds_per_dog %>%
-  filter(steroid_use == "steroid_yes") %>%
-  pull(subject_id)
-
-# Step 2: Keep steroid_yes rows or steroid_no only if no steroid_yes exists for that dog
-steroid_5y_meds_per_dog_clean <- steroid_5y_meds_per_dog %>%
-  filter(steroid_use == "steroid_yes" | !(subject_id %in% steroid_yes_subjects))
-
-#calculate steroid yes quartiles
-steroid_yes <- steroid_5y_meds_per_dog_clean %>%
-  filter(steroid_use=="steroid_yes")
-
-steroid_summary <- steroid_yes %>%
-  summarise(
-    min=min(count),
-    Q1 = quantile(count, 0.25, na.rm = TRUE),
-    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
-    Q3 = quantile(count, 0.75, na.rm = TRUE),
-    max=max(count),
-    .groups = "drop"
-  )
-
-steroid_5y_meds_per_dog_clean_quartiles <- steroid_5y_meds_per_dog_clean %>%
-  mutate(steroid_quantile = case_when(
-    steroid_use == "steroid_no" ~ "no_steroid_admin",
-    steroid_use == "steroid_yes" & count <= 1 ~ "Q1(1)",
-    steroid_use == "steroid_yes" & count > 1 & count <= 2 ~ "Q2(1-2)",
-    steroid_use == "steroid_yes" & count > 2 & count <= 3 ~ "Q3(2-3)",
-    steroid_use == "steroid_yes" & count > 3 ~ "Q4(3-17)"
-  ))
-#then filt down to unique single row for each dog of its count or steroid no, then join back to the 3044 dogs and if no count or no steroid no then "no_steroid_recorded_in_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID %>% left_join(steroid_5y_meds_per_dog_clean_quartiles, by="subject_id")
-
-#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>%
-    mutate(steroid_quantile = replace_na(steroid_quantile, "no_med_use_recorded"))
-
-#ditch count column 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid%>%
-  dplyr::select(c(-"count"))
-#rename steroid_quantile to make clear its a 5y column
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>%
-  rename(steroid_5y_quantiles = steroid_quantile)
-
-
+steroid_5y_features <- summarise_medication_count_feature(
+  medications_5y,
+  steroids,
+  "steroid",
+  function(count) {
+    dplyr::case_when(
+      count == 0L ~ "no_steroid_admin",
+      count == 1L ~ "Q1(1)",
+      count == 2L ~ "Q2(1-2)",
+      count == 3L ~ "Q3(2-3)",
+      count > 3L ~ "Q4(3-17)"
+    )
+  },
+  amount_column = "steroid_5y_quantiles"
+)
 
 dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid <-
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>%
-  mutate(across(253:254, ~ case_when(
-    is.na(.) ~ "no_medication_records_for_this_time_period",
-    TRUE ~ as.character(.)
-  )))
+  join_medication_features(
+    dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID,
+    steroid_5y_features
+  )
 ```
 
-For MCT want to do:
-
-#### Systemic preds
-
-\- insufficient variation for quartiles so going to just leave counts as is and let ZS decide how to categorise eg. binary or something else
+For MCT, also retain five-year administration counts for systemic
+prednisolone/prednisone, lokivetmab, and oclacitinib. There was insufficient
+variation to form meaningful quartiles, so positive values remain counts.
 
 ```{r}
-systemic_preds<- c("prednisone",
+systemic_preds <- c(
+  "prednisone",
   "predisolone acetate",
   "trimeprazine tartrate, prednisone",
-   "prednisolone"
+  "prednisolone"
 )
-```
+lokivetmab <- c("lokivetmab", "cytopoint")
+oclacitinib <- c("oclacitinib", "apoquel")
 
-```{r}
-# use HSA medications df to get list of NSAIDs in df
-table(medications_5y $medication_ingredients_100)
-unique(medications_5y $medication_ingredients_100)
-unique(medications_5y $medication_ingredients)
+count_or_no_administration <- function(label) {
+  function(count) {
+    ifelse(count == 0L, paste0("no_", label, "_admin"), as.character(count))
+  }
+}
 
+systemic_pred_features <- summarise_medication_count_feature(
+  medications_5y,
+  systemic_preds,
+  "systemic_preds",
+  count_or_no_administration("systemic_preds")
+)
+lokivetmab_features <- summarise_medication_count_feature(
+  medications_5y,
+  lokivetmab,
+  "lokivetmab",
+  count_or_no_administration("lokivetmab")
+)
+oclacitinib_features <- summarise_medication_count_feature(
+  medications_5y,
+  oclacitinib,
+  "oclacitinib",
+  count_or_no_administration("oclacitinib")
+)
 
-medications_5y  <- medications_5y  %>%
-  mutate(systemic_preds_use = if_else(
-    str_detect(tolower(medication_ingredients), str_c(systemic_preds, collapse = "|")),
-    "systemic_preds_yes",
-    "systemic_preds_no"
-  ))
-
-#a count of these for each dog exc if systemic_preds no then just systemic_preds no
-systemic_preds_5y_meds_per_dog <- medications_5y  %>%
-  group_by(subject_id, systemic_preds_use) %>%
-  summarise(count = n(), .groups = "drop")
-  #remove rows where if subject has ANY systemic_preds_yes value then remove the systemic_preds_no row/s for that subject id
-  # Step 1: Get subject_ids that have systemic_preds_yes
-systemic_preds_yes_subjects <- systemic_preds_5y_meds_per_dog %>%
-  filter(systemic_preds_use == "systemic_preds_yes") %>%
-  pull(subject_id)
-
-# Step 2: Keep systemic_preds_yes rows or systemic_preds_no only if no systemic_preds_yes exists for that dog
-systemic_preds_5y_meds_per_dog_clean <- systemic_preds_5y_meds_per_dog %>%
-  filter(systemic_preds_use == "systemic_preds_yes" | !(subject_id %in% systemic_preds_yes_subjects))
-
-#calculate systemic_preds yes quartiles
-systemic_preds_yes <- systemic_preds_5y_meds_per_dog_clean %>%
-  filter(systemic_preds_use=="systemic_preds_yes")
-
-systemic_preds_summary <- systemic_preds_yes %>%
-  summarise(
-    min=min(count),
-    Q1 = quantile(count, 0.25, na.rm = TRUE),
-    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
-    Q3 = quantile(count, 0.75, na.rm = TRUE),
-    max=max(count),
-    .groups = "drop"
+mct_specific_count_features <- systemic_pred_features |>
+  dplyr::full_join(
+    lokivetmab_features,
+    by = "subject_id",
+    relationship = "one-to-one"
+  ) |>
+  dplyr::full_join(
+    oclacitinib_features,
+    by = "subject_id",
+    relationship = "one-to-one"
   )
-#NB is not actually quartiles split
-#NB also the count column is counting rows for each dog, so the no_systemic_preds_admins will also have a count for each medical row they DO NOT HAVE PREDS for 
-systemic_preds_5y_meds_per_dog_clean_quartiles <- systemic_preds_5y_meds_per_dog_clean %>%
-  mutate(systemic_preds_amount = case_when(
-    systemic_preds_use == "systemic_preds_no" ~ "no_systemic_preds_admin",
-    systemic_preds_use == "systemic_preds_yes" ~ as.character(count)
-  ))
-#then filt down to unique single row for each dog of its count or systemic_preds no, then join back to the 3044 dogs and if no count or no systemic_preds no then "no_systemic_preds_recorded_in_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid %>% left_join(systemic_preds_5y_meds_per_dog_clean_quartiles, by="subject_id")
-
-#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred %>%
-    mutate(systemic_pred_amount = replace_na(systemic_preds_amount, "no_med_use_recorded"))
-
-#ditch count column 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred%>%
-  dplyr::select(c(-"count"))
-#rename steroid_quantile to make clear its a 5y column
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred %>%
-  rename(systemic_preds_5y_amount = systemic_preds_amount)
-
-###redo indices asnew column
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred <-
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred %>%
-  mutate(across(256:258, ~ case_when(
-    is.na(.) ~ "no_medication_records_for_this_time_period",
-    TRUE ~ as.character(.)
-  )))
-```
-
-Lokivetmab
-
-```{r}
-#
-lokivetmab <-c("lokivetmab","cytopoint")
-```
-
-```{r}
-medications_5y  <- medications_5y  %>%
-  mutate(lokivetmab_use = if_else(
-    str_detect(tolower(medication_ingredients), str_c(lokivetmab, collapse = "|")),
-    "lokivetmab_yes",
-    "lokivetmab_no"
-  ))
-
-#a count of these for each dog exc if lokivetmab no then just lokivetmab no
-lokivetmab_5y_meds_per_dog <- medications_5y  %>%
-  group_by(subject_id, lokivetmab_use) %>%
-  summarise(count = n(), .groups = "drop")
-  #remove rows where if subject has ANY lokivetmab_yes value then remove the lokivetmab_no row/s for that subject id
-  # Step 1: Get subject_ids that have lokivetmab_yes
-lokivetmab_yes_subjects <- lokivetmab_5y_meds_per_dog %>%
-  filter(lokivetmab_use == "lokivetmab_yes") %>%
-  pull(subject_id)
-
-# Step 2: Keep lokivetmab_yes rows or lokivetmab_no only if no lokivetmab_yes exists for that dog
-lokivetmab_5y_meds_per_dog_clean <- lokivetmab_5y_meds_per_dog %>%
-  filter(lokivetmab_use == "lokivetmab_yes" | !(subject_id %in% lokivetmab_yes_subjects))
-
-#calculate lokivetmab yes quartiles
-lokivetmab_yes <- lokivetmab_5y_meds_per_dog_clean %>%
-  filter(lokivetmab_use=="lokivetmab_yes")
-
-lokivetmab_summary <- lokivetmab_yes %>%
-  summarise(
-    min=min(count),
-    Q1 = quantile(count, 0.25, na.rm = TRUE),
-    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
-    Q3 = quantile(count, 0.75, na.rm = TRUE),
-    max=max(count),
-    .groups = "drop"
-  )
-#NB is not actually quartiles split
-#NB also the count column is counting rows for each dog, so the no_lokivetmab_admins will also have a count for each medical row they DO NOT HAVE lokivetmabs for 
-lokivetmab_5y_meds_per_dog_clean_quartiles <- lokivetmab_5y_meds_per_dog_clean %>%
-  mutate(lokivetmab_amount = case_when(
-    lokivetmab_use == "lokivetmab_no" ~ "no_lokivetmab_admin",
-    lokivetmab_use == "lokivetmab_yes" ~ as.character(count)
-  ))
-#then filt down to unique single row for each dog of its count or lokivetmab no, then join back to the 3044 dogs and if no count or no lokivetmab no then "no_lokivetmab_recorded_in_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred%>% left_join(lokivetmab_5y_meds_per_dog_clean_quartiles, by="subject_id")
-
-#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab %>%
-    mutate(lokivetmab_amount = replace_na(lokivetmab_amount, "no_med_use_recorded"))
-
-#ditch count column 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab%>%
-  dplyr::select(c(-"count"))
-#rename steroid_quantile to make clear its a 5y column
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab %>%
-  rename(lokivetmab_5y_amount = lokivetmab_amount)
-
-###redo indices asnew column
-
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab <-
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab %>%
-  mutate(across(259:260, ~ case_when(
-    is.na(.) ~ "no_medication_records_for_this_time_period",
-    TRUE ~ as.character(.)
-  )))
-```
-
-oclacitinib
-
-```{r}
-oclacitinib <-c("oclacitinib","apoquel")
-```
-
-```{r}
-medications_5y  <- medications_5y  %>%
-  mutate(oclacitinib_use = if_else(
-    str_detect(tolower(medication_ingredients), str_c(oclacitinib, collapse = "|")),
-    "oclacitinib_yes",
-    "oclacitinib_no"
-  ))
-
-#a count of these for each dog exc if oclacitinib no then just oclacitinib no
-oclacitinib_5y_meds_per_dog <- medications_5y  %>%
-  group_by(subject_id, oclacitinib_use) %>%
-  summarise(count = n(), .groups = "drop")
-  #remove rows where if subject has ANY oclacitinib_yes value then remove the oclacitinib_no row/s for that subject id
-  # Step 1: Get subject_ids that have oclacitinib_yes
-oclacitinib_yes_subjects <- oclacitinib_5y_meds_per_dog %>%
-  filter(oclacitinib_use == "oclacitinib_yes") %>%
-  pull(subject_id)
-
-# Step 2: Keep oclacitinib_yes rows or oclacitinib_no only if no oclacitinib_yes exists for that dog
-oclacitinib_5y_meds_per_dog_clean <- oclacitinib_5y_meds_per_dog %>%
-  filter(oclacitinib_use == "oclacitinib_yes" | !(subject_id %in% oclacitinib_yes_subjects))
-
-#calculate oclacitinib yes quartiles
-oclacitinib_yes <- oclacitinib_5y_meds_per_dog_clean %>%
-  filter(oclacitinib_use=="oclacitinib_yes")
-
-oclacitinib_summary <- oclacitinib_yes %>%
-  summarise(
-    min=min(count),
-    Q1 = quantile(count, 0.25, na.rm = TRUE),
-    median_count_per_dog = quantile(count, 0.50, na.rm = TRUE),  # Use quantile for clarity
-    Q3 = quantile(count, 0.75, na.rm = TRUE),
-    max=max(count),
-    .groups = "drop"
-  )
-#NB is not actually quartiles split
-#NB also the count column is counting rows for each dog, so the no_oclacitinib_admins will also have a count for each medical row they DO NOT HAVE oclacitinibs for 
-oclacitinib_5y_meds_per_dog_clean_quartiles <- oclacitinib_5y_meds_per_dog_clean %>%
-  mutate(oclacitinib_amount = case_when(
-    oclacitinib_use == "oclacitinib_no" ~ "no_oclacitinib_admin",
-    oclacitinib_use == "oclacitinib_yes" ~ as.character(count)
-  ))
-#then filt down to unique single row for each dog of its count or oclacitinib no, then join back to the 3044 dogs and if no count or no oclacitinib no then "no_oclacitinib_recorded_in_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab%>% left_join(oclacitinib_5y_meds_per_dog_clean_quartiles, by="subject_id")
-
-#now replace NAs in steroid_quantile column with "no_med_records_this_time_period"
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib %>%
-    mutate(oclacitinib_amount = replace_na(oclacitinib_amount, "no_med_use_recorded"))
-
-#ditch count column 
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib<- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib%>%
-  dplyr::select(c(-"count"))
-#rename steroid_quantile to make clear its a 5y column
-dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib %>%
-  rename(oclacitinib_5y_amount = oclacitinib_amount)
-
-###redo indices asnew column
 
 dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib <-
-  dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib %>%
-  mutate(across(260:262, ~ case_when(
-    is.na(.) ~ "no_medication_records_for_this_time_period",
-    TRUE ~ as.character(.)
-  )))
+  join_medication_features(
+    dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid,
+    mct_specific_count_features
+  )
 ```
 
 Interim write to csv
