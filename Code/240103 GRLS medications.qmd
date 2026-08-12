@@ -12,15 +12,15 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 
-medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv",na.strings=c ("","NA"))
-vaccinations <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/vaccines.csv",na.strings=c ("","NA"))
+medications <- read.csv(here::here("Data/medications.csv"),na.strings=c ("","NA"))
+vaccinations <-read.csv(here::here("Data/vaccines.csv"),na.strings=c ("","NA"))
 #ensure all lower case
 medications <- medications %>% mutate(across(where(is.character), tolower))
 vaccinations <- vaccinations %>% mutate(across(where(is.character), tolower))
 
 
 # use the end_points dataset for now 
-end_points_neoplasia <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- read.csv(here::here("Data/study_endpoints.csv"))
 end_points_neoplasia <- end_points_neoplasia %>% 
   mutate(across(where(is.character), tolower))
 end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)

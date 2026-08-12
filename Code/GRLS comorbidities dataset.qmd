@@ -13,7 +13,7 @@ library(ggplot2)
 library(tidyverse)
 
 #read in all csvs that start with the string "conditions_
-folder_path <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data"
+folder_path <- here::here("Data")
 
 # Get a list of all CSV files that start with "conditions_with"
 csv_files <- list.files(path = folder_path, pattern = "^conditions_.*\\.csv$", full.names = TRUE)
@@ -42,7 +42,7 @@ comorbs_unique <- comorbs_all %>%
 # View the combined dataframe
 head(comorbs_unique)
 #endpoints to join up conditions dataset
-endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+endpoints <- read.csv(here::here("Data/study_endpoints.csv"))
 
 
 
@@ -137,7 +137,7 @@ comorbs_to_find <-c("congestive_heart_failure",
 Looking in only all the columns in 'comorbs_to_find' columns, identify if there is record of these conditions and for \>1 year of records and if so record in new columns: "chronic_inflam_comorb_present" (YN), "number of chronic_inflam_comorbs_present" (count), "which comorbs_to_find present?" (each comorb name separated by comma) :
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
 
@@ -521,7 +521,7 @@ Create csv of single row for endpoint dogs with (\~1900 rows):
 -   were they present before endpoint diagnoses and if so how long before?
 
 ```{r}
-write.csv(endpoints_comorbs_3,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoint_comorbidities.csv")
+write.csv(endpoints_comorbs_3,here::here("Output/endpoint_comorbidities.csv"))
 ```
 
 Create csv of all dog records with (\~30k rows):
@@ -531,7 +531,7 @@ Create csv of all dog records with (\~30k rows):
 -   were they present before endpoint diagnoses and if so how long before? (NB. only 1800 dogs have end points so there will be lots of NA rows)
 
 ```{r}
-write.csv(df_result7,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_records_comorbidities.csv")
+write.csv(df_result7,here::here("Output/all_records_comorbidities.csv"))
 ```
 
 ### Incurable comorbidities checking if they occurred ever and recording as so
@@ -682,13 +682,13 @@ Write this into CSV
 -   comorbidities recorded at any point in dogs records that are incurable conditions and therefore may not have been recorded every year but are present
 
 ```{r}
-write.csv(GRLS_summary_lifelong,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_cohort_comorbidities_chronic_lifelong.csv")
+write.csv(GRLS_summary_lifelong,here::here("Output/GRLS_cohort_comorbidities_chronic_lifelong.csv"))
 ```
 
 Now incorporating in HSA status for cohort to calculate exposures relating to diagnosis/endpoint dates
 
 ```{r}
-HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+HSA_cohort <- read.csv(here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"))
 #combine comorb records and cohort
 #join to endpoints dogs 
 HSA_comorbs <- HSA_cohort %>%
@@ -742,5 +742,5 @@ HSA_comorbs3_lifetime <- HSA_comorbs3 %>%
 write HSA comorbidities to csv
 
 ```{r}
-write.csv(HSA_comorbs3_lifetime,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
+write.csv(HSA_comorbs3_lifetime,here::here("Output/HSA_cohort_comorbidities.csv"))
 ```

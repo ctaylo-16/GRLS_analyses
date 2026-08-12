@@ -11,10 +11,10 @@ Load in medications dataset and endpoints datasets:
 ```{r}
 library(tidyverse)
 library(lubridate)
-medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
-endpoints<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+medications <- read.csv(here::here("Output/GRLS_medications_initial_tidy.csv"))
+endpoints<- read.csv(here::here("Data/study_endpoints.csv"))
 #death date file
-dog_profile <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+dog_profile <-read.csv(here::here("Data/dog_profile.csv"))
 #keep only date of death and subject id
 dog_profile <- dog_profile %>%
   dplyr::select(c(subject_id,death_date))
@@ -25,7 +25,7 @@ endpoints_profile <- endpoints %>%
 Load in HSA cohort for endpoint of final point 31/12/24 or diagnosis point or earlier if died:
 
 ```{r}
-HSA_cohort <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+HSA_cohort <-read.csv(here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"))
 HSA_cohort <- HSA_cohort %>%
   dplyr::select(-c(X))
 ```
@@ -640,13 +640,13 @@ HSA_5y_and_lifetime_all_dogs <- HSA_5y_and_lifetime_all_dogs %>%
 
 
 
-write.csv(HSA_5y_and_lifetime_all_dogs,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
+write.csv(HSA_5y_and_lifetime_all_dogs,here::here("Output/HSA_cohort_medications_5y_and_lifetime.csv"))
 ```
 
 ### Medications to signal comorbidities & cross check with comorbidities dogs
 
 ```{r}
-lifetime_comorbs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_comorbidities.csv")
+lifetime_comorbs <- read.csv(here::here("Output/HSA_cohort_comorbidities.csv"))
 ```
 
 List of unique medication names/ingredients and pick which ones from there are exclusive to a lifelong disease:
@@ -668,7 +668,7 @@ all_unique_med_ingredients_or_names<-unique(c(medication_ingredients_unique,medi
 
 #as df for reading in here with ease as too long to print whole list
 all_unique_med_ingredients_or_names_df <-as.data.frame(all_unique_med_ingredients_or_names)
-write.csv(all_unique_med_ingredients_or_names,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_all_unique_medication_names_or_ingredients.csv")
+write.csv(all_unique_med_ingredients_or_names,here::here("Output/GRLS_all_unique_medication_names_or_ingredients.csv"))
 ```
 
 Specific medications (names and ingredients) from manual examination of list:
@@ -984,11 +984,11 @@ ecto_endo_NSAID <- ecto_endo %>%
 ecto_endo_NSAID <- ecto_endo_NSAID %>%
   dplyr::select(-c(2:71,74:143))
 
-write.csv(ecto_endo_NSAID,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_medications_5y_and_lifetime.csv")
+write.csv(ecto_endo_NSAID,here::here("Output/HSA_cohort_medications_5y_and_lifetime.csv"))
 ```
 
 ### Get all medications data for endpoint dogs for 5y prior to endpoint for GRLS clinical records cross-checking:
 
 ```{r}
-write.csv(endpoints_medication_5y_filt,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_endpoints_5y_prior_medications.csv")
+write.csv(endpoints_medication_5y_filt,here::here("Output/GRLS_endpoints_5y_prior_medications.csv"))
 ```

@@ -37,7 +37,7 @@ library(flextable)
 library(writexl)
 library(readr)
 # data was preliminarily tidied in GRLS cox HSA time to diagnosis script before changing to log reg analyses
-cohort_abr <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
+cohort_abr <-read.csv(here::here("Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv"))
 ```
 
 ## Updated weight data
@@ -45,7 +45,7 @@ cohort_abr <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort
 Incorporate in updated weight from Zoe's work (she has modified the erroneus lb kg issues also now all only adult weight so no \<18m weights in here)
 
 ```{r}
-updated_weight <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/weight_cleaned_grls.csv")
+updated_weight <- read.csv(here::here("Data/weight_cleaned_grls.csv"))
 
 #existing weight columns are average and median 5y prior to endpoint and either split into quartiles or biological
 
@@ -1032,7 +1032,7 @@ colnames_df <- tibble(
 
 
 colnames_df <- colnames(cohort_no_not_rec)
-write.csv(colnames_df,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_col_names.csv")
+write.csv(colnames_df,here::here("Output/HSA_GRLS_col_names.csv"))
 ```
 
 Harmonise the missing data recording name
@@ -1083,7 +1083,7 @@ cohort_abr_updated_weight2 <- cohort_abr_updated_weight2 %>%
 Save dataset for work on confirmed HSA dogs only modelling
 
 ```{r}
-write.csv(cohort_abr_updated_weight2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_updated_analysis_df.csv")
+write.csv(cohort_abr_updated_weight2,here::here("Output/HSA_GRLS_updated_analysis_df.csv"))
 ```
 
 ## Regression analyses
@@ -1926,7 +1926,7 @@ exposure_level_counts
 ```{r}
 write_csv(
   exposure_level_counts,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/exposome_exposure_level_counts.csv"
+  here::here("Output/exposome_exposure_level_counts.csv")
 )
 ```
 
@@ -2519,7 +2519,7 @@ crude_results_formatted <- crude_results %>%
 
 
 #write to csv
-write.csv(crude_results_formatted,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_family_grouped.csv")
+write.csv(crude_results_formatted,here::here("Output/HSA_GRLS_log_reg_family_grouped.csv"))
 
 
 ```
@@ -2989,7 +2989,7 @@ crude_results_table3 <- crude_results_table2 %>%
 Need to ensure correct reference level (need to refactorise at start before this analysis)
 
 ```{r}
-output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+output_folder <- here::here("Output")
 
 ft <- flextable(crude_results_table3) %>%
   theme_booktabs() %>%
@@ -4030,7 +4030,7 @@ crude_cc_results_table
 Save output
 
 ```{r}
-output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+output_folder <- here::here("Output")
 
 readr::write_excel_csv(
   crude_cc_results_table,
@@ -5552,7 +5552,7 @@ adjusted_results_table <-
 Save output
 
 ```{r}
-output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+output_folder <- here::here("Output")
 
 
 dir.create(

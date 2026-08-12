@@ -9,7 +9,7 @@ editor: visual
 ```{r}
 library(tidyverse)
 library(lubridate)
-dog_pop <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/MCT_cohort_250531.csv")
+dog_pop <- read.csv(here::here("Output/MCT_cohort_250531.csv"))
 #remove excess cols
 dog_pop <- dog_pop %>%
   dplyr::select(-c(record_date))
@@ -63,7 +63,7 @@ Had seperate files for all of these datasets for the HSA dataset creation but wi
 created in this file for all the clinics based on 2019 values so can use these again as MDI not updated yet- GRLS clinic and deprivation indices linkup.qmd
 
 ```{r}
-deprivation <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+deprivation <- read.csv(here::here("Output/GRLS_dogs_MDI_2019.csv"))
 deprivation <- deprivation %>%
   dplyr::select(c(subject_id,MDI_quintile,owner_MDI_quintile))
 
@@ -85,9 +85,9 @@ outside house exposures=
 
 ```{r}
 #exposures dataset
-environment_exposures<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures<-read.csv(here::here("Data/environment_conditions.csv"),na.strings=c ("","NA"))
 environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
-sleep_environment <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+sleep_environment <- read.csv(here::here("Data/environment_sleep_location.csv"),na.strings=c("","NA"))
 sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
 
 ```
@@ -150,7 +150,7 @@ indoors_outdoors_1_row_year <- indoors_outdoors_1_row_year %>%
 ```{r}
 
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 # apply check exposure function
@@ -170,7 +170,7 @@ dog_pop_deprivation_enviro_early<- check_exposure2(indoors_outdoors_1_row_year, 
 ### Rest of life
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 # apply check exposure function
@@ -191,7 +191,7 @@ dog_pop_deprivation_enviro_early_rest <- check_exposure2(dog_pop_deprivation_env
 ### Whole life exposure
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 # apply check exposure function
 columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
@@ -210,7 +210,7 @@ dog_pop_deprivation_enviro__early_rest_whole<- check_exposure2(dog_pop_deprivati
 
 ```{r}
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 #delete rows with NA of record date in it in the indoors_outdoors
 indoors_outdoors2 <- indoors_outdoors %>%
@@ -301,7 +301,7 @@ smoking_df2 <- exposure_dosage(smoking_df,"hours_of_smoke","record_year","diagno
 ##### early
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 study_years <- c(0,1,2)
@@ -311,7 +311,7 @@ smoking_df3 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
 ##### rest
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 study_years <- c(3,4,5,6,7,8,9,10)
@@ -322,7 +322,7 @@ smoking_df4 <- exposure_dosage2(smoking_df3,"hours_of_smoke",study_years)
 ##### whole
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
@@ -394,7 +394,7 @@ sleep_smoking_enviro <- sleep_smoking_enviro %>%
 
 ```{r}
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 # apply check exposure function
@@ -413,7 +413,7 @@ sleep_smoking_enviro_early<- check_exposure2(sleep_smoking_enviro, columns_to_ch
 
 ```{r}
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 # apply check exposure function
@@ -430,7 +430,7 @@ sleep_smoking_enviro_early_rest<- check_exposure2(sleep_smoking_enviro_early, co
 #### whole life
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 # apply check exposure function
 columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
@@ -509,7 +509,7 @@ dog_pop_deprivation_enviro_smoking_sleep_all <- dog_pop_deprivation_enviro_smoki
 -   like with the enviro exposures/sleep data, no dogs are missing this bit of data so there will not be a "not_recorded/records_not_available" category
 
 ```{r}
-lifestyle <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifestyle.csv",na.strings=c ("","NA"))
+lifestyle <-read.csv(here::here("Data/lifestyle.csv"),na.strings=c ("","NA"))
 
 #check if all dogs have lifestyle recorded - they do
 unique_lifestyle <- unique(lifestyle$subject_id)
@@ -654,10 +654,10 @@ House datasets
 
 ```{r}
 
-house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+house <- read.csv(here::here("Data/house_details.csv"))
 house<- house %>%
   mutate(across(where(is.character), tolower))
-location <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv")
+location <- read.csv(here::here("Data/location_history.csv"))
 location <- location %>%
   mutate(across(where(is.character), tolower))
 
@@ -833,7 +833,7 @@ Mode exposure value calculations
 -   rather than early, rest,whole, 5y prior as not that much variation across
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 #early life
 columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
@@ -904,7 +904,7 @@ house_tidy <- house_tidy %>%
 #### Majority region/state/zip in study
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 #early life
 columns_to_check <- c("region_name","state","zip")
@@ -976,7 +976,7 @@ Code for 5y prior to endpoint calculations
 Determining most common exposure (mode) in the 5y prior to endpoint (year_in_study_diagnosis_or_final_record_year):
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 #add to house tidy the final record year column
 cohort_dogs_final_date <- dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location %>%
   dplyr::select(c(subject_id,year_in_study_diagnosis_or_final_record_year))
@@ -1017,7 +1017,7 @@ Load in all the comorbidity files:
 
 ```{r}
 #read in all csvs that start with the string "conditions_
-folder_path <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data"
+folder_path <- here::here("Data")
 
 # Get a list of all CSV files that start with "conditions_with"
 csv_files <- list.files(path = folder_path, pattern = "^conditions_.*\\.csv$", full.names = TRUE)
@@ -1193,7 +1193,7 @@ chronic_inflammatory <-c("congestive_heart_failure",
 #### Chronic inflam conditions ever in all years of study
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 conditions_in_df_and_list <- intersect(colnames(comorbs_unique),comorbs_to_find)
 
@@ -1777,7 +1777,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs <-
 Using the df created in an earlier script of analyses which tidies up free text and the many drug categories etc. in this qmd GRLS medications.qmd
 
 ```{r}
-medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+medications <- read.csv(here::here("Output/GRLS_medications_initial_tidy.csv"))
 ```
 
 ### Lifetime medication calculations
@@ -1800,7 +1800,7 @@ medication_summary_lifetime <- meds_per_dog_lifetime%>%
     max = max(count)
   )
 
-write.csv(medication_summary_lifetime,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/MCT_study_medication_quartiles_summaries_lifetime.csv")
+write.csv(medication_summary_lifetime,here::here("Output/MCT_study_medication_quartiles_summaries_lifetime.csv"))
 
 
 
@@ -1864,7 +1864,7 @@ medication_summary_5y <- meds_per_dog_5y%>%
     max = max(count)
   )
 
-write.csv(medication_summary_5y,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/MCT_study_medication_quartiles_summaries_5y.csv")
+write.csv(medication_summary_5y,here::here("Output/MCT_study_medication_quartiles_summaries_5y.csv"))
 
 
 
@@ -2603,7 +2603,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 Interim write to csv
 
 ```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset_interim.csv")
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib,here::here("Output/GRLS_MCT_variables_dataset_interim.csv"))
 ```
 
 ## Reproduction variables
@@ -2612,15 +2612,15 @@ Load in repro datasets
 
 ```{r}
 # female information
-repro_hx_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_female.csv")
-# not using df as hasnt been updated in past year or so of GRLS datasets so dont think being maintained spay_details <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/details_spay_before_heat.csv")
+repro_hx_female <- read.csv(here::here("Data/reproductive_history_female.csv"))
+# not using df as hasnt been updated in past year or so of GRLS datasets so dont think being maintained spay_details <- read.csv(here::here("Data/details_spay_before_heat.csv"))
 #join spay details to repro hx female sheet
 
-repro_heats_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv")
+repro_heats_female <- read.csv(here::here("Data/reproductive_history_heat.csv"))
 #male 
-repro_hx_male <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_male.csv")
+repro_hx_male <- read.csv(here::here("Data/reproductive_history_male.csv"))
 
-repro_hx_hormones <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv")
+repro_hx_hormones <-read.csv(here::here("Data/reproductive_history_hormones.csv"))
 #all empty cells encoded as NA
 repro_hx_female <- repro_hx_female %>%
   mutate_if(~any(. == ""), na_if, "")
@@ -2641,7 +2641,7 @@ colnames(repro_heats_female)
 colnames(repro_hx_hormones)
 
 #dog profile also contains neuter date and neuter status
-profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+profile <- read.csv(here::here("Data/dog_profile.csv"))
 ```
 
 First adding basic neuter info to the dataset = neuter status and age at neuter
@@ -2710,7 +2710,7 @@ unique_neut <- unique(demog_neut$subject_id)
 ### Age at first heat variable
 
 ```{r}
-#source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/240103_GRLS_functions.qmd")
+#source(here::here("Code/240103_GRLS_functions.qmd"))
 #3 inputs required
 first_exposure_point <- function(data, exposure_column, record_date) {
   exposure_col <- enquo(exposure_column)
@@ -2896,7 +2896,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 
 ```{r}
 ###add in weight and BCS data for the dogs
-dog_weight <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical.csv")
+dog_weight <- read.csv(here::here("Data/exam_physical.csv"))
 dog_weight <- dog_weight %>%
   dplyr::select(c(subject_id,year_in_study,height,weight,purina_body_condition_score))
 #remerge back to big df 
@@ -2980,7 +2980,7 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 ```
 
 ```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset_interim.csv")
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_unique,here::here("Output/GRLS_MCT_variables_dataset_interim.csv"))
 ```
 
 ## Activity
@@ -2991,14 +2991,14 @@ Loading in datasets:
 
 ```{r}
 #activity data from study y 1 and 2
-activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
+activity_sy1_2 <- read.csv(here::here("Data/activity_details_through_SY2.csv"))
 #check # dogs in it
 act_1_2 <- unique(activity_sy1_2$subject_id)
 #activity data from study y 3 + 
-activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
+activity_sy3_beyond <- read.csv(here::here("Data/activity_details_SY3_beyond.csv"))
 act_3_plus<- unique(activity_sy3_beyond$subject_id)
 #activity overview dataset
-activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+activity_overview<- read.csv(here::here("Data/activity_overview.csv"))
 act_over<-unique(activity_overview$subject_id)
 ```
 
@@ -3571,5 +3571,5 @@ dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_me
 ```
 
 ```{r}
-write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_MCT_variables_dataset.csv")
+write.csv(dog_pop_deprivation_enviro_smoking_sleep_lifestyle_all_house_location_comorbs_meds_NSAID_steroid_systemic_pred_lokivetmab_oclacitinib3_weight4_activity_endpoint_activity_tidied,here::here("Output/GRLS_MCT_variables_dataset.csv"))
 ```

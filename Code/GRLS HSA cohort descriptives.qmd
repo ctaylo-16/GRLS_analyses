@@ -28,11 +28,11 @@ library(survminer)
 library(cardx)
 library(finalfit)
 #whole grls cohort
-cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
+cohort <- read.csv(here::here("Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv"))
 HSA_dogs <- cohort %>%
   filter(had_HSA==1)
 
-endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+endpoints <- read.csv(here::here("Data/study_endpoints.csv"))
 #
 #keeping only relevant columns from each df
 HSA_dogs <- HSA_dogs %>%
@@ -53,7 +53,7 @@ multi_HSA <- HSA_dogs2 %>%
 
 
 #incorp in survival time days - get date of diagnosis from endpoints and date of death from profile 
-profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+profile <- read.csv(here::here("Data/dog_profile.csv"))
 profile <- profile %>%
   dplyr::select(c(subject_id,enrolled_date,death_date,is_euthanized,birth_date))
 
@@ -65,7 +65,7 @@ HSA_dogs2 <- HSA_dogs2 %>%
 ## Time enrolled in study, median age at enrollment
 
 ```{r}
-study_times <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date.csv")
+study_times <- read.csv(here::here("Output/HSA_study_pop_with_final_date.csv"))
 
 #link to dog profile to calc age at enrollment and time enrolled in study]
 
@@ -268,7 +268,7 @@ location_summary <- location_df[, c("location","count","count_percent", "count_p
 # View result
 print(location_summary)
 #write to csv for manuscript
-write.csv(location_summary,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_location_counts.csv")
+write.csv(location_summary,here::here("Output/GRLS_HSA_location_counts.csv"))
 ```
 
 Location barplot
@@ -391,7 +391,7 @@ plot <- ggplot(location_df, aes(x = fct_reorder(location, count), y = count)) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.2)))
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_barplot.tiff", plot = plot, width = 8, height = 6, dpi = 600)
+ggsave(here::here("Output/GRLS_HSA_locations_barplot.tiff"), plot = plot, width = 8, height = 6, dpi = 600)
 
 ```
 
@@ -401,7 +401,7 @@ Survival time days calculation
 
 ```{r}
 #funct to calc time between events
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
+source(here::here("Code/functions/age_calc_funct.R"))
 
 #convert char dates to date format
 #HSA_dogs2$diagnosis_date2 <- as.Date(HSA_dogs2$diagnosis_date)
@@ -690,12 +690,12 @@ KM_plot_4
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls.svg", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls.svg"), plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls.pdf", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls.pdf"), plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls.tif", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls.tif"), plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
 
 
 
@@ -722,12 +722,12 @@ KM_plot_5
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other.svg", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_no_other.svg"), plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other.pdf", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_no_other.pdf"), plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other.tif", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_no_other.tif"), plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
 
 ```
 
@@ -736,7 +736,7 @@ ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no
 Use profile dataset to calculate time between enrolled date and death_date OR 31st Dec 2024 if not dead yet
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
+source(here::here("Code/functions/age_calc_funct.R"))
 
 #add death date 31/12/24 for all dogs with no death date recorded into death_date_2
 profile <- profile %>%
@@ -801,7 +801,7 @@ cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
 ## Confirmed diagnoses descriptives and MST and incidence
 
 ```{r}
-cohort_info_for_tiers <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+cohort_info_for_tiers <- read.csv(here::here("Data/study_endpoints.csv"))
 
 cohort_info_for_tiers<- cohort_info_for_tiers %>%
   mutate(across(where(is.character), str_to_lower))%>%
@@ -817,7 +817,7 @@ HSA_dogs_confirmed <- cohort_info_for_tiers %>%
 ```
 
 ```{r}
-study_times <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date.csv")
+study_times <- read.csv(here::here("Output/HSA_study_pop_with_final_date.csv"))
 
 #link to dog profile to calc age at enrollment and time enrolled in study]
 
@@ -978,7 +978,7 @@ location_summary2 <- location_df2[, c("location","count","count_percent", "count
 # View result
 print(location_summary2)
 #write to csv for manuscript
-write.csv(location_summary2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_location_counts_confirmed_cases.csv")
+write.csv(location_summary2,here::here("Output/GRLS_HSA_location_counts_confirmed_cases.csv"))
 ```
 
 Location barplot
@@ -1009,7 +1009,7 @@ plot2<- location_df2 %>%
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_barplot_confirmed.tiff", plot = plot2, width = 8, height = 6, dpi = 600)
+ggsave(here::here("Output/GRLS_HSA_locations_barplot_confirmed.tiff"), plot = plot2, width = 8, height = 6, dpi = 600)
 
 ```
 
@@ -1019,7 +1019,7 @@ Survival time days calculation
 
 ```{r}
 #funct to calc time between events
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
+source(here::here("Code/functions/age_calc_funct.R"))
 
 #convert char dates to date format
 HSA_dogs_confirmed$diagnosis_date2 <- as.Date(HSA_dogs_confirmed$diagnosis_date)
@@ -1312,12 +1312,12 @@ KM_plot_4
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_confirmed.svg", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_confirmed.svg"), plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_confirmed.pdf", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_confirmed.pdf"), plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_confirmed.tif", plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_confirmed.tif"), plot = KM_plot_4$plot, width = 15, height = 10, dpi = 300)
 
 
 
@@ -1344,12 +1344,12 @@ KM_plot_5
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other_conf.svg", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_no_other_conf.svg"), plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other_conf.pdf", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_no_other_conf.pdf"), plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no_other_conf.tif", plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_no_other_conf.tif"), plot = KM_plot_5$plot, width = 15, height = 10, dpi = 300)
 
 ```
 
@@ -1358,7 +1358,7 @@ ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_no
 Use profile dataset to calculate time between enrolled date and death_date OR 31st Dec 2024 if not dead yet
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/functions/age_calc_funct.R")
+source(here::here("Code/functions/age_calc_funct.R"))
 
 #add death date 31/12/24 for all dogs with no death date recorded into death_date_2
 profile <- profile %>%
@@ -1427,7 +1427,7 @@ cat("95% CI:", round(lower_rate, 3), "to", round(upper_rate, 3), "\n")
 
 ```{r}
 #get df ready for KMs
-cohort_df <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_updated_analysis_df.csv")
+cohort_df <- read.csv(here::here("Output/HSA_GRLS_updated_analysis_df.csv"))
 #keep the age, sex, neut of only cases
 cohort_df_cases <- cohort_df %>%
   dplyr::filter(had_HSA==1) %>%
@@ -1479,12 +1479,12 @@ KM_plot_age
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis.svg", plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_age_diagnosis.svg"), plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis.pdf", plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_age_diagnosis.pdf"), plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis.tif", plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_age_diagnosis.tif"), plot = KM_plot_age$plot, width = 15, height = 10, dpi = 300)
 
 ```
 
@@ -1643,12 +1643,12 @@ KM_plot_age2
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis_conf_cases.svg", plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_age_diagnosis_conf_cases.svg"), plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis_conf_cases.pdf", plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_age_diagnosis_conf_cases.pdf"), plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_age_diagnosis_conf_cases.tif", plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_age_diagnosis_conf_cases.tif"), plot = KM_plot_age2$plot, width = 15, height = 10, dpi = 300)
 
 
 ```
@@ -1686,12 +1686,12 @@ KM_plot_sex
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis.svg", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_sex_diagnosis.svg"), plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis.pdf", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_sex_diagnosis.pdf"), plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis.tif", plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_sex_diagnosis.tif"), plot = KM_plot_sex$plot, width = 15, height = 10, dpi = 300)
 
 ```
 
@@ -1726,12 +1726,12 @@ KM_plot_sex2
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.svg", plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_sex_diagnosis_conf_cases.svg"), plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.pdf", plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_sex_diagnosis_conf_cases.pdf"), plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_sex_diagnosis_conf_cases.tif", plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_sex_diagnosis_conf_cases.tif"), plot = KM_plot_sex2$plot, width = 15, height = 10, dpi = 300)
 
 ```
 
@@ -1768,12 +1768,12 @@ KM_plot_neut
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis.svg", plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_neut_diagnosis.svg"), plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis.pdf", plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_neut_diagnosis.pdf"), plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis.tif", plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_neut_diagnosis.tif"), plot = KM_plot_neut$plot, width = 15, height = 10, dpi = 300)
 
 ```
 
@@ -1808,12 +1808,12 @@ KM_plot_neut2
 
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis_conf_cases.svg", plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_neut_diagnosis_conf_cases.svg"), plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis_conf_cases.pdf", plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_neut_diagnosis_conf_cases.pdf"), plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
 
 
-ggsave(filename = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/km_hsa_grls_neut_diagnosis_conf_cases.tif", plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
+ggsave(filename = here::here("Output/km_hsa_grls_neut_diagnosis_conf_cases.tif"), plot = KM_plot_neut2$plot, width = 15, height = 10, dpi = 300)
 
 ```
 
@@ -1968,7 +1968,7 @@ location_comparison_plot
 
 ```{r}
 ggsave(
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_combined.tiff",
+  here::here("Output/GRLS_HSA_locations_combined.tiff"),
   plot = location_comparison_plot,
   width = 8.5,
   height = 10,
@@ -1978,7 +1978,7 @@ ggsave(
 )
 
 ggsave(
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_locations_combined.pdf",
+  here::here("Output/GRLS_HSA_locations_combined.pdf"),
   plot = location_comparison_plot,
   width = 8.5,
   height = 10,
@@ -2603,7 +2603,7 @@ main_location_results_table
 
 write.csv(
   main_location_tests,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_main_location_histopath_tests_chisq.csv",
+  here::here("Output/HSA_main_location_histopath_tests_chisq.csv"),
   row.names = FALSE
 )
 
@@ -2614,7 +2614,7 @@ write.csv(
 
 write.csv(
   main_location_results_table,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_main_location_histopath_results_table_chisq.csv",
+  here::here("Output/HSA_main_location_histopath_results_table_chisq.csv"),
   row.names = FALSE
 )
 ```
@@ -3659,7 +3659,7 @@ demographic_KM_figure
 
 ggsave(
   filename =
-    "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_demographic_KM_combined.tiff",
+    here::here("Output/GRLS_HSA_demographic_KM_combined.tiff"),
 
   plot =
     demographic_KM_figure,
@@ -3678,7 +3678,7 @@ ggsave(
 
 ggsave(
   filename =
-    "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_HSA_demographic_KM_combined.pdf",
+    here::here("Output/GRLS_HSA_demographic_KM_combined.pdf"),
 
   plot =
     demographic_KM_figure,
@@ -3887,7 +3887,7 @@ demographic_logrank_table
 
 write.csv(
   demographic_logrank_results,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_demographic_logrank_tests.csv",
+  here::here("Output/HSA_demographic_logrank_tests.csv"),
   row.names = FALSE
 )
 
@@ -4446,14 +4446,14 @@ pairwise_age_results %>%
 
 write.csv(
   age_survival_summary,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_age_survival_summary.csv",
+  here::here("Output/HSA_age_survival_summary.csv"),
   row.names = FALSE
 )
 
 
 write.csv(
   pairwise_age_results,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_age_pairwise_logrank_tests.csv",
+  here::here("Output/HSA_age_pairwise_logrank_tests.csv"),
   row.names = FALSE
 )
 ```
@@ -4730,7 +4730,7 @@ restricted_pairwise_age_table
 
 write.csv(
   restricted_pairwise_age_results,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_restricted_age_pairwise_logrank_tests.csv",
+  here::here("Output/HSA_restricted_age_pairwise_logrank_tests.csv"),
   row.names = FALSE
 )
 ```

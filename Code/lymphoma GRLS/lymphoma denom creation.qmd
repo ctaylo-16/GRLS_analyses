@@ -27,8 +27,8 @@ lymphoma_cases_abr <- lymphoma_cases %>%
 Add in cohort population:
 
 ```{r}
-endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
-dog_profiles <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+endpoints <- read.csv(here::here("Data/study_endpoints.csv"))
+dog_profiles <- read.csv(here::here("Data/dog_profile.csv"))
 #abridge to relevant columns
 dog_profiles_abr<- dog_profiles %>%
   dplyr::select(c(subject_id,enrolled_date,birth_date,withdrawn_date,inactive_date,death_date))
@@ -159,7 +159,7 @@ Need to add in a final study year for each dog as well so using the meds data:
 -   cut off dates after 1/12/24 and then match our cohort to the final medsrow
 
 ```{r}
-med_q <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv")
+med_q <- read.csv(here::here("Data/medications.csv"))
 #keep only record year cols
 med_q2 <- med_q %>%
   dplyr::select(c(subject_id,year_in_study,record_date))
@@ -189,5 +189,5 @@ Write file to csv for then running in other files when creating all the time lin
 So there are 163 cases and 2881 controls in the population as of 1/12/24
 
 ```{r}
-write.csv(dates_and_lymphoma_diagnosis,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lymphoma_cohort_241201.csv")
+write.csv(dates_and_lymphoma_diagnosis,here::here("Data/lymphoma_cohort_241201.csv"))
 ```

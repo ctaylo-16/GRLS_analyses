@@ -15,10 +15,10 @@ library(ggplot2)
 library(lubridate)
 
 #original medications datasets
-medications <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv",na.strings=c ("","NA"))
-vaccinations <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/vaccines.csv",na.strings=c ("","NA"))
-OTC_meds <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/over_the_counter_medications.csv",na.strings=c ("","NA"))
-parasite_control <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/flea_tick_heartworm.csv",na.strings=c ("","NA"))
+medications <- read.csv(here::here("Data/medications.csv"),na.strings=c ("","NA"))
+vaccinations <-read.csv(here::here("Data/vaccines.csv"),na.strings=c ("","NA"))
+OTC_meds <- read.csv(here::here("Data/over_the_counter_medications.csv"),na.strings=c ("","NA"))
+parasite_control <-read.csv(here::here("Data/flea_tick_heartworm.csv"),na.strings=c ("","NA"))
 #ensure all lower case
 medications <- medications %>%
   mutate(across(where(is.character), tolower))
@@ -31,7 +31,7 @@ parasite_control <- parasite_control %>%
   
 
 # use the end_points dataset for now 
-end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points <- read.csv(here::here("Data/study_endpoints.csv"))
 end_points_neoplasia <- end_points %>% 
   mutate(across(where(is.character), tolower))
 
@@ -202,7 +202,7 @@ med_ingredients_count <- ingredients %>%
   arrange(desc(Count))
 med_ingredients_count
 
-write.csv(med_ingredients_count,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/medications_all.csv")
+write.csv(med_ingredients_count,here::here("Output/medications_all.csv"))
 ```
 
 \~800 ingredients
@@ -436,7 +436,7 @@ combined_df <- data.frame(
 
 
 
-write.csv(combined_df, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/med_groups_table.csv", row.names = FALSE, quote = TRUE)
+write.csv(combined_df, here::here("Output/med_groups_table.csv"), row.names = FALSE, quote = TRUE)
 
 
 ```
@@ -1112,7 +1112,7 @@ medications_2$dose_unit <- dose$dose_unit
 Many are done mg/kg or say something based on dogs weight = add in dog weight column to dataset
 
 ```{r}
-dog_pe <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical.csv")
+dog_pe <- read.csv(here::here("Data/exam_physical.csv"))
 
 dog_pe2 <- dog_pe %>%
   dplyr::select(c(subject_id,year_in_study,weight,weight_units))
@@ -1298,7 +1298,7 @@ dosing_frequency <- list(
 Apply this list to the dataframe so that they are reclassified:
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 
@@ -1387,7 +1387,7 @@ duration_dict <- list(
 ```
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 
@@ -1534,7 +1534,7 @@ medications_complete <- medications_5 %>%
   filter(!dose%in%c("unspecified","varies","","moderate amount","small amount","as directed","powder","as directed"))
 
 #write all rows as a csv
-write.csv(medications_5,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv" )
+write.csv(medications_5,here::here("Output/GRLS_medications_initial_tidy.csv") )
 #dose units that are definitely not usable dogs
 medications_complete <-medications_complete %>%
   filter(!dose_unit %in% c("unspecified","as directed","as needed","monthly","liquid","tapering dose","daily","injection"))
@@ -1616,7 +1616,7 @@ print(medications_mapped[, c("frequency_specify_days", "mapped_values")])
 
 
 #write this to csv 
-write.csv(medications_mapped,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+write.csv(medications_mapped,here::here("Output/GRLS_medications_initial_tidy.csv"))
 
 
 
@@ -1637,7 +1637,7 @@ medications_mapped <- medications_mapped %>%
 
 
 #write this to csv 
-write.csv(medications_mapped,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv")
+write.csv(medications_mapped,here::here("Output/GRLS_medications_initial_tidy.csv"))
 ```
 
 ## Vaccinations
@@ -1655,7 +1655,7 @@ What were they vaccinated with in past X years
 NB. new row for every vaccine (multiple rows for same study year) for each subject id
 
 ```{r}
-vaccinations <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/vaccines.csv")
+vaccinations <-read.csv(here::here("Data/vaccines.csv"))
 
 #remove rows with any_vaccine = 0 as no vaccine recorded that year of questionaire
 vacc <- vaccinations %>%
@@ -1724,7 +1724,7 @@ both_core_non_core <- c("adenovirus type 2, bordetella bronchiseptica, parainflu
 ## Flea-worming Tx
 
 ```{r}
-flea_tick_heartworm <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/flea_tick_heartworm.csv")
+flea_tick_heartworm <-read.csv(here::here("Data/flea_tick_heartworm.csv"))
 ```
 
 ## OTC medications - ignore for now

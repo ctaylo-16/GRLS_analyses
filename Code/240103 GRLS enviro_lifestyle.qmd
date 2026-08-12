@@ -19,9 +19,9 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 #exposures dataset
-environment_exposures<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures<-read.csv(here::here("Data/environment_conditions.csv"),na.strings=c ("","NA"))
 environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
-sleep_environment <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+sleep_environment <- read.csv(here::here("Data/environment_sleep_location.csv"),na.strings=c("","NA"))
 sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
 
 ```
@@ -139,7 +139,7 @@ Load in endpoint file:
 
 ```{r}
 # use the end_points dataset for now 
-end_points<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/data version Feb 2024/study_endpoints.csv")
+end_points<- read.csv(here::here("Data/data version Feb 2024/study_endpoints.csv"))
 end_points2 <- end_points
 #get neoplasia diagnosis year month column into date format - check its in YMD or in MDY and if is split by - or /
 end_points2$diagnosis_year_month_date <- as.Date(end_points2$diagnosis_date, format = "%m/%d/%Y")
@@ -168,7 +168,7 @@ end_points2 <- end_points2 %>%
 
 ```{r}
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 #new dataframe to combine  diagnosis date and exposure
 end_points2 <- end_points2 %>%
@@ -236,7 +236,7 @@ result_df <- check_exposure(result_df, columns_to_check, diagnosis_year, exposur
 ```{r}
 
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 # apply check exposure function
@@ -257,7 +257,7 @@ result_df<- check_exposure2(result_df, columns_to_check, study_years,year_column
 ### Exposure in mid-later years (SY3+)
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 enviro_early <- environment_exposures_2 %>%
   filter(year_in_study ==3 |year_in_study ==4 |year_in_study ==5|year_in_study ==6|year_in_study ==7|year_in_study ==8|year_in_study ==9|year_in_study ==10)
@@ -282,7 +282,7 @@ result_df <- check_exposure2(result_df, columns_to_check, study_years,year_colum
 ### Exposure over whole life
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 # apply check exposure function
 columns_to_check <- c("use_aerosol", "use_air_cleaner", "use_hepa_filter",
@@ -360,7 +360,7 @@ Could also create a further function to calculate dosage 1,3,5y before diagnosis
 ### Hours of smoke exposure SY1-2
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 study_years <- c(0,1,2)
@@ -372,7 +372,7 @@ smoking_df2 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
 ### Hours of smoke exposure SY3
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 study_years <- c(3,4,5,6,7,8,9,10)
@@ -383,7 +383,7 @@ smoking_df2 <- exposure_dosage2(smoking_df2,"hours_of_smoke",study_years)
 ### Lifetime hours of smoke exposure
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 study_years <- c(0,1,2,3,4,5,6,7,8,9,10)
@@ -479,7 +479,7 @@ Calculate early life, rest of life and later life exposure
 ```{r}
 
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 # apply check exposure function
@@ -498,7 +498,7 @@ result_df4<- check_exposure2(result_df4, columns_to_check, study_years,year_colu
 ### Exposure in mid-later years (SY3+)
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 enviro_early <- environment_exposures_2 %>%
   filter(year_in_study ==3 |year_in_study ==4 |year_in_study ==5|year_in_study ==6|year_in_study ==7|year_in_study ==8|year_in_study ==9|year_in_study ==10)
@@ -520,7 +520,7 @@ result_df4 <- check_exposure2(result_df4, columns_to_check, study_years,year_col
 ### Exposure over whole life
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 # apply check exposure function
 columns_to_check <- c("in the garage_YN","in the house_YN","outside_YN")
@@ -617,12 +617,12 @@ sleep_smoking_enviro_all <- merge(result_df5,result_df6,by="subject_id")
 ## Location classifying
 
 ```{r}
-enviro_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- read.csv(here::here("Data/environment_spend_time_location.csv"),na.strings=c("","NA"))
 enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
 ```
 
 ```{r}
-enviro_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- read.csv(here::here("Data/environment_spend_time_location.csv"),na.strings=c("","NA"))
 enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
 
 ```
@@ -651,14 +651,14 @@ Can create variables something along the lines of *exposure to each flooring typ
 
 ```{r}
 #activity data from study y 1 and 2
-activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
+activity_sy1_2 <- read.csv(here::here("Data/activity_details_through_SY2.csv"))
 #check # dogs in it
 act_1_2 <- unique(activity_sy1_2$subject_id)
 #activity data from study y 3 + 
-activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
+activity_sy3_beyond <- read.csv(here::here("Data/activity_details_SY3_beyond.csv"))
 act_3_plus<- unique(activity_sy3_beyond$subject_id)
 #activity overview dataset
-activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+activity_overview<- read.csv(here::here("Data/activity_overview.csv"))
 act_over<-unique(activity_overview$subject_id)
 ```
 
@@ -741,7 +741,7 @@ print(overview)
 Read in dataset on what the dog is primarily used for (e.g. showing, breeding, agility):
 
 ```{r}
-lifestyle <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifestyle.csv",na.strings=c ("","NA"))
+lifestyle <-read.csv(here::here("Data/lifestyle.csv"),na.strings=c ("","NA"))
 ```
 
 What are all the categories of lifestyle? and what are most common ones?
@@ -1041,7 +1041,7 @@ sleep_smoking_enviro_all_final_date<- sleep_smoking_enviro_all_final_date%>%
   distinct(subject_id, .keep_all = TRUE)
 
 #NB change to final file name when file done
-write.csv(sleep_smoking_enviro_all_final_date,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_sleep_smoking_enviro_lifestyle_enviro.csv")
+write.csv(sleep_smoking_enviro_all_final_date,here::here("Output/endpoints_sleep_smoking_enviro_lifestyle_enviro.csv"))
 
 ```
 
@@ -1064,7 +1064,7 @@ Keeping all rows:
 
 
 #NB change to final file name when file done
-write.csv(sleep_smoking_enviro_all_no_endpoints,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/allrows_sleep_smoking_enviro_lifestyle_enviro.csv")
+write.csv(sleep_smoking_enviro_all_no_endpoints,here::here("Output/allrows_sleep_smoking_enviro_lifestyle_enviro.csv"))
 
 ```
 
@@ -1078,13 +1078,13 @@ sleep_smoking_enviro_all_no_endpoints2 <- sleep_smoking_enviro_all_no_endpoints 
 sleep_smoking_enviro_all_no_endpoints2 <- sleep_smoking_enviro_all_no_endpoints2 %>%
   distinct(subject_id, .keep_all = TRUE)
 
-write.csv(sleep_smoking_enviro_all_no_endpoints2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv")
+write.csv(sleep_smoking_enviro_all_no_endpoints2,here::here("Output/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv"))
 ```
 
 ## Add in HSA cohort time specific data
 
 ```{r}
-HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+HSA_cohort <- read.csv(here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"))
 ```
 
 Combine HSA data with:
@@ -1100,7 +1100,7 @@ Things to calculate:
 -   lifestyle - mode class of dog 'job'
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 columns_to_check <- c("main_lifestyle_category","sleep_location")
 HSA_cohort_sleep_smoking_enviro_all_no_endpoints2 <- check_exposure_mode_X_prev_years(
   data = HSA_cohort_sleep_smoking_enviro_all_no_endpoints,
@@ -1115,10 +1115,10 @@ HSA_cohort_sleep_smoking_enviro_all_no_endpoints2 <- check_exposure_mode_X_prev_
 Remaining variables its a Y/N exposure in prev 5 y calculation
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 columns_to_check <- c("use_aerosol","use_air_cleaner","use_hepa_filter","use_moth_balls","use_incense_or_candles","smoke_exposure","any_treated_weeds","any_treated_insects","any_treated_fertilizer")
 
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 
 # Specify the columns to check
@@ -1139,7 +1139,7 @@ HSA_cohort_sleep_smoking_enviro_all_no_endpoints2 <- check_exposure_binary(
 Calculate hours of smoke exposure in prev 5 y
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 #make smoke into numeric
 HSA_cohort_sleep_smoking_enviro_all_no_endpoints2$hours_of_smoke <- as.numeric(HSA_cohort_sleep_smoking_enviro_all_no_endpoints2$hours_of_smoke)
 result <- check_exposure_hours(
@@ -1160,5 +1160,5 @@ HSA_cohort_sleep_smoking_enviro_all_single_row <- result %>%
 HSA_cohort_sleep_smoking_enviro_all_single_row2 <- HSA_cohort_sleep_smoking_enviro_all_single_row %>%
   dplyr::select(-c(2:18))
 
-write.csv(HSA_cohort_sleep_smoking_enviro_all_single_row2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_lifestyle_exposures.csv")
+write.csv(HSA_cohort_sleep_smoking_enviro_all_single_row2,here::here("Output/HSA_cohort_lifestyle_exposures.csv"))
 ```

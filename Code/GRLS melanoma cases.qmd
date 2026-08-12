@@ -11,22 +11,22 @@ editor: visual
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
-demog <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+demog <- read.csv(here::here("Data/dog_profile.csv"))
 
 demog <- demog %>% mutate_all(na_if,"")
 
-end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points <- read.csv(here::here("Data/study_endpoints.csv"))
 
-histo_necro <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/histology_necropsy_labs.csv")
+histo_necro <- read.csv(here::here("Data/histology_necropsy_labs.csv"))
 
 
-neoplasia_conditions <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv")
+neoplasia_conditions <- read.csv(here::here("Data/conditions_neoplasia.csv"))
 
-banked_samples <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/banked_samples.csv")
+banked_samples <- read.csv(here::here("Data/banked_samples.csv"))
 
-clinical_labs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/clinical_labs.csv")
+clinical_labs <- read.csv(here::here("Data/clinical_labs.csv"))
 
-exam_notes <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical_superficial_mass.csv")
+exam_notes <- read.csv(here::here("Data/exam_physical_superficial_mass.csv"))
 ```
 
 Find melanoma in end points dataset

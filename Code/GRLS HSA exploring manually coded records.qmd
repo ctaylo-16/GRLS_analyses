@@ -6,16 +6,16 @@ editor: visual
 
 ```{r}
 library(tidyverse)
-folder_path <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Data"
+folder_path <- here::here("Data")
 
 ```
 
 Checking number of HSA dogs coded by Josie etc and how many had histopath vs not
 
 ```{r}
-HSA_manually_coded<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/HSA_cases_clinical_records_coded.csv")
+HSA_manually_coded<-read.csv(here::here("Data/HSA_cases_clinical_records_coded.csv"))
 
-analysed_manuscript_dogs <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
+analysed_manuscript_dogs <-read.csv(here::here("Output/HSA_cohort_all_RFs_data.csv"))
 #keep only HSA cases in manuscript analyses
 HSA_analysed_manuscript_dogs <-analysed_manuscript_dogs %>%
   dplyr::filter(had_HSA==1)
@@ -55,7 +55,7 @@ There are dupes in the manual coding df- why?
 write to csv to read these better
 
 ```{r}
-write.csv(original_df_dupes,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_manual_coding_dupes.csv")
+write.csv(original_df_dupes,here::here("Output/HSA_manual_coding_dupes.csv"))
 ```
 
 There is 54 duplicates = 26 dogs duplicated
@@ -73,7 +73,7 @@ Since CSV doesnt carry this colour info over make a new column in it (QC_duplica
 Check how many records of the tier 1 patients are already coded up manually
 
 ```{r}
-tiered_HSA <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+tiered_HSA <- read.csv(here::here("Data/study_endpoints.csv"))
 
 tiered_HSA<- tiered_HSA %>%
   mutate(across(where(is.character), str_to_lower))

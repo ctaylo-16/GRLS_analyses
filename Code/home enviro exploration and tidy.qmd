@@ -13,13 +13,13 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 
-house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+house <- read.csv(here::here("Data/house_details.csv"))
 house<- house %>%
   mutate(across(where(is.character), tolower))
-location <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/location_history.csv")
+location <- read.csv(here::here("Data/location_history.csv"))
 location <- location %>%
   mutate(across(where(is.character), tolower))
-end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points <- read.csv(here::here("Data/study_endpoints.csv"))
 end_points <- end_points %>%
   mutate(across(where(is.character), tolower))
 
@@ -309,7 +309,7 @@ proportions <- differences %>%
 Mode value of exposure:
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 #early life
 columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
@@ -416,7 +416,7 @@ Across whole study period (10+y) this changes for approx 50% of dogs
 Determine mode state and region for dogs:
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 #early life
 columns_to_check <- c("region_name","state","zip")
@@ -482,7 +482,7 @@ result_combined <- result_df2_unique %>%
 ```
 
 ```{r}
-write.csv(result_combined,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/house_location_all_rows.csv")
+write.csv(result_combined,here::here("Output/house_location_all_rows.csv"))
 ```
 
 #### Add in endpoints data:
@@ -490,7 +490,7 @@ write.csv(result_combined,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/house_
 ```{r}
 
 # use the end_points dataset for now 
-end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points <- read.csv(here::here("Data/study_endpoints.csv"))
 # sort dates
 #get neoplasia diagnosis year month column into date format
 end_points$diagnosis_year_month_date <- as.POSIXct(end_points$diagnosis_date)
@@ -515,25 +515,25 @@ end_lymphoma <- end_lymphoma %>%
 end_points_all <- end_points %>%
   left_join(result_combined, by="subject_id") %>%
   distinct(subject_id,.keep_all=TRUE)
-write.csv(end_points_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_all_house_location.csv")
+write.csv(end_points_all,here::here("Output/endpoints_all_house_location.csv"))
 
 #end points lymphoma
 end_points_lymphoma_join <- end_lymphoma %>%
   left_join(result_combined,by="subject_id") %>%
   distinct(subject_id,.keep_all=TRUE)
-write.csv(end_points_lymphoma_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_lymphoma_house_location.csv")
+write.csv(end_points_lymphoma_join,here::here("Output/endpoints_lymphoma_house_location.csv"))
 #end points HSA
 end_points_HSA_join <- end_HSA %>%
   left_join(result_combined,by="subject_id") %>%
   distinct(subject_id,.keep_all=TRUE)
-write.csv(end_points_HSA_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_HSA_house_location.csv")
+write.csv(end_points_HSA_join,here::here("Output/endpoints_HSA_house_location.csv"))
 
 ```
 
 ### Create haemangiosarcoma cohort with this data
 
 ```{r}
-HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+HSA_cohort <- read.csv(here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"))
 ```
 
 Calculations for exposure within X years of diagnosis year/final record year
@@ -555,7 +555,7 @@ For house dataset:
 Determining most common exposure (mode) in the 5y prior to endpoint (year_in_study_diagnosis_or_final_record_year):
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 columns_to_check <- c("area_type","house_type","water_source","pipes_metal_any","pipes_plastic_any","heating_fuel_primary","cooking_fuel_primary","heating_fuel_secondary","cooking_fuel_secondary")
 HSA_cohort_house <- check_exposure_mode_X_prev_years(
   data = HSA_cohort_house,
@@ -576,7 +576,7 @@ HSA_cohort_house_per_dog <- HSA_cohort_house_per_dog %>%
 For location dataset:
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 columns_to_check <- c("region_name","state","zip")
 HSA_cohort_location<- check_exposure_mode_X_prev_years(
   data = HSA_cohort_location,
@@ -600,5 +600,5 @@ Combine these 2 datasets together to create home enviro HSA dataset:
 HSA_cohort_location_house_per_dog <- HSA_cohort_house_per_dog %>%
   left_join(HSA_cohort_location_per_dog, by="subject_id")
 
-write.csv(HSA_cohort_location_house_per_dog,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_house_location_enviro_exposures.csv")
+write.csv(HSA_cohort_location_house_per_dog,here::here("Output/HSA_cohort_house_location_enviro_exposures.csv"))
 ```

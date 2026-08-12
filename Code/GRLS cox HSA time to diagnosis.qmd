@@ -35,7 +35,7 @@ library(cardx)
 library(finalfit)
 
 #load in dataset
-cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
+cohort <- read.csv(here::here("Output/HSA_cohort_all_RFs_data.csv"))
 colnames(cohort)
 cohort <- cohort %>%
   dplyr::select(-c(X))
@@ -295,7 +295,7 @@ cohort_abr <- cohort %>%
   dplyr::select(all_of(cols_to_keep))
 
 #also need to add in a survival time variable (days/weeks/months/years)
-enrol_date <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+enrol_date <-read.csv(here::here("Data/dog_profile.csv"))
 enrol_date <- enrol_date %>%
   dplyr::select(c(subject_id, enrolled_date))
 
@@ -468,7 +468,7 @@ low_weight2 <- cohort_abr %>%
 #keep rel cols
 low_weight <- low_weight %>%
   dplyr::select(c(subject_id,avg_weight_5y_prior_endpoint_kg,avg_weight_5y_prior_endpoint_kg_outliers_removed,had_HSA))
-write.csv(low_weight,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/low_weightGRLScohort.csv")
+write.csv(low_weight,here::here("Output/low_weightGRLScohort.csv"))
 #height
 cohort_abr<- cohort_abr%>%
   mutate(avg_height_5y_prior_endpoint_cm = avg_height_5y_prior_endpoint * 2.54)
@@ -1055,7 +1055,7 @@ cohort_abr <- cohort_abr %>%
 ```
 
 ```{r}
-write.csv(cohort_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
+write.csv(cohort_abr,here::here("Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv"))
 ```
 
 ## Setting factors with baselines correct
@@ -1221,8 +1221,8 @@ perform_univariable_analysis(
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles", "age_at_final_date_GB","age_at_final_date_bio",
 "NSAID_5y","NSAID_ever","steroid_5y","steroid_ever","fenbendazole_5y","fenbendazole_ever"),
-  output_csv = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv",
-  output_doc = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx"
+  output_csv = here::here("Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv"),
+  output_doc = here::here("Output/HSA_GRLS_time_to_HSA_cox_ph_univar.docx")
 )
 
 
@@ -1322,7 +1322,7 @@ knitr::kable(t1, row.names=FALSE, align=c("l", "l", "r", "r", "r"))
 results_df <- as.data.frame(results)
 
 # Write the results to CSV
-write.csv(results_df, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.csv", row.names = FALSE)
+write.csv(results_df, here::here("Output/HSA_cross_table_case_control_output.csv"), row.names = FALSE)
 
 #save as worddoc
 # Install and load the required packages
@@ -1341,13 +1341,13 @@ doc <- doc %>%
   body_add_par("Finalfit Regression Results", style = "heading 1")
 
 # Save the Word document
-print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.docx")
+print(doc, target = here::here("Output/HSA_cross_table_case_control_output.docx"))
 ```
 
 ## Multivariable Cox PH
 
 ```{r}
-lrt_pvalues <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv")
+lrt_pvalues <-read.csv(here::here("Output/HSA_GRLS_time_to_HSA_cox_ph_univar.csv"))
 multivar_variables <- lrt_pvalues %>%
   filter(lrt_pvalue <= 0.2) %>%
   distinct(variable)
@@ -1393,13 +1393,13 @@ Assess which variables are correlated:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:68), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival.png")
+create_corr_matrix(cohort_abr_sig,c(1:68), here::here("Output/hsa_corr_matrix_quartiles_survival.csv"), here::here("Output/hsa_corr_matrix_quartiles_survival2.csv"),here::here("Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv"),here::here("Output/hsa_corr_matrix_quartiles_survival.png"))
 ```
 
 ### Correlated variables:
 
 ```{r}
-corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv")
+corr_values <- read.csv(here::here("Output/hsa_corr_matrix_quartiles_survival_corrvalue.csv"))
 
 #ditch rows where variable 1 and 2 values are same as in another row :
 corr_values2 <- corr_values %>%
@@ -2610,7 +2610,7 @@ knitr::kable(t1, row.names=FALSE, align=c("l", "l", "r", "r", "r"))
 results_df <- as.data.frame(results)
 
 # Write the results to CSV
-write.csv(results_df, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output_no_missing.csv", row.names = FALSE)
+write.csv(results_df, here::here("Output/HSA_cross_table_case_control_output_no_missing.csv"), row.names = FALSE)
 
 #save as worddoc
 # Install and load the required packages
@@ -2629,7 +2629,7 @@ doc <- doc %>%
   body_add_par("Finalfit Regression Results", style = "heading 1")
 
 # Save the Word document
-print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output_no_missing.docx")
+print(doc, target = here::here("Output/HSA_cross_table_case_control_output_no_missing.docx"))
 
 
 
@@ -2720,15 +2720,15 @@ perform_univariable_analysis(
          #    "quartile_diuretics_5y_prior_endpoint", "quartile_anti_hist_5y_prior_endpoint", 
              #"quartile_anti_viral_5y_prior_endpoint",
  "age_at_final_date_quartiles","age_at_neuter_years_quartiles"),
-  output_csv = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar_no_missing.csv",
-  output_doc = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar_no_missing.docx"
+  output_csv = here::here("Output/HSA_GRLS_time_to_HSA_cox_ph_univar_no_missing.csv"),
+  output_doc = here::here("Output/HSA_GRLS_time_to_HSA_cox_ph_univar_no_missing.docx")
 )
 ```
 
 ## Multivariable Cox PH
 
 ```{r}
-lrt_pvalues <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_time_to_HSA_cox_ph_univar_no_missing.csv")
+lrt_pvalues <-read.csv(here::here("Output/HSA_GRLS_time_to_HSA_cox_ph_univar_no_missing.csv"))
 multivar_variables <- lrt_pvalues %>%
   filter(lrt_pvalue <= 0.2) %>%
   distinct(variable)
@@ -2753,13 +2753,13 @@ Assess which variables are correlated:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_no_not_rec_sig,c(1:63), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_no_missing.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival2_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_no_missing.png")
+create_corr_matrix(cohort_no_not_rec_sig,c(1:63), here::here("Output/hsa_corr_matrix_quartiles_survival_no_missing.csv"), here::here("Output/hsa_corr_matrix_quartiles_survival2_no_missing.csv"),here::here("Output/hsa_corr_matrix_quartiles_survival_corrvalue_no_missing.csv"),here::here("Output/hsa_corr_matrix_quartiles_survival_no_missing.png"))
 ```
 
 ### Correlated variables:
 
 ```{r,error=TRUE}
-corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartiles_survival_corrvalue_no_missing.csv")
+corr_values <- read.csv(here::here("Output/hsa_corr_matrix_quartiles_survival_corrvalue_no_missing.csv"))
 
 #ditch rows where variable 1 and 2 values are same as in another row :
 corr_values2 <- corr_values %>%

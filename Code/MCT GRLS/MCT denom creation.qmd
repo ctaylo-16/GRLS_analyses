@@ -10,8 +10,8 @@ editor: visual
 
 ```{r}
 library(tidyverse)
-dog_profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile_for_MCT.csv")
-endpoint<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints_MCT.csv")
+dog_profile <- read.csv(here::here("Data/dog_profile_for_MCT.csv"))
+endpoint<-read.csv(here::here("Data/study_endpoints_MCT.csv"))
 
 
 #keep only date of death and subject id
@@ -59,7 +59,7 @@ MCT_subjectIDs$diagnosis_date <- format(as.Date(MCT_subjectIDs$diagnosis_date, f
 Now make sure the cohort has 31/5/25 cut off date
 
 ```{r}
-dog_profiles <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+dog_profiles <- read.csv(here::here("Data/dog_profile.csv"))
 #keep only columns we want for joining
 MCT_subject_IDs_abr <- MCT_subjectIDs %>%
   dplyr::select(c(subject_id,diagnosis_date,had_MCT))
@@ -112,7 +112,7 @@ Need to add in a final study year for each dog as well so using the meds data:
 -   cut off dates after 31/5/25 and then match our cohort to the final medsrow
 
 ```{r}
-med_q <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/medications.csv")
+med_q <- read.csv(here::here("Data/medications.csv"))
 #keep only record year cols
 med_q2 <- med_q %>%
   dplyr::select(c(subject_id,year_in_study,record_date))
@@ -138,5 +138,5 @@ dates_and_MCT_diagnosis <- dog_profiles_abr %>% left_join(med_q3, by="subject_id
 Save to csv
 
 ```{r}
-write.csv(dates_and_MCT_diagnosis,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/MCT_cohort_250531.csv")
+write.csv(dates_and_MCT_diagnosis,here::here("Output/MCT_cohort_250531.csv"))
 ```

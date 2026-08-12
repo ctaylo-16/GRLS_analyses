@@ -1,5 +1,5 @@
 ##Current functions to be used in GRLS 
-# explanatory file currently at this location - "C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/240103_GRLS_functions.qmd"
+# explanatory file currently at this location - here::here("Code/240103_GRLS_functions.qmd")
 
 
 

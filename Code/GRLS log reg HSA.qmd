@@ -35,7 +35,7 @@ library(kableExtra)
 library(officer)
 library(flextable)
 # data was preliminarily tidied in GRLS cox HSA time to diagnosis script before changing to log reg analyses
-cohort_abr <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv")
+cohort_abr <-read.csv(here::here("Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv"))
 ```
 
 Converting columns to factors for analyses
@@ -248,7 +248,7 @@ for (i in cols_to_modify) {
 
 ```
 
-Activity datasets very challenging to explain the cut-offs quartile for interpretation so going to attempt to split into more biologically meaningful categories based on original script splits - C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS activity classifcation method_modified.qmd Columns to modify: - duration, freq and intensity SY1_2 - intensity freq SY3 beyond - intensity freq 5y prior
+Activity datasets very challenging to explain the cut-offs quartile for interpretation so going to attempt to split into more biologically meaningful categories based on the original `Code/GRLS activity classifcation method_modified.qmd` script. Columns to modify: duration, frequency and intensity in SY1-2; intensity and frequency in SY3 onwards; and intensity and frequency in the five years before the endpoint.
 
 Also going to group to more meaningful categories e.g slow and average walks together, rarely and monthly activity together
 
@@ -471,7 +471,7 @@ univar_table2 <- cohort_abr %>%summary_factorlist(dependent, explanatory,
 # View the results
 print(univar_table)
 #write this table to csv
-write.csv(univar_table,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.csv")
+write.csv(univar_table,here::here("Output/HSA_cross_table_case_control_output.csv"))
 
 #save as worddoc
 # Install and load the required packages
@@ -490,7 +490,7 @@ doc <- doc %>%
   body_add_par("Finalfit Regression Results", style = "heading 1")
 
 # Save the Word document
-print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cross_table_case_control_output.docx")
+print(doc, target = here::here("Output/HSA_cross_table_case_control_output.docx"))
 ```
 
 -   Univar log reg with ORs
@@ -687,7 +687,7 @@ cohort_abr2 <- cohort_abr2%>%
 univar_results <- univar_logistic_regression(cohort_abr2, "had_HSA", explanatory)
 
 # If you want to write the output to CSV after running:
-write.csv(univar_results, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv", row.names = FALSE)
+write.csv(univar_results, here::here("Output/HSA_GRLS_log_reg_univar.csv"), row.names = FALSE)
 
 
 
@@ -699,10 +699,10 @@ Tidy up csv of univar log reg into more readable format:
 #create tidy table from univar output
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/univar_log_reg_table.R")
 #read in data
-univar <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
+univar <- read.csv(here::here("Output/HSA_GRLS_log_reg_univar.csv"))
 
 #function to tidy data and write to csv in a table ready to use for univar
-table <- univar_logistic_regression_table(univar,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table.csv")
+table <- univar_logistic_regression_table(univar,here::here("Output/HSA_GRLS_log_reg_univar_tidied_table.csv"))
 
 #remove all the redunt variable name bits of table so just one row per variable 
 blank_repeated_variable <- function(df, fill = ""){
@@ -721,7 +721,7 @@ print(table_2)
 print(knitr::kable(table_2, row.names=FALSE, 
     align=c("l", "l", "r", "r", "r")))
 
-write.csv(table_2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table2.csv")
+write.csv(table_2,here::here("Output/HSA_GRLS_log_reg_univar_tidied_table2.csv"))
 
 #save table_2 as a word doc file too
 doc <- read_docx()
@@ -735,7 +735,7 @@ doc <- doc %>%
   body_add_par("Finalfit Regression Results", style = "heading 1")
 
 # Save the Word document
-print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_tidied_table2.docx")
+print(doc, target = here::here("Output/HSA_GRLS_log_reg_univar_tidied_table2.docx"))
 ```
 
 Run the repro univariable analyses on only the relevant populations rather than whole cohort:
@@ -778,45 +778,45 @@ explan_neut <- c("neutered_females_bred_with_count_ever","spayed_while_in_heat",
 univar_results_FN <- univar_logistic_regression(FN_pop, "had_HSA", explan_neut)
 
 # If you want to write the output to CSV after running:
-write.csv(univar_results_FN, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_FN_pop.csv", row.names = FALSE)
+write.csv(univar_results_FN, here::here("Output/HSA_GRLS_log_reg_univar_FN_pop.csv"), row.names = FALSE)
 
 #MN
 explan_neut2 <- c("neutered_sired_litters_natural_ever")
 univar_results_MN <- univar_logistic_regression(MN_pop, "had_HSA", explan_neut2)
 
 # If you want to write the output to CSV after running:
-write.csv(univar_results_MN, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_MN_pop.csv", row.names = FALSE)
+write.csv(univar_results_MN, here::here("Output/HSA_GRLS_log_reg_univar_MN_pop.csv"), row.names = FALSE)
 #Neut pop
 explan_neut3 <- c("neutered_ever_bred","neutered_reason","num_breeding_before_neutering_tercile")
 univar_results_N <- univar_logistic_regression(N_pop, "had_HSA", explan_neut3)
 
 # If you want to write the output to CSV after running:
-write.csv(univar_results_N, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_N_pop.csv", row.names = FALSE)
+write.csv(univar_results_N, here::here("Output/HSA_GRLS_log_reg_univar_N_pop.csv"), row.names = FALSE)
 #ME
 explan_neut4 <- c("intact_sired_litters_natural_ever")
 univar_results_ME<- univar_logistic_regression(ME_pop, "had_HSA", explan_neut4)
 
 # If you want to write the output to CSV after running:
-write.csv(univar_results_ME, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_ME_pop.csv", row.names = FALSE)
+write.csv(univar_results_ME, here::here("Output/HSA_GRLS_log_reg_univar_ME_pop.csv"), row.names = FALSE)
 
 #F pop
 explan_neut5 <- c("prevent_heat_ever", "no_pregnancy_ever")
 univar_results_F<- univar_logistic_regression(F_pop, "had_HSA", explan_neut5)
 
 # If you want to write the output to CSV after running:
-write.csv(univar_results_F, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_F_pop.csv", row.names = FALSE)
+write.csv(univar_results_F, here::here("Output/HSA_GRLS_log_reg_univar_F_pop.csv"), row.names = FALSE)
 
 
 #combine all these univar
 univar_repro <- rbind(univar_results_F,univar_results_FN,univar_results_ME,univar_results_MN,univar_results_N)
 
-write.csv(univar_repro,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_all_repro_pops.csv", row.names = FALSE)
+write.csv(univar_repro,here::here("Output/HSA_GRLS_log_reg_univar_all_repro_pops.csv"), row.names = FALSE)
 
 
 
 #format this univar into table for word export
 #function to tidy data and write to csv in a table ready to use for univar
-table <- univar_logistic_regression_table(univar_repro,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_all_repro_pops_tidied_table.csv")
+table <- univar_logistic_regression_table(univar_repro,here::here("Output/HSA_GRLS_log_reg_univar_all_repro_pops_tidied_table.csv"))
 
 #remove all the redunt variable name bits of table so just one row per variable 
 blank_repeated_variable <- function(df, fill = ""){
@@ -835,7 +835,7 @@ print(table_2)
 print(knitr::kable(table_2, row.names=FALSE, 
     align=c("l", "l", "r", "r", "r")))
 
-write.csv(table_2,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_all_repro_pops_tidied_table2.csv")
+write.csv(table_2,here::here("Output/HSA_GRLS_log_reg_univar_all_repro_pops_tidied_table2.csv"))
 
 #save table_2 as a word doc file too
 doc <- read_docx()
@@ -849,7 +849,7 @@ doc <- doc %>%
   body_add_par("Finalfit Regression Results", style = "heading 1")
 
 # Save the Word document
-print(doc, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_all_repro_pops_tidied_table2.docx")
+print(doc, target = here::here("Output/HSA_GRLS_log_reg_univar_all_repro_pops_tidied_table2.docx"))
 ```
 
 Run univar log reg to only retain variables where they are sig not just due to NA/not recorded variable - as want to only use these to take forward for multivar analysis
@@ -964,14 +964,14 @@ cohort_no_not_rec <- cohort_no_not_rec %>%
       factor(x)
     }
   ))
-#univar_logistic_regression(cohort_no_not_rec, "had_HSA", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_no_missing.csv")
+#univar_logistic_regression(cohort_no_not_rec, "had_HSA", here::here("Output/HSA_GRLS_log_reg_univar_no_missing.csv"))
 
 univar_table_no_missing <- cohort_no_not_rec %>%summary_factorlist(dependent, explanatory, 
   add_dependent_label=TRUE,na_include = FALSE, p=TRUE,column=TRUE)
 # View the results
 print(univar_table_no_missing)
 
-write.csv(univar_table_no_missing,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_no_missing.csv")
+write.csv(univar_table_no_missing,here::here("Output/HSA_GRLS_log_reg_univar_no_missing.csv"))
 
 ```
 
@@ -979,7 +979,7 @@ Potentially significant univariable variables (with NA included as "not_recorded
 
 ```{r}
 #not using this sect as keeping only variables with sig p for those with other levels sig besides "NA" equivalent
-lrt_pvalues <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar.csv")
+lrt_pvalues <-read.csv(here::here("Output/HSA_GRLS_log_reg_univar.csv"))
 multivar_variables <- lrt_pvalues %>%
   filter(LR_T_pvalue <= 0.2) %>%
   distinct(predictor)
@@ -988,7 +988,7 @@ cols_to_keep <- append(cols_to_keep, "had_HSA")
 cohort_abr_sig <- cohort_abr2[,cols_to_keep]
 
 #missing data removed for p val calculation 
-pvalues_no_miss <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_univar_no_missing.csv")
+pvalues_no_miss <-read.csv(here::here("Output/HSA_GRLS_log_reg_univar_no_missing.csv"))
 multivar_variables2 <- pvalues_no_miss %>%
   filter(p <= 0.2) %>%
   distinct(Dependent..had_HSA)
@@ -1015,13 +1015,13 @@ Assessing collinearity of potentially sig univariable variables:
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig,c(1:114), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg2.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg.png")
+create_corr_matrix(cohort_abr_sig,c(1:114), here::here("Output/hsa_corr_matrix_quartile_logreg.csv"), here::here("Output/hsa_corr_matrix_quartile_logreg2.csv"),here::here("Output/hsa_corr_matrix_quartile_logreg_corrvalue.csv"),here::here("Output/hsa_corr_matrix_quartile_logreg.png"))
 ```
 
 Correlated variables
 
 ```{r}
-corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue.csv")
+corr_values <- read.csv(here::here("Output/hsa_corr_matrix_quartile_logreg_corrvalue.csv"))
 
 #ditch rows where variable 1 and 2 values are same as in another row = only have unique corr pairs listed
 corr_values2 <- corr_values %>%
@@ -1041,13 +1041,13 @@ print(corr_values3)
 source("C:/Users/ctaylor18/GitHub/HSA-VC-enviro-analyses/functions/corr_matrix_creation.R")
 #use sig variables list generated above
 
-create_corr_matrix(cohort_abr_sig2,c(1:114), "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_no_missing.csv", "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg2_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue_no_missing.csv","C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_no_missing.png")
+create_corr_matrix(cohort_abr_sig2,c(1:114), here::here("Output/hsa_corr_matrix_quartile_logreg_no_missing.csv"), here::here("Output/hsa_corr_matrix_quartile_logreg2_no_missing.csv"),here::here("Output/hsa_corr_matrix_quartile_logreg_corrvalue_no_missing.csv"),here::here("Output/hsa_corr_matrix_quartile_logreg_no_missing.png"))
 
 
 
 
 
-corr_values <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/hsa_corr_matrix_quartile_logreg_corrvalue_no_missing.csv")
+corr_values <- read.csv(here::here("Output/hsa_corr_matrix_quartile_logreg_corrvalue_no_missing.csv"))
 
 #ditch rows where variable 1 and 2 values are same as in another row :
 corr_values2 <- corr_values %>%
@@ -2050,7 +2050,7 @@ doc <- read_docx()
 doc <- doc %>%
   body_add_flextable(results_flextable) %>%
   body_add_par("Finalfit Regression Results", style = "heading 1")
-print(results_flextable, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/250617_finalfit_logreg_table_all_variables.docx")
+print(results_flextable, target = here::here("Output/250617_finalfit_logreg_table_all_variables.docx"))
 
 ```
 
@@ -2682,7 +2682,7 @@ doc <- read_docx()
 doc <- doc %>%
   body_add_flextable(results_flextable) %>%
   body_add_par("Finalfit Regression Results", style = "heading 1")
-print(results_flextable, target = "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/finalfit_logreg_table_5y_restricted_variables.docx")
+print(results_flextable, target = here::here("Output/finalfit_logreg_table_5y_restricted_variables.docx"))
 
 ```
 
@@ -2949,19 +2949,19 @@ forest_log <- p_left + p_mid + plot_layout(design = layout2)
 forest_log
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers2.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers2.pdf"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers2.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers2.svg"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers2.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
-
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers2.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot2.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot2.pdf"), plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave(here::here("Output/logreg_forestplot2.svg"), plot = forest_log, width = 25, height = 15, dpi = 300)
+
+
+ggsave(here::here("Output/logreg_forestplot2.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
 ```
 
 Final model with endoparasite quartiles subed in:
@@ -3212,21 +3212,21 @@ forest_log <- p_left + p_mid + plot_layout(design = layout2)
 forest_log
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_endo.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers_endo.pdf"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_endo.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers_endo.svg"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_endo.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
-
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers_endo.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_2_endo.pdf"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_2_endo_2.tif", plot = forest_log, width = 15, height = 10, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_2_endo.svg"), plot = forest_log, width = 25, height = 15, dpi = 300)
+
+
+ggsave(here::here("Output/logreg_forestplot_2_endo.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave(here::here("Output/logreg_forestplot_2_endo_2.tif"), plot = forest_log, width = 15, height = 10, dpi = 300)
 =======
 
 ```
@@ -3461,19 +3461,19 @@ forest_log <- p_left + p_mid + plot_layout(design = layout2)
 forest_log
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers5y.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers5y.pdf"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers5y.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers5y.svg"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers5y.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
-
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot5y.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot5y.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers5y.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot5y.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot5y.pdf"), plot = forest_log, width = 25, height = 15, dpi = 300)
+
+ggsave(here::here("Output/logreg_forestplot5y.svg"), plot = forest_log, width = 25, height = 15, dpi = 300)
+
+
+ggsave(here::here("Output/logreg_forestplot5y.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
 ```
 
 Final plot of updated 17/06/25 model where activity modified to just be mode of level
@@ -3698,17 +3698,17 @@ forest_log <- p_left + p_mid + plot_layout(design = layout2)
 forest_log
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_v2.pdf", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers_v2.pdf"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_v2.svg", plot = forest_log, width = 25, height = 15, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers_v2.svg"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_casecontrol_numbers_v2.tif", plot = forest_log, width = 25, height = 15, dpi = 300)
-
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_v2.pdf", plot = forest_log, width = 20, height = 10, dpi = 300)
-
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_v2.svg", plot = forest_log, width = 20, height = 10, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_casecontrol_numbers_v2.tif"), plot = forest_log, width = 25, height = 15, dpi = 300)
 
 
-ggsave("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/logreg_forestplot_v2.tif", plot = forest_log, width = 20, height = 10, dpi = 300)
+ggsave(here::here("Output/logreg_forestplot_v2.pdf"), plot = forest_log, width = 20, height = 10, dpi = 300)
+
+ggsave(here::here("Output/logreg_forestplot_v2.svg"), plot = forest_log, width = 20, height = 10, dpi = 300)
+
+
+ggsave(here::here("Output/logreg_forestplot_v2.tif"), plot = forest_log, width = 20, height = 10, dpi = 300)
 ```

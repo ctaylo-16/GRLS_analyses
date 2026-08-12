@@ -22,14 +22,14 @@ Determine whether dogs are active or sedentary by incorporating the following ac
 
 ```{r}
 #activity data from study y 1 and 2
-activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
+activity_sy1_2 <- read.csv(here::here("Data/activity_details_through_SY2.csv"))
 #check # dogs in it
 act_1_2 <- unique(activity_sy1_2$subject_id)
 #activity data from study y 3 + 
-activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
+activity_sy3_beyond <- read.csv(here::here("Data/activity_details_SY3_beyond.csv"))
 act_3_plus<- unique(activity_sy3_beyond$subject_id)
 #activity overview dataset
-activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+activity_overview<- read.csv(here::here("Data/activity_overview.csv"))
 act_over<-unique(activity_overview$subject_id)
 ```
 
@@ -44,7 +44,7 @@ act_over<-unique(activity_overview$subject_id)
 Additionally use the dog details data to calculate values for first 2y of life:
 
 ```{r}
-dog_enrollment<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/data version Feb 2024/dog_details.csv")
+dog_enrollment<- read.csv(here::here("Data/data version Feb 2024/dog_details.csv"))
 ```
 
 ## Early life classifier
@@ -987,7 +987,7 @@ early_rest_whole_activity_overview <- early_rest_whole_activity_overview %>%
     TRUE ~ as.character(.)
   )))
 
-write.csv(early_rest_whole_activity_overview,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/early_rest_whole_activity_level_classification.csv")
+write.csv(early_rest_whole_activity_overview,here::here("Output/early_rest_whole_activity_level_classification.csv"))
 ```
 
 #### Combine all the datasets:
@@ -1036,19 +1036,19 @@ activity_all_3_3 <- activity_all_3 %>%
   left_join(activity_sy3_beyond_abr_3,by="subject_id")
 
 
-write.csv(activity_all_3_3, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_one_row_per_dog_outof100.csv")
+write.csv(activity_all_3_3, here::here("Output/GRLS_activity_modified_variables_one_row_per_dog_outof100.csv"))
 ```
 
 Create endpoints dogs
 
 ```{r}
 #endpoints to join up conditions dataset
-endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+endpoints <- read.csv(here::here("Data/study_endpoints.csv"))
 
 endpoints_activity_all_3_3 <- endpoints %>%
   left_join(activity_all_3_3, by="subject_id")
 
-write.csv(endpoints_activity_all_3_3,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_endpoints_outof100.csv")
+write.csv(endpoints_activity_all_3_3,here::here("Output/GRLS_activity_modified_variables_endpoints_outof100.csv"))
 ```
 
 what does each column mean?
@@ -1069,7 +1069,7 @@ print(colnames(activity_all_3_3))
 ## Activity calculations for haemangiosarcoma dataset
 
 ```{r}
-HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+HSA_cohort <- read.csv(here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"))
 
 
 
@@ -1158,7 +1158,7 @@ Combine this to the early/rest/whole 5y
 early_rest_whole_5y_activity_overview <- early_rest_whole_activity_overview %>%
   left_join(prior5y_activity_overview,by="subject_id")
 
-write.csv(early_rest_whole_5y_activity_overview,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_early_rest_whole_5y_activity__level_classification.csv")
+write.csv(early_rest_whole_5y_activity_overview,here::here("Output/HSA_cohort_early_rest_whole_5y_activity__level_classification.csv"))
 ```
 
 ```{r}
@@ -1171,5 +1171,5 @@ Now join this back onto cohort data
 HSA_cohort_all_calcs <- HSA_cohort_all %>%
   left_join(HSA_cohort_5y_prior, by="subject_id")
 
-write.csv(HSA_cohort_all_calcs,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_activity_classification.csv")
+write.csv(HSA_cohort_all_calcs,here::here("Output/HSA_cohort_activity_classification.csv"))
 ```

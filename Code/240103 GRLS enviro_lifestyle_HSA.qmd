@@ -11,9 +11,9 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 #exposures dataset
-environment_exposures<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_conditions.csv",na.strings=c ("","NA"))
+environment_exposures<-read.csv(here::here("Data/environment_conditions.csv"),na.strings=c ("","NA"))
 environment_exposures <- environment_exposures %>% mutate(across(where(is.character), tolower))
-sleep_environment <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_sleep_location.csv",na.strings=c("","NA"))
+sleep_environment <- read.csv(here::here("Data/environment_sleep_location.csv"),na.strings=c("","NA"))
 sleep_environment <- sleep_environment %>% mutate(across(where(is.character), tolower))
 
 ```
@@ -129,7 +129,7 @@ Load in cancer file:
 
 ```{r}
 # use the end_points dataset for now 
-end_points_neoplasia <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points_neoplasia <- read.csv(here::here("Data/study_endpoints.csv"))
 end_points_neoplasia <- end_points_neoplasia %>% 
   mutate(across(where(is.character), tolower))
 end_HSA <- end_points_neoplasia %>% filter(grepl('hema',tracked_condition),ignore.case=TRUE)
@@ -154,7 +154,7 @@ end_HSA <- end_HSA %>%
 
 ```{r}
 #read in function file for all GRLS functions:
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 
 #new dataframe to combine hsa diagnosis date and exposure
 end_HSA2 <- end_HSA %>%
@@ -382,12 +382,12 @@ HSA_sleep_smoking_enviro_all <- merge(result_df,result_df2,by="subject_id")
 ## Location classifying
 
 ```{r}
-enviro_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- read.csv(here::here("Data/environment_spend_time_location.csv"),na.strings=c("","NA"))
 enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
 ```
 
 ```{r}
-enviro_time <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/environment_spend_time_location.csv",na.strings=c("","NA"))
+enviro_time <- read.csv(here::here("Data/environment_spend_time_location.csv"),na.strings=c("","NA"))
 enviro_time <- enviro_time %>% mutate(across(where(is.character), tolower))
 
 ```
@@ -418,7 +418,7 @@ Saving environmental data assoc with HSA
 
 ```{r}
 #NB change to final file name when file done
-write.csv(HSA_sleep_smoking_enviro_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/HSA_case_enviro.csv")
+write.csv(HSA_sleep_smoking_enviro_all,here::here("Data/HSA_case_enviro.csv"))
 ```
 
 ## Lifestyle/job/function
@@ -426,7 +426,7 @@ write.csv(HSA_sleep_smoking_enviro_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/
 Read in dataset on what the dog is primarily used for (e.g. showing, breeding, agility):
 
 ```{r}
-lifestyle <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/lifestyle.csv",na.strings=c ("","NA"))
+lifestyle <-read.csv(here::here("Data/lifestyle.csv"),na.strings=c ("","NA"))
 ```
 
 What are all the categories of lifestyle? and what are most common ones?
@@ -662,6 +662,6 @@ HSA_sleep_smoking_enviro__lifestyle_all <- HSA_sleep_smoking_enviro_all %>%
 -   HSA dataset
 
 ```{r}
-write.csv(HSA_sleep_smoking_enviro__lifestyle_all,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_case_sleep_smoking_enviro_lifestyle.csv")
+write.csv(HSA_sleep_smoking_enviro__lifestyle_all,here::here("Output/HSA_case_sleep_smoking_enviro_lifestyle.csv"))
 
 ```

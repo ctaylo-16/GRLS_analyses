@@ -63,5 +63,5 @@ Join MDI data to clinics
 ```{r}
 clinics_and_fips2_mdi <- clinics_and_fips2 %>% left_join (MDI_2019,by="county_fips" )
 
-write.csv(clinics_and_fips2_mdi,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+write.csv(clinics_and_fips2_mdi,here::here("Output/GRLS_dogs_MDI_2019.csv"))
 ```

@@ -18,14 +18,14 @@ Determine whether dogs are active or sedentary by incorporating the following ac
 
 ```{r}
 #activity data from study y 1 and 2
-activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
+activity_sy1_2 <- read.csv(here::here("Data/activity_details_through_SY2.csv"))
 #check # dogs in it
 act_1_2 <- unique(activity_sy1_2$subject_id)
 #activity data from study y 3 + 
-activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
+activity_sy3_beyond <- read.csv(here::here("Data/activity_details_SY3_beyond.csv"))
 act_3_plus<- unique(activity_sy3_beyond$subject_id)
 #activity overview dataset
-activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+activity_overview<- read.csv(here::here("Data/activity_overview.csv"))
 act_over<-unique(activity_overview$subject_id)
 ```
 
@@ -40,7 +40,7 @@ act_over<-unique(activity_overview$subject_id)
 Additionally use the dog details data to calculate values for first 2y of life:
 
 ```{r}
-dog_enrollment<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/data version Feb 2024/dog_details.csv")
+dog_enrollment<- read.csv(here::here("Data/data version Feb 2024/dog_details.csv"))
 ```
 
 ## Early life classifier
@@ -868,7 +868,7 @@ activity_over_sy12_2 <- activity_overview_abr2 %>%
 activity_all_2 <- activity_over_sy12_2 %>%
   left_join(activity_sy3_beyond_abr2,by=c("subject_id","year_in_study"))
 
-write.csv(activity_all_2, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables.csv")
+write.csv(activity_all_2, here::here("Output/GRLS_activity_modified_variables.csv"))
 ```
 
 Modify further to create final single values for early life activity, rest of life and overview life activity
@@ -916,7 +916,7 @@ activity_all_3_3 <- activity_all_3 %>%
   left_join(activity_sy3_beyond_abr_3,by="subject_id")
 
 
-write.csv(activity_all_3_3, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_one_row_per_dog.csv")
+write.csv(activity_all_3_3, here::here("Output/GRLS_activity_modified_variables_one_row_per_dog.csv"))
 ```
 
 what does each column mean?

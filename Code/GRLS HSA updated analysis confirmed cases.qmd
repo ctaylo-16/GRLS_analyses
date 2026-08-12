@@ -35,9 +35,9 @@ library(flextable)
 library(writexl)
 library(readr)
 #updated df from midway through the updated log reg of cohort so now should only need to remove the tier 2 and 3 dogs prior to rerun
-cohort_df <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_updated_analysis_df.csv")
+cohort_df <- read.csv(here::here("Output/HSA_GRLS_updated_analysis_df.csv"))
 #classification of dogs into tiers
-cohort_info_for_tiers <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+cohort_info_for_tiers <- read.csv(here::here("Data/study_endpoints.csv"))
 
 cohort_info_for_tiers1<- cohort_info_for_tiers %>%
   mutate(across(where(is.character), str_to_lower))%>%
@@ -957,7 +957,7 @@ exposure_level_counts
 ```{r}
 write_csv(
   exposure_level_counts,
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/exposome_exposure_level_counts_confirmed_cases.csv"
+  here::here("Output/exposome_exposure_level_counts_confirmed_cases.csv")
 )
 ```
 
@@ -1515,7 +1515,7 @@ crude_results_formatted <- crude_results %>%
 
 
 #write to csv
-write.csv(crude_results_formatted,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_GRLS_log_reg_family_grouped_confirmed_cases.csv")
+write.csv(crude_results_formatted,here::here("Output/HSA_GRLS_log_reg_family_grouped_confirmed_cases.csv"))
 
 
 ```
@@ -1969,7 +1969,7 @@ crude_results_table3 <- crude_results_table2 %>%
 ```
 
 ```{r}
-output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+output_folder <- here::here("Output")
 
 ft <- flextable(crude_results_table3) %>%
   theme_booktabs() %>%
@@ -2905,7 +2905,7 @@ crude_cc_results_table
 ```
 
 ```{r}
-output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+output_folder <- here::here("Output")
 
 readr::write_excel_csv(
   crude_cc_results_table,
@@ -3409,7 +3409,7 @@ adjusted_results_table <-
 ```
 
 ```{r}
-output_folder <- "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+output_folder <- here::here("Output")
 
 
 dir.create(
@@ -5077,7 +5077,7 @@ comparison_forest_plot
 
 ```{r}
 output_folder <-
-  "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output"
+  here::here("Output")
 
 dir.create(
   output_folder,

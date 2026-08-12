@@ -21,7 +21,7 @@ Need to :
 Meds data
 
 ```{r}
-meds <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_medications_initial_tidy.csv" )
+meds <- read.csv(here::here("Output/GRLS_medications_initial_tidy.csv") )
 
 #remove rows where there are just all NAs for drug info e.g first 2 rows of df
 
@@ -39,7 +39,7 @@ Endpoints:
 -   for each cancer, each case is a case of that cancer and the controls are those that didnt have that cancer?
 
 ```{r}
-endpoints <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+endpoints <-read.csv(here::here("Data/study_endpoints.csv"))
 
 end_points <- endpoints %>% 
   mutate(across(where(is.character), tolower))

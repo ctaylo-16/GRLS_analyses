@@ -11,22 +11,22 @@ editor: visual
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
-demog <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+demog <- read.csv(here::here("Data/dog_profile.csv"))
 
 
 #demog <- demog %>% mutate_all(na_if,"")
 # female information
-repro_hx_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_female.csv")
-spay_details <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/details_spay_before_heat.csv")
+repro_hx_female <- read.csv(here::here("Data/reproductive_history_female.csv"))
+spay_details <- read.csv(here::here("Data/details_spay_before_heat.csv"))
 #join spay details to repro hx female sheet
 repro_hx_female <- repro_hx_female %>%
   left_join(spay_details, by="subject_id")
 
-repro_heats_female <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_heat.csv")
+repro_heats_female <- read.csv(here::here("Data/reproductive_history_heat.csv"))
 #male 
-repro_hx_male <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_male.csv")
+repro_hx_male <- read.csv(here::here("Data/reproductive_history_male.csv"))
 
-repro_hx_hormones <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/reproductive_history_hormones.csv")
+repro_hx_hormones <-read.csv(here::here("Data/reproductive_history_hormones.csv"))
 #all empty cells encoded as NA
 repro_hx_female <- repro_hx_female %>%
   mutate_if(~any(. == ""), na_if, "")
@@ -149,7 +149,7 @@ neut_age_seasons <- neut_age_seasons %>%
 ## Create an age at first season variable:
 
 ```{r}
-source("C:/Users/ctaylor18/GitHub/GRLS_analyses/Code/GRLS_functions.R")
+source(here::here("Code/GRLS_functions.R"))
 neut_age_seasons$record_date <-parse_date_time(neut_age_seasons$record_date.x,"ymd")
 
 #using functions from GRLS functions.qmd
@@ -214,7 +214,7 @@ neut_age_M3 <- neut_age_M %>%
 
 ```{r}
 
-write.csv(neut_age_M3,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cases_all_records_repro.csv")
+write.csv(neut_age_M3,here::here("Output/all_cases_all_records_repro.csv"))
 
 ```
 
@@ -227,7 +227,7 @@ neut_age_M3_abr <- neut_age_M3 %>%
 neut_age_M3_abr <- neut_age_M3_abr %>%
   distinct(subject_id, .keep_all = TRUE)
 
-write.csv(neut_age_M3_abr,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/all_cases_all_records_repro.csv")
+write.csv(neut_age_M3_abr,here::here("Output/all_cases_all_records_repro.csv"))
 
 ```
 
@@ -239,7 +239,7 @@ Haemangiosarcoma
 ##HSA data
 
 # use the end_points dataset for now 
-end_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+end_points <- read.csv(here::here("Data/study_endpoints.csv"))
 # sort dates
 #get neoplasia diagnosis year month column into date format
 end_points$diagnosis_year_month_date <- as.POSIXct(end_points$diagnosis_date)
@@ -367,13 +367,13 @@ print(numeric_summary)
 
 ```{r}
 #HSA and repro
-write.csv(end_HSA_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_case_repro.csv")
+write.csv(end_HSA_join,here::here("Output/HSA_case_repro.csv"))
 
 
 ## all endpoints and repro
-write.csv(end_join,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_repro.csv")
+write.csv(end_join,here::here("Output/endpoints_repro.csv"))
 
 
 #lymphoma and repro
-write.csv(end_lymphoma_join, "C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_case_repro.csv")
+write.csv(end_lymphoma_join, here::here("Output/lymphoma_case_repro.csv"))
 ```

@@ -13,7 +13,7 @@ editor: visual
 ```{r}
 library(tidyverse)
 
-dog_profile<-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv") 
+dog_profile<-read.csv(here::here("Data/dog_profile.csv"))
 
 
 ```
@@ -52,7 +52,7 @@ Load in the house data
 -   median of 9 records per dog
 
 ```{r}
-house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/house_details.csv")
+house <- read.csv(here::here("Data/house_details.csv"))
 
 
 #num of records per dog
@@ -74,14 +74,14 @@ Check also similar numbers per dog for activity data
 
 ```{r}
 #activity data from study y 1 and 2
-activity_sy1_2 <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_through_SY2.csv")
+activity_sy1_2 <- read.csv(here::here("Data/activity_details_through_SY2.csv"))
 #check # dogs in it
 act_1_2 <- unique(activity_sy1_2$subject_id)
 #activity data from study y 3 + 
-activity_sy3_beyond <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_details_SY3_beyond.csv")
+activity_sy3_beyond <- read.csv(here::here("Data/activity_details_SY3_beyond.csv"))
 act_3_plus<- unique(activity_sy3_beyond$subject_id)
 #activity overview dataset
-activity_overview<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/activity_overview.csv")
+activity_overview<- read.csv(here::here("Data/activity_overview.csv"))
 act_over<-unique(activity_overview$subject_id)
 sy1_2 <- activity_sy1_2 %>%
   group_by(subject_id) %>%
@@ -138,9 +138,9 @@ print(overview)
 -   summary stats and histogram plots of age at diagnosis for all cancers then specific cancers
 
 ```{r}
-endpoints <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+endpoints <- read.csv(here::here("Data/study_endpoints.csv"))
 
-all_cancer_points <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/conditions_neoplasia.csv")
+all_cancer_points <- read.csv(here::here("Data/conditions_neoplasia.csv"))
 
 
 ```

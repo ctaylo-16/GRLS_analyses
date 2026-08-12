@@ -8,7 +8,7 @@ editor: visual
 
 ```{r}
 library(tidyverse)
-HSA <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_cohort_all_RFs_data.csv")
+HSA <- read.csv(here::here("Output/HSA_cohort_all_RFs_data.csv"))
 
 HSA <- HSA %>%
   dplyr::select(-c(X,X,year_in_study_diagnosis_or_final_record_year.x,year_in_study_diagnosis_or_final_record_year.y,year_in_study_diagnosis_or_final_record_year.y.y))

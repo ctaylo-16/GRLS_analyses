@@ -17,7 +17,7 @@ Environmental dataset that doesnt use endpoint data (just study years for exposu
 This dataset contains:
 
 ```{r}
-enviro_tidy <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv")
+enviro_tidy <- read.csv(here::here("Output/lifetime_sleep_smoking_enviro_lifestyle_enviro.csv"))
 
 enviro_tidy_abr <- enviro_tidy %>%
   dplyr::select(-c(1,3:17))
@@ -61,11 +61,11 @@ geom_histogram(bins = 20)
 Add in endpoints data to determine if adequate variation between lymphoma vs not lymphoma dogs
 
 ```{r}
-dead_dogs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+dead_dogs <- read.csv(here::here("Data/study_endpoints.csv"))
 
 lymphoma_dogs <- dead_dogs %>%
 filter(grepl("lymphoma", tracked_condition, ignore.case = TRUE))
-write.csv(lymphoma_dogs,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/lymphoma_endpoints.csv")
+write.csv(lymphoma_dogs,here::here("Output/lymphoma_endpoints.csv"))
 
 dead_dogs <- dead_dogs %>%
   mutate(had_lymphoma = ifelse(grepl("lymphoma", tracked_condition, ignore.case = TRUE), "had_lymphoma", "no_lymphoma")) %>%
@@ -130,7 +130,7 @@ for (col in cols) {
 ## House location data
 
 ```{r}
-endpoints_house <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_all_house_location.csv")
+endpoints_house <- read.csv(here::here("Output/endpoints_all_house_location.csv"))
 print(colnames(endpoints_house))
 endpoints_house_abr <- endpoints_house
 #%>%
@@ -169,7 +169,7 @@ NB. many of the sum ones are nonsense as they are of a categorical, non-ordinal,
 ## Reproduction data
 
 ```{r}
-endpoints_repro <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_repro.csv")
+endpoints_repro <- read.csv(here::here("Output/endpoints_repro.csv"))
 
 print(colnames(endpoints_repro))
 endpoints_repro_abr <- endpoints_repro%>%
@@ -206,7 +206,7 @@ for (col in cols) {
 ## Comorbidities dataset
 
 ```{r}
-endpoints_comorb<- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoint_comorbidities.csv")
+endpoints_comorb<- read.csv(here::here("Output/endpoint_comorbidities.csv"))
 
 
 # Need to tidy up the NAs in certain columns to be an informative string
@@ -294,7 +294,7 @@ enviro_repro_house_comorb_dist_condition_cols <- enviro_repro_house_comorb_dist 
 
 ```{r}
 #what to do for age for these dogs?
-dog_profile <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/dog_profile.csv")
+dog_profile <- read.csv(here::here("Data/dog_profile.csv"))
   
 dog_profile <- dog_profile %>%
     dplyr::select(c(subject_id,enrolled_date,birth_date,death_date))
@@ -366,7 +366,7 @@ enviro_repro_house_comorb_profile$multi_cancers_present <- ifelse(enviro_repro_h
 ## Activity dataset
 
 ```{r}
-activity <-read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_activity_modified_variables_endpoints_outof100.csv")
+activity <-read.csv(here::here("Output/GRLS_activity_modified_variables_endpoints_outof100.csv"))
 
 activity <- activity %>% dplyr::select(-c(X,public_id,tracked_condition,diagnosis_date,location,phenotype,status,tier_of_confidence,is_cause_of_death,is_recurrence,is_adjudicated)) %>%
   distinct(subject_id,.keep_all = TRUE)
@@ -383,11 +383,11 @@ Add in weight data for demographics dataset
 
 ```{r}
 ###add in weight and BCS data for the dogs
-dog_weight <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/exam_physical.csv")
+dog_weight <- read.csv(here::here("Data/exam_physical.csv"))
 dog_weight <- dog_weight %>%
   dplyr::select(c(subject_id,year_in_study,height,weight,purina_body_condition_score))
 #get endpoints data to calc BCS 5y
-endpoints_years <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Data/study_endpoints.csv")
+endpoints_years <- read.csv(here::here("Data/study_endpoints.csv"))
 endpoints_years <- endpoints_years %>%
   dplyr::select(c(subject_id,year_in_study))
 #rename year_in_study
@@ -475,7 +475,7 @@ enviro_repro_house_comorb_profile_activity <- enviro_repro_house_comorb_profile_
 Save all cols of whole dataset
 
 ```{r}
-write.csv(enviro_repro_house_comorb_profile_activity,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/endpoints_demog_lifestyle_enviro_comorb.csv")
+write.csv(enviro_repro_house_comorb_profile_activity,here::here("Output/endpoints_demog_lifestyle_enviro_comorb.csv"))
 ```
 
 -   Set criteria for variable inclusion eg. X% in each variable category?
@@ -501,18 +501,18 @@ demographics <- enviro_repro_house_comorb_profile_activity %>%
   dplyr::select(c(subject_id,had_lymphoma,main_lifestyle_category,sex,neuter,age_at_neuter_years,age_at_endpoint_diagnosis, age_at_death,time_enrolled,heats_before_neutering,num_bred_before_neutering,neutered_reason,region_name_mode_whole_life,area_type,avg_weight_5y_prior_endpoint_kg_outliers_removed,avg_height_5y_prior_endpoint_cm_outliers_removed,avg_purina_BCS_5y_prior_endpoint,mode_purina_BCS_5y_prior_endpoint))
 
 
-#write.csv(demographics,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
+#write.csv(demographics,here::here("Output/RP2_dataset1_lymphoma_demographics.csv"))
 ```
 
 Adding in MDI data here to demographics dataset:
 
 ```{r}
-MDI_dogs <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/GRLS_dogs_MDI_2019.csv")
+MDI_dogs <- read.csv(here::here("Output/GRLS_dogs_MDI_2019.csv"))
 MDI_dogs <- MDI_dogs %>%
   dplyr::select(c(subject_id,MDI_quintile,MDI.rate))
 demographics_MDI <- demographics %>% left_join (MDI_dogs, by="subject_id")
 
-write.csv(demographics_MDI,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset1_lymphoma_demographics.csv")
+write.csv(demographics_MDI,here::here("Output/RP2_dataset1_lymphoma_demographics.csv"))
 ```
 
 Dataset 2= early years environmental/lifestyle dataset
@@ -520,7 +520,7 @@ Dataset 2= early years environmental/lifestyle dataset
 ```{r}
 early_years <- enviro_repro_house_comorb_profile_activity %>%
   dplyr::select(c(subject_id,had_lymphoma,use_aerosol_study_years_early_life,use_air_cleaner_study_years_early_life,use_hepa_filter_study_years_early_life,use_moth_balls_study_years_early_life,use_incense_or_candles_study_years_early_life,smoke_exposure_study_years_early_life,any_treated_insects_study_years_early_life,hours_of_smoke_early_life_total_dosage,house_type_mode_early_life,area_type_mode_early_life,water_source_mode_early_life,pipes_metal_any_mode_early_life,pipes_plastic_any_mode_early_life,cooking_fuel_primary_mode_early_life,heating_fuel_primary_mode_early_life,state_mode_early_life,region_name_mode_early_life,avg_activity_duration_sy1_2,avg_activity_freq_sy1_2,avg_activity_intensity_sy1_2 ))
-write.csv(early_years,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset2_lymphoma_earlyyears_enviro_lifestyle.csv")
+write.csv(early_years,here::here("Output/RP2_dataset2_lymphoma_earlyyears_enviro_lifestyle.csv"))
 ```
 
 Dataset 3 = rest of life environmental/lifestyle
@@ -529,7 +529,7 @@ Dataset 3 = rest of life environmental/lifestyle
 rest_years <- enviro_repro_house_comorb_profile_activity %>%
   dplyr::select(c(subject_id,had_lymphoma,use_aerosol_study_years_rest_of_life,use_air_cleaner_study_years_rest_of_life,use_hepa_filter_study_years_rest_of_life,use_moth_balls_study_years_rest_of_life,use_incense_or_candles_study_years_rest_of_life,smoke_exposure_study_years_rest_of_life,any_treated_insects_study_years_rest_of_life,hours_of_smoke_rest_of_life_total_dosage,house_type_mode_rest_of_life,area_type_mode_rest_of_life,water_source_mode_rest_of_life,pipes_metal_any_mode_rest_of_life,pipes_plastic_any_mode_rest_of_life,cooking_fuel_primary_mode_rest_of_life,heating_fuel_primary_mode_rest_of_life,state_mode_rest_of_life,region_name_mode_rest_of_life,avg_activity_freq_sy3,avg_activity_intensity_sy3 ))
 
-write.csv(rest_years,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset3_lymphoma_restyears_enviro_lifestyle.csv")
+write.csv(rest_years,here::here("Output/RP2_dataset3_lymphoma_restyears_enviro_lifestyle.csv"))
 ```
 
 Dataset 4 = comorbidities, other cancers etc
@@ -537,13 +537,13 @@ Dataset 4 = comorbidities, other cancers etc
 ```{r}
 other <- enviro_repro_house_comorb_profile_activity %>% 
   dplyr::select(c(subject_id,had_lymphoma,multi_cancers_present,chronic_inflam_present,num_lifetime_chronic_inflam,first_chronic_inflam_condition, all_comorbidities_ever,diagnosis_after_comorb))
-write.csv(other,"C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/RP2_dataset4_lymphoma_comorbidities.csv")
+write.csv(other,here::here("Output/RP2_dataset4_lymphoma_comorbidities.csv"))
 ```
 
 ## Haemangiosarcoma cohort creation
 
 ```{r}
-HSA_cohort <- read.csv("C:/Users/ctaylor18/GitHub/GRLS_analyses/Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv")
+HSA_cohort <- read.csv(here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"))
 
 
 ```
