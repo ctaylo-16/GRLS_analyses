@@ -200,9 +200,17 @@ endpoints_and_all_dogs_study_record_year3 <- endpoints_and_all_dogs_study_record
 Save this cohort
 
 ```{r}
-write.csv(endpoints_and_all_dogs, here::here("Output/HSA_study_pop_with_final_date.csv"))
+write.csv(
+  endpoints_and_all_dogs,
+  here::here("Output/HSA_study_pop_with_final_date.csv"),
+  row.names = FALSE
+)
 
-write.csv(endpoints_and_all_dogs_study_record_year3, here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"))
+write.csv(
+  endpoints_and_all_dogs_study_record_year3,
+  here::here("Output/HSA_study_pop_with_final_date_with_final_study_record_year.csv"),
+  row.names = FALSE
+)
 ```
 
 What columns mean:
@@ -220,6 +228,30 @@ creating-HSA-RF-dataset
 ## Cohort plus RF data added in
 
 ```{r}
+select_hsa_features <- function(data) {
+  metadata_columns <- grep(
+    paste0(
+      "^(X($|\\.)|had_HSA($|\\.)|final_date($|\\.)|record_date($|\\.)|",
+      "year_in_study_diagnosis_or_final_record_year($|\\.))"
+    ),
+    names(data),
+    value = TRUE
+  )
+
+  data %>%
+    dplyr::select(-dplyr::all_of(metadata_columns)) %>%
+    dplyr::relocate(subject_id)
+}
+
+HSA_cohort <- endpoints_and_all_dogs_study_record_year3 %>%
+  dplyr::select(
+    subject_id,
+    had_HSA,
+    final_date,
+    year_in_study_diagnosis_or_final_record_year,
+    record_date
+  )
+
 #MDI
 MDI_dogs <- read.csv(here::here("Output/GRLS_dogs_MDI_2019.csv"))
 MDI_dogs <- MDI_dogs %>%
@@ -227,50 +259,61 @@ MDI_dogs <- MDI_dogs %>%
 #enviro
 enviro<-read.csv(here::here("Output/HSA_cohort_house_location_enviro_exposures.csv"))
 enviro <- enviro %>%
-  dplyr::select(-c("X.1","year_in_study_diagnosis_or_final_record_year.x","record_date.y.x",14:28))
+  dplyr::select(-dplyr::all_of(c(
+    "X.1",
+    "year_in_study_diagnosis_or_final_record_year.x",
+    "record_date.y.x",
+    "year_in_study",
+    "record_date.x",
+    "city",
+    "zip",
+    "state",
+    "travel_length_weeks",
+    "travel_start_month",
+    "regular_work_visits",
+    "work_visit_hours",
+    "work_visit_days",
+    "type",
+    "travel_mode",
+    "travel_mode_other",
+    "country",
+    "region_name"
+  ))) %>%
+  select_hsa_features()
 #comorb
 comorb<-read.csv(here::here("Output/HSA_cohort_comorbs_incl_cancer.csv"))
-comorb <- comorb %>%
-  dplyr::select(-c("X"))
 #lifetime comorbs data made in another script for comorb creating
 comorbs_lifetime <-read.csv(here::here("Output/HSA_cohort_comorbidities.csv"))
-comorb_all <- comorb %>% left_join(comorbs_lifetime,by="subject_id")
-#remove extra cols:
-comorb_all <- comorb_all %>%
-  dplyr::select(-c(had_HSA.y,X.1,X,final_date.y))
+comorb_all <- select_hsa_features(comorb) %>%
+  left_join(
+    select_hsa_features(comorbs_lifetime),
+    by = "subject_id",
+    relationship = "one-to-one"
+  )
 #activity
 activity <-read.csv(here::here("Output/HSA_cohort_activity_classification.csv"))
-activity <-activity %>%
-  dplyr::select(-c("X.1","X","record_date"))
+activity <- select_hsa_features(activity)
 #lifestyle
 lifestyle<-read.csv(here::here("Output/HSA_cohort_lifestyle_exposures.csv"))
 lifestyle <- lifestyle%>%
-  dplyr::select(-c("X.1","record_date.x.x","X","record_date.y","sleep_location","specific_sleep_location","in.the.garage_YN","in.the.house_YN","outside_YN"))
+  dplyr::select(-c("sleep_location","specific_sleep_location","in.the.garage_YN","in.the.house_YN","outside_YN")) %>%
+  select_hsa_features()
 #neut
 neut<-read.csv(here::here("Output/all_cases_all_records_repro.csv"))
 neut <- neut %>%
-  dplyr::select(-c("X","birth_date2"))
+  dplyr::select(-c("birth_date2")) %>%
+  select_hsa_features()
 
 #create an ever bred from variable to incorporate entire and neutered dogs
 neut <- neut %>%
   mutate(ever_bred_from = if_any(c(neutered_ever_bred,spayed_while_pregnant,intact_sired_litters_natural_ever,neutered_females_bred_with_count_ever,neutered_sired_litters_natural_ever,preg_pre_neuter,num_bred_before_neutering,num_breeding_before_neutering),~ . >= 1) * 1)
 
-#combine all
-dfs <- list(MDI_dogs, enviro, comorb_all, activity, lifestyle, neut)
-
-
-
-
-
-# Perform full join iteratively on subject_id
-merged_HSA_data <- reduce(dfs, full_join, by = "subject_id")
-
-
-#remove messy extra cols eg. X.x
-merged_HSA_data <- merged_HSA_data %>%
-  dplyr::select(-c(had_HSA.y,had_HSA.x.x,
-                   final_date.x,final_date.x.x,
-                   record_date.y.y))
+# Join features onto the explicitly defined HSA cohort metadata.
+dfs <- list(HSA_cohort, MDI_dogs, enviro, comorb_all, activity, lifestyle, neut)
+merged_HSA_data <- reduce(
+  dfs,
+  ~ left_join(.x, .y, by = "subject_id", relationship = "one-to-one")
+)
 
 ### add in age at final date
 get_age <- read.csv(here::here("Data/dog_profile.csv"))
@@ -284,7 +327,7 @@ merged_HSA_data <- merged_HSA_data %>%
 merged_HSA_data <- merged_HSA_data %>%
   mutate(
     date_of_birth = as.Date(birth_date, format = "%Y-%m-%d"),
-    final_date2= as.Date(final_date.y, format = "%Y-%m-%d")
+    final_date2= as.Date(final_date, format = "%Y-%m-%d")
   ) %>%
   mutate(age_at_final_date = as.numeric(interval(date_of_birth, final_date2) / years(1)))
 
@@ -296,15 +339,24 @@ dog_weight <- dog_weight %>%
 dog_weight_HSA <- dog_weight %>%
   left_join(merged_HSA_data,by="subject_id")
 ###for record years 5y prior to endpoint record year do an average of weight
-get_mode <- function(x) {
-  ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))] # Returns the most frequent value
+get_mode_max_tie <- function(x) {
+  x <- x[!is.na(x)]
+  if (length(x) == 0L) {
+    return(NA_real_)
+  }
+
+  counts <- table(x)
+  modes <- as.numeric(names(counts)[counts == max(counts)])
+  max(modes)
 }
 
 # Modify  pipeline to include mode calculation for purina_BCS
 dog_weight_HSA2 <- dog_weight_HSA %>%
   group_by(subject_id) %>%
-  filter(year_in_study >= (year_in_study_diagnosis_or_final_record_year.x - 5)) %>%
+  filter(
+    year_in_study >= (year_in_study_diagnosis_or_final_record_year - 5),
+    year_in_study <= year_in_study_diagnosis_or_final_record_year
+  ) %>%
   summarise(
     count_rows = n(),
     avg_weight_5y_prior_endpoint = if (count_rows >= 5) mean(weight, na.rm = TRUE) else NA_real_,
@@ -314,7 +366,8 @@ dog_weight_HSA2 <- dog_weight_HSA %>%
     median_weight_5y_prior_endpoint = if (count_rows >= 5) median(weight, na.rm = TRUE) else NA_real_,
     median_weight_5y_prior_endpoint_any_records = median(weight, na.rm = TRUE),
     avg_purina_BCS_5y_prior_endpoint = if (count_rows >= 5) mean(purina_body_condition_score, na.rm = TRUE) else NA_real_,
-    mode_purina_BCS_5y_prior_endpoint = get_mode(purina_body_condition_score),  # Keep mode even if <5 rows
+    # Where BCS modes tie, use the maximum tied value.
+    mode_purina_BCS_5y_prior_endpoint = get_mode_max_tie(purina_body_condition_score),
     .groups = "drop"
   )
 
@@ -328,7 +381,23 @@ merged_HSA_data <- merged_HSA_data %>%
 
 ##add in medication info:
 
-meds<- read.csv(here::here("Output/HSA_cohort_medications_5y_and_lifetime.csv"))
+meds <- read.csv(
+  here::here("Output/HSA_cohort_medications_5y_and_lifetime.csv")
+)
+medication_metadata_columns <- c(
+  "X",
+  "subject_id",
+  "had_HSA",
+  "final_date",
+  "year_in_study_diagnosis_or_final_record_year",
+  "record_date"
+)
+medication_feature_columns <- setdiff(
+  names(meds),
+  medication_metadata_columns
+)
+meds <- meds %>%
+  dplyr::select(subject_id, dplyr::all_of(medication_feature_columns))
 
 #add onto merged_HSA_data
 merged_HSA_data <- merged_HSA_data %>%
@@ -336,13 +405,11 @@ merged_HSA_data <- merged_HSA_data %>%
 
 #for the ~200 dogs with no meds records recode their NAs
 merged_HSA_data <- merged_HSA_data %>%
-  mutate(across(243:310, ~ case_when(
+  mutate(across(dplyr::all_of(medication_feature_columns), ~ case_when(
     is.na(.) ~ "no_medication_records_for_this_time_period",
     as.character(.) == "drug_not_administered" ~ "no_medication_records_for_this_time_period",
     TRUE ~ as.character(.)
   )))
-merged_HSA_data <- merged_HSA_data %>%
-  dplyr::select(-c(X.y,X.x))
 #merged_HSA_data <- merged_HSA_data %>%
 #  rename(study_year_first_chronic_inflam = study_year_first_chronic_inflam.x)
 
@@ -354,8 +421,25 @@ activity_level_overview <- activity_level_overview %>%
 
 #convert data back to char 0=none, 1= little, 2=moderate 3= very active (and do the halves in between)
 activity_level_overview[] <- lapply(activity_level_overview,as.character)
+activity_level_columns <- c(
+  "whole_activity_mean",
+  "whole_activity_median",
+  "whole_activity_min",
+  "early_activity_mode",
+  "early_activity_mean",
+  "early_activity_median",
+  "early_activity_min",
+  "rest_activity_mode",
+  "rest_activity_mean",
+  "rest_activity_median",
+  "rest_activity_min",
+  "prior5y_activity_mode",
+  "prior5y_activity_mean",
+  "prior5y_activity_median",
+  "prior5y_activity_min"
+)
 activity_level_overview<- activity_level_overview %>%
-  mutate(across(c(4:6,10:13,15:18,26:29), ~ case_when(
+  mutate(across(dplyr::all_of(activity_level_columns), ~ case_when(
     . == "0" ~ "none",
     . == "0.5" ~ "none to little",
     . == "1" ~ "little",
@@ -371,18 +455,16 @@ activity_level_overview<- activity_level_overview %>%
 merged_HSA_data2 <- merged_HSA_data %>%
   left_join(activity_level_overview,by="subject_id")
 
-#rename had_HSA.x to had_HSA and final_date.y to final_date
-merged_HSA_data2 <- merged_HSA_data2%>%
-  dplyr::rename(
-    final_date = final_date.x
-  )
-
-#drop all cols that end in .y or .x
+# Keep the existing canonical final_date and drop duplicate join suffixes.
 merged_HSA_data2 <- merged_HSA_data2 %>%
  dplyr::select(
     -ends_with(".x"),
     -ends_with(".y")
   )
 #write to csv
-write.csv(merged_HSA_data2,here::here("Output/HSA_cohort_all_RFs_data.csv"))
+write.csv(
+  merged_HSA_data2,
+  here::here("Output/HSA_cohort_all_RFs_data.csv"),
+  row.names = FALSE
+)
 ```

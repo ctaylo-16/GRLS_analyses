@@ -49,6 +49,11 @@ The HSA command begins by assembling `HSA_cohort_all_RFs_data.csv` from the
 legacy generated feature files listed in `docs/pipelines.md`; it does not yet
 regenerate all of those feature files from raw data.
 
+The assembly now sources cohort status, endpoint date, endpoint study year, and
+record date directly from the HSA cohort definition. Legacy handoffs contribute
+features only; their saved row-number and duplicate metadata columns are not
+propagated into the assembled dataset.
+
 ## Before rerunning analyses
 
 - Check the notebook statuses in `docs/analysis-register.md` and the execution route in `docs/pipelines.md`.

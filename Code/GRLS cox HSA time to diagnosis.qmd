@@ -41,10 +41,6 @@ library(finalfit)
 #load in dataset
 cohort <- read.csv(here::here("Output/HSA_cohort_all_RFs_data.csv"))
 colnames(cohort)
-cohort <- cohort %>%
-  dplyr::select(-c(X))
-#cohort <- cohort %>%
-#  rename(had_HSA = had_HSA.x)
 
 HSA <- cohort %>%
   dplyr::filter(had_HSA==1)
@@ -1059,7 +1055,11 @@ cohort_abr <- cohort_abr %>%
 ```
 
 ```{r}
-write.csv(cohort_abr,here::here("Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv"))
+write.csv(
+  cohort_abr,
+  here::here("Output/HSA_cohort_all_RFs_data_tidied_from_cox.csv"),
+  row.names = FALSE
+)
 
 if (!isTRUE(params$run_cox_analysis)) {
   knitr::knit_exit()
