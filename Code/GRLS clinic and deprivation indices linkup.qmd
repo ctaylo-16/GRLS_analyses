@@ -15,7 +15,7 @@ Using vet clinic zip codes/postal code to get a FIPS code then link this to coun
 ```{r}
 library(tidyverse)
 #GRLS clinics
-clinics <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/data updates June 2024/vet_address.csv")
+clinics <- read.csv(here::here("Data/vet_address.csv"))
 
 #strip to only have first 5 digits of postcode as some have a second part for full zipcode
 clinic <- clinics %>%
@@ -24,7 +24,7 @@ clinic <- clinics %>%
 
 clinics$postal_code <- as.numeric(clinics$postal_code)
 #FIPS database from https://simplemaps.com/data/us-zips
-FIPS <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/data updates June 2024/simplemaps_uszips_basicv1.86/uszips.csv")
+FIPS <- read.csv(here::here("Data/uszips.csv"))
 FIPS <- FIPS %>%
   rename(postal_code = zip)
 
@@ -40,7 +40,7 @@ clinics_and_fips2 <- clinics_and_fips %>%
 MDI data from https://www.census.gov/topics/income-poverty/poverty/about/related-sites/rates.html - just going to use most recent values available of 2019 MDI
 
 ```{r}
-MDI_2019 <- read.csv("C:/Users/ctaylor18/OneDrive - Royal Veterinary College/post doc/GRLS/data updates June 2024/MDI_2019.csv")
+MDI_2019 <- read.csv(here::here("Data/MDI_2019.csv"))
 MDI_2019 <- MDI_2019 %>%
   rename(county_fips=County)
 

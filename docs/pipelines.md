@@ -68,7 +68,7 @@ Important generated prerequisites include:
 | `Output/GRLS_medications_initial_tidy.csv` | `Code/GRLS medications.qmd` |
 | Condition-domain features | Raw condition extracts under `Data/`, read by `R/comorbidities.R` |
 
-At the time this map was recorded, `Data/vet_address.csv` and `Data/MDI_2019.csv` were present locally, while `Data/uszips.csv` was still missing. Because `Data/` is ignored by Git, these files must be transferred as part of the approved data snapshot rather than committed.
+`Code/GRLS clinic and deprivation indices linkup.qmd` now reads all three inputs from the project-local `Data/` directory. At the time this map was recorded, `Data/vet_address.csv` and `Data/MDI_2019.csv` were present locally, while `Data/uszips.csv` was still missing. Because `Data/` is ignored by Git, these files must be transferred as part of the approved data snapshot rather than committed.
 
 ## Execution rules
 
