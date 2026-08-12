@@ -10,6 +10,7 @@ renv/staging/
 .quarto/
 _site/
 *_files/
+*.html
 
 # Source data are managed outside Git
 Data/
